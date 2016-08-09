@@ -1,7 +1,6 @@
 """
 import os as OS
-import maya.cmds as MC
-muPath = "F:\\MuWrapper\\4_agosto"
+muPath = r'yout shitty path'
 if muPath not in OS.sys.path:
     OS.sys.path.append(muPath)
 
@@ -9,6 +8,141 @@ import MuCore
 reload(MuCore)
 MU = MuCore
 """
+
+
+
+
+'''
+#################################################################################################
+=================================================================================================
+-------------------------------------------------------------------------------------------------
+                             ,,          
+              mm            `7MM          
+              MM              MM          
+    ,pP"Ybd mmMMmm `7M'   `MF'MM  .gP"Ya  
+    8I   `"   MM     VA   ,V  MM ,M'   Yb 
+    `YMMMa.   MM      VA ,V   MM 8M"""""" 
+    L.   I8   MM       VVV    MM YM.    , 
+    M9mmmP'   `Mbmo    ,V   .JMML.`Mbmmd' 
+                      ,V                  
+                   OOb"  
+
+-------------------------------------------------------------------------------------------------
+=================================================================================================
+#################################################################################################
+
+
+
+
+-------------------------------------------------------------------------------------------------
+CLASS STRUCTURE
+-------------------------------------------------------------------------------------------------
+    STATIC METHODS (@SORTED)
+    CLASS METHODS  (@SORTED)
+    CONSTRUCTOR/INITIALIZER
+        __new__
+        __init__
+    MAGIC METHODS  (@SORTED)
+        __magicA__
+        __magicB__
+        __magicC__
+        ...
+    METHODS        (@SORTED)
+        methodA()
+        methodB()
+        methodC()
+        ...
+
+RULES
+ - if a "complex property" can be "called" without arguments, 
+   set it to @property:
+   ex:
+    - xxx.nodeName, xxx.shortName, xxx.type, xxx.longName, xxx.namespace
+
+
+
+
+
+
+-------------------------------------------------------------------------------------------------
+DOC
+------------------------------------------------------------------------------------------------- 
+- VOGLIO una cosa del genere perche posso chiuderla negli editor
+
+class Node(object):
+    """
+    shitty doc
+    zaheiaz heinhqsd qs
+    qsdqsidf qsifd qkqsf
+    """
+    def __init__(self):
+        pass
+
+- come risultato da sta merda:
+--------------------------------------
+
+    shitty doc
+    zaheiaz heinhqsd qs
+    qsdqsidf qsifd qkqsf
+    
+--------------------------------------
+quindi va semplicemente riparsata
+
+
+
+
+
+
+-------------------------------------------------------------------------------------------------
+TECHS
+------------------------------------------------------------------------------------------------- 
+NOTES:
+Ragiona in questi termini:
+ - fai le cose protette e incapsulate, ad alto livello
+ - nei punti critici, puoi "compilare" la parte astratta in "commandEngine"
+   un po come del codice Python con parti compilate in C
+
+   MuCore --> commandEngine
+   Python --> C
+
+
+
+
+
+
+-------------------------------------------------------------------------------------------------
+     _     _ _     _                                      
+    | |   (_) |   | |                                     
+ ___| |__  _| |_  | |__   __ _ _ __  _ __   ___ _ __  ___ 
+/ __| '_ \| | __| | '_ \ / _` | '_ \| '_ \ / _ \ '_ \/ __|
+\__ \ | | | | |_  | | | | (_| | |_) | |_) |  __/ | | \__ \
+|___/_| |_|_|\__| |_| |_|\__,_| .__/| .__/ \___|_| |_|___/
+                              | |   | |                   
+                              |_|   |_|                   
+-------------------------------------------------------------------------------------------------
+ISSUES:
+
+ - objExists e' chiamato una volta da __new__ di MuNode... poi una seconda volta da 
+   DGNode __init__... MINIMIZZA
+
+ - PyMel usa MObjectHandle invece di MObject... fai un tentativo
+
+ ? apparentemente, l'API 2.0 e davvero piu rapida... fai un tes e  vedi se c'e tutto cio che serve!  
+
+ - il __new__ di MuNode e' orriderrimo... non si puo semplificare?
+
+ - prt il momento non funziona con le "instances"... perche si concentra sul nodo e quando e condiviso
+   fallisce. semplicemente per le instances salva anche il DAGPath
+
+ - il decorator [functionDebug] da dei problemi negli __init__, __new__ e __repr__
+   In teoria, quando attivi il flaggone DEBUG, dovrebbe applicare automaticamente il 
+   decorator a tutti i metodi rilevanti, senza obbligarti a farlo manualmente 
+
+   Inoltre, la wrappedFunction introduce un caller in piu alle volte si alle volte no e non so come calcolare
+   l'offset visuale del depth... fuck you so deep...
+
+
+'''
 
 import maya.cmds         as MC
 import maya.OpenMaya     as OM
@@ -19,14 +153,17 @@ import PySide.QtCore     as QC
 import PySide.QtGui      as QG
 import shiboken
 
-import time
+import functools
 import inspect
+import time
+import types
+
 
 print
-print "+-------------------+"
-print "|      MU CORE      |"
-print "+-------------------+"
-print "      08/08/16"
+print '+-------------------+'
+print '|      MU CORE      |'
+print '+-------------------+'
+print '       09/08/16'
 print 
 
 
@@ -44,6 +181,12 @@ def printDebug(text):
 #======================================================================================================
 # DECORATORS
 #======================================================================================================
+
+# Check for decorators' order:
+#   @staticmethod
+#   @functionDebug
+#   def fuckYou(...)
+# One fails:(, the other not:)
 def functionDebug(func):
     def wrappedFunction(*args, **kwargs):
         stack = inspect.stack()
@@ -95,6 +238,24 @@ def functionDebug(func):
     """
 
 
+# Apparently, the price for this decorator is really irrelevant, 'cause it does almost nothing
+# PREMATURE OPTIMIZATION IS EVIL!
+def massiveMethod(func):
+    """
+    @massivemethod
+    def setVisibility():
+        ...
+
+    Adds the flag _isMassive to a "massive" method; it's up to the <Bundle>
+    to inspect all classes and create a massive method!
+    """   
+    def wrappedFunc(*args, **kwargs):
+        return func(*args, **kwargs)
+    wrappedFunc._isMassive = True # Not really important the value!   
+    wrappedFunc.__name__ = func.__name__
+    wrappedFunc.__doc__  = func.__doc__
+
+    return wrappedFunc   
 
 
 
@@ -600,89 +761,6 @@ class Scene(object):
 
 
 
-
-
-
-"""========================================================================
-RULES:
- - if a "complex property" can be "called" without arguments, 
-   set it to @property:
-   ex:
-    - xxx.nodeName, xxx.shortName, xxx.type, xxx.longName, xxx.namespace
-
-Structure of each class:
-    STATIC METHODS (@SORTED)
-    CLASS METHODS  (@SORTED)
-    CONSTRUCTOR/INITIALIZER
-        __new__
-        __init__
-    MAGIC METHODS  (@SORTED)
-        __cockMagic__
-        __fuckMagic__
-        __shitMagic__
-    METHODS        (@SORTED)
-        alphaWow()
-        betaWow()
-        hugeShit()
-        pleaseDie()
-========================================================================"""
-
-
-"""=================================================================================================
-NOTES:
-Ragiona in questi termini:
- - fai le cose protette e incapsulate, ad alto livello
- - nei punti critici, puoi "compilare" la parte astratta in "commandEngine"
-   un po come del codice Python con parti compilate in C
-
-   MuCore --> commandEngine
-   Python --> C
-
-#-------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-============================================================================================================
-============================================================================================================
-     _     _ _     _                                      
-    | |   (_) |   | |                                     
- ___| |__  _| |_  | |__   __ _ _ __  _ __   ___ _ __  ___ 
-/ __| '_ \| | __| | '_ \ / _` | '_ \| '_ \ / _ \ '_ \/ __|
-\__ \ | | | | |_  | | | | (_| | |_) | |_) |  __/ | | \__ \
-|___/_| |_|_|\__| |_| |_|\__,_| .__/| .__/ \___|_| |_|___/
-                              | |   | |                   
-                              |_|   |_|                   
-
-------------------------------------------------------------------------------------------------------------
-ISSUES:
-
- - objExists e' chiamato una volta da __new__ di MuNode... poi una seconda volta da 
-   DGNode __init__... MINIMIZZA
-
- - PyMel usa MObjectHandle invece di MObject... fai un tentativo
-
- ? apparentemente, l'API 2.0 e davvero piu rapida... fai un tes e  vedi se c'e tutto cio che serve!  
-
- - il __new__ di MuNode e' orriderrimo... non si puo semplificare?
-
- - prt il momento non funziona con le "instances"... perche si concentra sul nodo e quando e condiviso
-   fallisce. semplicemente per le instances salva anche il DAGPath
-
- - il decorator [functionDebug] da dei problemi negli __init__, __new__ e __repr__
-   In teoria, quando attivi il flaggone DEBUG, dovrebbe applicare automaticamente il 
-   decorator a tutti i metodi rilevanti, senza obbligarti a farlo manualmente 
-
-   Inoltre, la wrappedFunction introduce un caller in piu alle volte si alle volte no e non so come calcolare
-   l'offset visuale del depth... fuck you so deep...
-============================================================================================================
-============================================================================================================
-"""
 
 
 
@@ -1310,6 +1388,47 @@ class Bundle(object):
     ma allo stato attuale non e' un iterabile in senso proprio
     """
 
+
+
+    #-----------------------------
+    # STATIC METHOD
+    #-----------------------------   
+    @staticmethod
+    def registerMassiveMethods(targetClass):
+        """
+        Inspects a derived of <MuNode> and gathers all the methods with a "_isMassive" attribute
+        Then adds a method of the same name to <Bundle>
+
+        <Bundle> must be the last defined class; then call for each derived of <MuNode>:
+        Bundle.registerMassiveMethods(derived)
+        """
+        functions = []
+        for x in dir(targetClass):
+            element = getattr(Node, x)
+            # "_isMassive" is just a TAG... no need for a value!
+            if hasattr(element, "_isMassive") and getattr(element, "_isMassive"): # The second check is useless...
+                print x, " is MASSIVE"
+                functions.append(element)
+        
+        def massiveFunctionFactory(originalFunction, self, *args, **kwargs):
+            print "\nMASSIVE from ", originalFunction.__name__, "of", targetClass
+            for x in self._list:
+                """ use 'issubclass()' to inherit baseClasses methods"""
+                if isinstance(x, targetClass):
+                    originalFunction(x, *args, **kwargs) 
+                else:
+                    # Raise a type exception
+                    pass
+                    
+        for function in functions:
+            temp = types.MethodType(functools.partial(massiveFunctionFactory, function), None, Bundle)
+            setattr(Bundle, function.__name__, temp) 
+            # Add an updated __doc__, ex:
+            # new.__doc__ = "Massive method\n" + old.__doc__       
+ 
+
+
+
     #-----------------------------
     # INITIALIZER
     #-----------------------------    
@@ -1364,6 +1483,14 @@ class Bundle(object):
             self._list.append(node)
 
 
+
+
+""" 
+<Bundle> must come after all <MuNode>'s deriveds.
+Call this for each derived:
+
+Bundle.registerMassiveMethods(derived)
+"""
 
 
 # Not implemented yet... probably a derived of "renderPass"??? 'cause it's not exactly a type of node...
