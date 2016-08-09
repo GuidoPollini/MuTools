@@ -93,10 +93,43 @@ quindi va semplicemente riparsata
 
 
 
+
+
+
+=================================================================================================
 -------------------------------------------------------------------------------------------------
 TECHS
 ------------------------------------------------------------------------------------------------- 
-NOTES:
+=================================================================================================
+
+
+***********************************************************************
+FUNCTION ARGUMENTS
+***********************************************************************
+def function(a1, a2, ..., k1=d1, k2=d2, ..., *args, **kwargs):
+
+una chiamata a function() sfrutta al massimo i vari a_i e k_i (facendo cio cpe puo)
+--> tutto cio' che gli pass in piu, finisce in *args (list) e **kwargs (dict)
+
+_________________________________________________________
+ripeto:) *ARGS E **KWARGS ASSORBONO SOLO CIO CHE RESTA... 
+---------------------------------------------------------
+
+--> puoi riconvertirli con * ** (nella chiamata di funzione) per un altro call
+
+Quello che segue e' quindi legale:
+
+def massiveFunctionFactory(originalFunction, self, *args, **kwargs):
+    ...
+    originalFunction(x, *args, **kwargs) 
+
+
+
+
+
+***********************************************************************
+PREMATURE OPTIMIZIATION (i.e. the non-algorithmic one) IS EVIL
+***********************************************************************
 Ragiona in questi termini:
  - fai le cose protette e incapsulate, ad alto livello
  - nei punti critici, puoi "compilare" la parte astratta in "commandEngine"
@@ -121,6 +154,11 @@ Ragiona in questi termini:
                               |_|   |_|                   
 -------------------------------------------------------------------------------------------------
 ISSUES:
+
+ - quello che hai fatto per la 'smoothMesh' e' un miglioramento... 
+   prova a fare la stessa cosa per OCCLUSION, che e immondo
+   e eventualmente produrre AUTOMATICAMENTE i getter/setter (se proprio vuoi)
+   ... senno passi per il dizionario
 
  - cosa fare quando cerchi di settare un attribute ed e':
    LOCKED
