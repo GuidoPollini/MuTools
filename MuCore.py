@@ -171,7 +171,7 @@ ISSUES:
  - objExists e' chiamato una volta da __new__ di MuNode... poi una seconda volta da 
    DGNode __init__... MINIMIZZA
 
- - PyMel usa MObjectHandle invece di MObject... fai un tentativo
+ - PyMel (e altri)... usa MObjectHandle invece di MObject... fai un tentativo
 
  ? apparentemente, l'API 2.0 e davvero piu rapida... fai un tes e  vedi se c'e tutto cio che serve!  
 
@@ -872,24 +872,32 @@ class MuNode(object):
 
 
 class DGNode(object):
-    """""""""""""""""""""""""""""""""""""""
-    INTERNAL  
-      self._pointer.name()
-      self._pointer.fullPathName()
-      self._pointer.partialPathName()
-      ... pretty heavy
+    """
+    Always use the following properties (for a GD not DAG they coincide):
+     - obj.nodeName  (the name of the node, without DAG prefixes)
+     - obj.shortName (the minimal DAG path)
+     - obj.longName  (the full, heavy dagpath) 
 
-    EXTERNAL 
-      obj.nodeName  (the name of the node, without DAG prefixes)
-      obj.shortName (the minimal DAG path)
-      obj.longName  (the full, heavy dagpath)       
-    
-    ==> CHECK FOR PERFORMANCE PENALTIES
-    ==> probably using EXTERNALS makes things easier...
-    
-    --> for the moment, use EXTERNALS
-    --> then Profile and if slow, use internals
-    """"""""""""""""""""""""""""""""""""""" 
+    There's a real reason to use at all LONGNAME???
+    SHORTNAME is exactly what we need to work in Maya
+    LONGNAME probably to recover its position in hierarchy
+
+    NODENAME is misleading... for a DG it's true, but for a DAG it means almost nothing
+    ... 
+    probably I should use:
+
+    obj.name     --> nodeName (DG not DAG)
+                 --> shortName (DAG) 
+
+    obj.longName --> nodeName (DG not DAG)
+                 --> longName (DAG)
+
+    And removing totally the entire concept of nodeName/shortName/longName for a DAG
+    If you need the "pureName", you''l slice it!!!
+
+    nodeName for a DAG is its shortName!!!
+                                
+    """ 
 
     #-----------------------------
     # STATIC/CLASS METHODS
@@ -975,8 +983,11 @@ class DGNode(object):
     # MAGIC METHODS
     #-----------------------------
     def __repr__(self):
-        # Generic reps for DGNodes; override it for DAGS to show shortName
-        return "\"" + self._pointer.name() + "\"<" + self.type + ">"      
+        # Nope: the "fake" .shortName and .longName for generic DGs are defined 
+        #       to solve EXACTLY this kind of problems
+        #
+        # (NOPE NOPE NOPE)Generic reps for DGNodes; override it for DAGS to show shortName
+        return "\"" + self.shortName + "\"<" + self.type + ">"      
 
 
 
@@ -993,10 +1004,23 @@ class DGNode(object):
 
 
     def getAttr(self, attrName): 
-        return MC.getAttr("{0}.{1}".format(self.longName, attrName))
+        return MC.getAttr('{0}.{1}'.format(self.longName, attrName))
         #return MC.getAttr(self.longName + "." + attrName)
-    
 
+
+    def getChannelBoxAttrs(self, plugs=False):
+        """
+        Apparently... it's a mess (?)
+        channelBox=True --> "only show non-keyable attributes that appear in the channelbox"
+        ... non-keyable??? WTF? 
+        """
+        nodeName = self.shortName
+        channelBoxAttrs = (MC.listAttr(nodeName, keyable=True) or []) + (MC.listAttr(nodeName, channelBox=True) or [])
+        if plugs:
+            channelBoxAttrs = [nodeName + "." + x for x in channelBoxAttrs]
+        return channelBoxAttrs    
+        
+    
     def getInputPlugs(self, attrName, **kwargs):
         """
                 <DGNode>.getInputPlugs(attrName [, type=<String>,
@@ -1014,7 +1038,7 @@ class DGNode(object):
         nodeOnly_flag            = kwargs.get("nodeOnly",            kwargs.get("no",  False))
         exactType_flag           = kwargs.get("exactType",           kwargs.get("et",  False))
         
-        plugs = MC.listConnections(self.name + "." + attrName, 
+        plugs = MC.listConnections(self.shortName + "." + attrName, 
             source=True, destination=False, 
             plugs=not nodeOnly_flag, type=typeArg, exactType=exactType_flag, 
             skipConversionNodes=skipConversionNodes_flag)
@@ -1043,13 +1067,37 @@ class DGNode(object):
     def isReferencedFromFile(self):
         """
         If the node is referenced, returns the source filename.
-        Otherwise ""
+        Otherwise ''
         """
         if MC.referenceQuery(self.shortName, isNodeReferenced=True):
             return MC.referenceQuery(self.shortName, filename=True)
         else:
-            return ""    
+            return ''   
 
+
+    def lockAttr(self, attrName=None, value=True, channelBox=False):
+        """
+        Vorrei anche la prssibilita' di fare:
+        .lockAttr("tx", "ty", "sx", True)
+
+        The 'allChannelBox' syntax is horrid:
+        .lockAttr(value=False, channelBox=True)
+        
+        This is better?
+        .lockAttr(False, channelBox=True)
+
+        """
+        if attrName:
+            MC.setAttr(self.shortName + '.' + attrName, lock=value)
+        elif channelBox:
+            for plug in self.getChannelBoxAttrs(plugs=True):
+                MC.setAttr(plug, lock=value)
+        
+        else:    
+            MC.error(".lockAttr invalid arguments!")
+        
+        return self
+                 
 
     @property
     def longName(self): 
@@ -1076,7 +1124,7 @@ class DGNode(object):
         """
         # Use the .longName() to allow working on DAGs too!
         # Returns the "true" new name in case of DAG autoResolution of ambiguities
-        realNewName = MC.rename(self.longName, newNodeName)
+        realNewName = MC.rename(self.shortName, newNodeName)
         return realNewName
 
 
@@ -1084,9 +1132,9 @@ class DGNode(object):
         # Allow "fluid style" (concatenation)
         if isinstance(newValue, str):
             # It's a string attribute
-            MC.setAttr(self.nodeName + "." + attrName, newValue, type="string")
+            MC.setAttr(self.shortName + "." + attrName, newValue, type="string")
         else:
-            MC.setAttr(self.nodeName + "." + attrName, newValue)
+            MC.setAttr(self.shortName + "." + attrName, newValue)
             
         # Promote concatenation
         return self    
@@ -1120,10 +1168,11 @@ class DAGNode(DGNode):
     #-----------------------------
     # MAGIC METHODS
     #-----------------------------
+    """
     def __repr__(self):
         # For DAGs, we want the minimalistic path
         return "\"" + self._pointer.partialPathName() + "\"<" + self.type + ">"      
-
+    """
 
 
     #-----------------------------
@@ -1135,7 +1184,7 @@ class DAGNode(DGNode):
         because I need to save the DAGPath not only the pointer for DAGs)
 
         """
-        parentList = MC.listRelatives(self._pointer.partialPathName(), parent=True, fullPath=True)
+        parentList = MC.listRelatives(self.shortName, parent=True, fullPath=True)
         if parentList is not None:
             return MuNode(parentList[0])
         else:
