@@ -122,6 +122,14 @@ Ragiona in questi termini:
 -------------------------------------------------------------------------------------------------
 ISSUES:
 
+ - cosa fare quando cerchi di settare un attribute ed e':
+   LOCKED
+   UNKEYABLE
+   HIDDEN
+   ANIMATED
+   CONNECTED???
+   ... warning? fatal? specialmente nei MASSIVES
+ 
  - objExists e' chiamato una volta da __new__ di MuNode... poi una seconda volta da 
    DGNode __init__... MINIMIZZA
 
@@ -163,7 +171,7 @@ print
 print '+-------------------+'
 print '|      MU CORE      |'
 print '+-------------------+'
-print '       09/08/16'
+print '       09/08/16+'
 print 
 
 
@@ -1101,6 +1109,8 @@ class DAGNode(DGNode):
         return self._pointer.isInstanced(indirect)
 
 
+
+
     @property
     def longName(self): 
         return self._pointer.fullPathName()
@@ -1126,6 +1136,75 @@ class Mesh(DAGNode):
     #-----------------------------
     # METHODS
     #-----------------------------
+
+    # Default values
+    _smoothMeshAttributes = {
+        'displaySmoothMesh':         0,
+        'smoothMeshSelectionMode':   0,
+        'useGlobalSmoothDrawType':   True,
+        'smoothDrawType':            2,
+        'displaySubdComps':          False,
+        'smoothLevel':               2,
+        'useSmoothPreviewForRender': True,
+        'renderSmoothLevel':         2
+    }
+    
+
+    def getSmoothMeshDict(self):
+        meshName = self.shortName
+        smoothDict = {}
+        for attr in Mesh._smoothMeshAttributes:
+            smoothDict[attr] = MC.getAttr(meshName + "." + attr)
+        return smoothDict    
+
+
+    def setSmoothMesh(self, *args, **kwargs):
+        meshName = self.shortName
+
+        if kwargs.pop('setDefault', None):
+            # Reset default values        
+            for attr in Mesh._smoothMeshAttributes:
+                MC.setAttr(meshName + "." + attr, Mesh._smoothMeshAttributes[attr])
+        
+        if kwargs.pop('setZero', None):
+            # All to 'zero' (it's legal:)
+            for attr in Mesh._smoothMeshAttributes:
+                MC.setAttr(meshName + "." + attr, 0)
+        
+        if len(args) == 1 and isinstance(args[0], dict):
+            # args[0] is probably another 'smoothDict': convert it to kwargs and recycle!
+            self.setSmoothMesh(**args[0]) 
+        else:
+            for kwarg in kwargs:
+                # Check or not???
+                MC.setAttr(meshName + "." + kwarg, kwargs[kwarg])
+                # ??? try except???
+
+        return self
+
+            
+        # .displaySmoothMesh:
+        # 0 --> smoothMeshPreview off
+        # 1 --> smoothMeshPreview on: cage + smoothMesh
+        # 2 --> smoothMeshPreview on: smoothMesh 
+
+        # .smoothMeshSelectionMode:
+        # 0 --> edit: cage
+        # 1 --> edit: smoothMesh
+        # 2 --> edit: both
+        """
+        MC.setAttr(meshName + ".useGlobalSmoothDrawType", useGlobalSmoothDrawType) # 0 --> local override
+        MC.setAttr(meshName + ".smoothDrawType", smoothDrawType) # 0 --> Maya Catmull-Clark, 1 --> openSubdiv Catmull-Clark
+
+        MC.setAttr(meshName + ".displaySubdComps", displaySubdComps) # Show Display subdivisions on/off
+        MC.setAttr(meshName + ".smoothLevel", smoothLevel) # preview division levels 
+
+        MC.setAttr(meshName + ".useSmoothPreviewForRender", useSmoothPreviewForRender) # use preview level for rendering
+        MC.setAttr(meshName + ".renderSmoothLevel", renderSmoothLevel) # Render division level
+        """
+
+
+
     def getShader(self, **kwargs):  
         pass
         """  
