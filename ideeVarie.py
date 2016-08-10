@@ -1,30 +1,29 @@
-import maya.cmds as MC
-def GP_incapsulateDAGNode(suffixName):
-    objs = cm.ls (sl=1, type="transform")
-    for obj in objs:
-        newObj = cm.createNode ("transform", n=obj+suffixName)
-        parentsObj = cm.listRelatives (obj, p=1)
-        if parentsObj:
-            # null if parent to the world
-            cm.parent (newObj, parentsObj[0])
-        # copyAttr copies even CONNECTIONS!!!
-        cm.copyAttr (obj, newObj, v=1, at=["t","r"])
-        if cm.nodeType (obj) == "joint":
-            # se perenting for joint is different. it add a transform in a=1 mode
-            cm.parent (obj, newObj, r=1)
-            cm.setAttr (obj+".t",0,0,0)                         
-            cm.setAttr (obj+".r",0,0,0) 
-        else:    
-            cm.parent (obj, newObj, a=1)
-        cm.select (newObj, r=1)
 
 """
---> --> -->
-i piacerebbe una classe che onitora certi attributi (da registrare) 
-dei nodi selezionati...
---> --> -->
-"""
+----------------------------------------------------------------
+================================================================
+SIMPLIFIED (SIMPLE) ATTRIBUTES ACCESS
 
+palla.v = False
+palla.tx = cubbo.tx
+palla.tx >> cubbo.tx
+================================================================
+----------------------------------------------------------------
+
+idea pratica... ma forse non fattibile:
+
+----------------------------------------
+palla.v  = False
+palla.tx = cubbo.tx
+palla.tx >> cubbo.tx
+  VS
+palla.setAttr('v',  False)
+palla.setAttr('tx', cubbo.getAttr('tx'))
+palla.connect('tx', cubbo.name + '.tx')
+----------------------------------------
+
+Cioe' un rapido MC.setAttr e MC.getAttr e connectAttr()
+Pero per evidenti ragioni, il seguente fallisce... forse chiedi troppo
 class DGNode(object):
     def __init__(self, nodeName):
         if MC.objExists(nodeName):
@@ -47,15 +46,45 @@ x = DGNode('xxx')
 print x.tx #??
 print x.tx.value #??
 
+i piacerebbe una classe che onitora certi attributi (da registrare) 
+dei nodi selezionati...
+
+
+
+
+
 """
-#connect attr:
-x.tx >> y.tx 
-Ma dovresti creare una classe per gli attibuti... siao
-sicuri che tu guadagni quancosa?
 
-x.connect("tx", "pippo.ty")
-VS
-x.tx >> pippo.ty
 
-...credo tu conosca gia la risposta:)                      
-"""        
+
+
+
+"""=================================================================================================
+================================================================================================="""
+
+
+import maya.cmds as MC
+def GP_incapsulateDAGNode(suffixName):
+    objs = cm.ls (sl=1, type="transform")
+    for obj in objs:
+        newObj = cm.createNode ("transform", n=obj+suffixName)
+        parentsObj = cm.listRelatives (obj, p=1)
+        if parentsObj:
+            # null if parent to the world
+            cm.parent (newObj, parentsObj[0])
+        # copyAttr copies even CONNECTIONS!!!
+        cm.copyAttr (obj, newObj, v=1, at=["t","r"])
+        if cm.nodeType (obj) == "joint":
+            # se perenting for joint is different. it add a transform in a=1 mode
+            cm.parent (obj, newObj, r=1)
+            cm.setAttr (obj+".t",0,0,0)                         
+            cm.setAttr (obj+".r",0,0,0) 
+        else:    
+            cm.parent (obj, newObj, a=1)
+        cm.select (newObj, r=1)
+
+
+
+
+
+     

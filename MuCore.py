@@ -102,6 +102,33 @@ TECHS
 ------------------------------------------------------------------------------------------------- 
 =================================================================================================
 
+***********************************************************************
+BASIC ATTRIBUTE MANIPULATIONS
+***********************************************************************
+It would be WOOOOONDERFUL (but beware of __getattr__ recursion!!!)
+Moreover, to allow the hypercool >>, palla.tx should be an object, not 
+a value... and we should be obliged to write: var = palla.tx.value
+
+    var = palla.tx.value
+    var = palla.getAttr('tx')
+
+    palla.v  = False
+    palla.setAttr('v',  False)
+
+    palla.v.lock(True).hide(True)
+    palla.lockAttr('v', True).hideAttr('v',)
+
+    palla.tx = cubbo.tx
+    palla.setAttr('tx', cubbo.getAttr('tx'))
+
+    palla.tx >> cubbo.tx
+    palla.connect('tx', cubbo.name + '.tx')
+
+    palla.tx >> cubbo.tx >> cono.tx
+    palla.connect... don't even try to concatenate:)
+
+
+
 
 ***********************************************************************
 FUNCTION ARGUMENTS
@@ -127,6 +154,7 @@ def massiveFunctionFactory(originalFunction, self, *args, **kwargs):
 
 
 
+
 ***********************************************************************
 PREMATURE OPTIMIZIATION (i.e. the non-algorithmic one) IS EVIL
 ***********************************************************************
@@ -137,6 +165,8 @@ Ragiona in questi termini:
 
    MuCore --> commandEngine
    Python --> C
+
+
 
 
 
@@ -680,24 +710,26 @@ class Metadata(object):
 
 
 
+
+
 #======================================================================================================
 # HELPERS
 #======================================================================================================  
-def typeString(object):
+def typeString(obj):
     """
     From <class 'MuCore.RenderLayer'> to "MuCore.RenderLayer" 
     """
-    return str(type(object)).split("'")[1]
+    return str(type(obj)).split("'")[1]
 
 
-def showHierarchy(module):
+def showHierarchy(mod):
     """
     Non riesco a passargli l'oggetto modulo "se stesso"...
     cioe': MU.showHierarchy(MU)
     """
     hierarchy = {}
-    for elementName in dir(module):
-        element = getattr(module, elementName)
+    for elementName in dir(mod):
+        element = getattr(mod, elementName)
         if typeString(element) == "type":
             mro = [cls.__name__ for cls in element.mro()][::-1]
             position = hierarchy
@@ -714,6 +746,51 @@ def showHierarchy(module):
                 traverseDict(actualDict[item], depth + 1)
             
     traverseDict(hierarchy)
+
+
+# "The globals is perhaps a little misleading; globals() is essentially the locals() of a module. 
+#  The closest Python comes to globals that are truly global to all of your program is 
+#  the __builtin__ module" ... Amen
+def inspectModule(mod):
+    """
+    For example to check for naming clashes, check __builtins__ (it's a module)
+    """    
+    content = dir(mod)
+    myDict = {}
+    for x in content:
+        tipo = str(type(getattr(mod, x))).split("'")[1]
+        if tipo not in myDict:
+            myDict[tipo] = []
+        myDict[tipo].append(x) 
+    
+    for tipo in sorted(myDict):
+        for item in sorted(myDict[tipo]):
+            print '{0:>20.20s}  {1}'.format(tipo, item)
+        print  
+        
+
+def inspectGlobals():
+    """
+    Inspect global objects
+    """
+    globs = globals()
+    globDict = {}
+    for x in globs:
+        tipo = str(type(globals()[x])).split("'")[1]
+        if tipo not in globDict:
+            globDict[tipo] = []
+        globDict[tipo].append(x) 
+    
+    for tipo in sorted(globDict):
+        for item in sorted(globDict[tipo]):
+            print '{0:>20.20s}  {1}'.format(tipo, item)
+        print   
+
+
+
+
+
+
 
 
 
