@@ -1,3 +1,20 @@
+Se ti ascolti bene, avevi dei sogni... Ed e' per rispetto di me stesso
+che devi cercare di raggiungerli (approssimando)
+Quindi, usa il 2017 per:
+- salire al massimo livello nel 3d (per non, avere piu' problemi di lavoro/soldi)
+- risolvi le cazzate 'sociali' (basta puttanate da disadattato)
+- sviluppa la parte sociale (apertura massima)
+- riprendi una forma fisica appetibile
+
+... poi salta per l'ultima volta
+
+
+
+
+
+
+
+
 Fa decisamente molto professionale:
 ```python
 with LegacyViewport():
