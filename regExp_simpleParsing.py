@@ -19,6 +19,8 @@ filterExamples = [
     ' 099 -  012_C',
     
     # List (spaces)
+    '999_B',
+    '  000_M     ',
     '123 232 999_B 111 001_T',
     '   345     012_B      999',
     
@@ -74,8 +76,12 @@ for filter in filterExamples:
     
     # List?
     else:
-        if re.search(r'^([ ,]*[0-9]{3}(_[a-zA-Z])?[ ,]*)+$', filter):
+        if re.search(r'^(?:[ ,]*[0-9]{3}(?:_[a-zA-Z])?[ ,]*)+$', filter):
             print '"{0}" list OK'.format(filter)
+            # (?:  ) means a "non capturing" group... I.e. a siple "grouping"
+            matches = re.findall(r'[0-9]{3}(?:_[a-zA-Z])?', filter)
+            for match in matches:
+                print "-->", match
             continue
         else:
             MC.error('BAD')     
