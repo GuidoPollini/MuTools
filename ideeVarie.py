@@ -1,5 +1,29 @@
 
 """
+
+
+----------------------------------------------------------------
+================================================================
+NEVER compare floats with a bare =
+(the channelBox uses a limites precision, but not Maya core)
+================================================================
+----------------------------------------------------------------
+def equivalent(a, b):
+    tolerance = 1.0e-10 # or 1.0e-13?
+    return abs(a - b) < tolerance
+
+if equivalent(fava, cazzo):
+if not equuivalent(fava, cazzo):    
+
+
+
+
+
+
+
+
+
+
 ----------------------------------------------------------------
 ================================================================
 SIMPLIFIED (SIMPLE) ATTRIBUTES ACCESS
