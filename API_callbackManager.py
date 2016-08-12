@@ -36,6 +36,39 @@ def annihilateTurtle_callback(*args):
 
 print '[OK] Module "{0}" imported from "{1}"!'.format(__name__, __file__)
 
-shittyVar = 'Can you read this?' 
+XXX = 'GLOBALONA from local'
+
+A_suckyVar  = 'globale?'
+A_fuckyVar  = 'globale?'
+A_shittyVar = 'globale?' 
+
+print '\n\nmoduleGlobals'
+for g in sorted(globals().keys()):
+	print ' ', g
+
 #id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
 #OM.MMessage.removeCallback(id)
+
+
+
+"""
+for x in sorted(globals()):
+  name = None
+  fromWhere = None
+  try:
+      name = globals()[x].__name__
+      fromWhere = globals()[x].__file__
+  except:
+      pass    
+  print '{0:>20.20}'.format(x), name, fromWhere
+  
+print x, name  
+"""
+
+"""
+import os
+if r'C:\Users\guido.pollini\Desktop\MuTools' not in os.sys.path:
+    os.sys.path.append(r'C:\Users\guido.pollini\Desktop\MuTools')
+import API_callbackManager as CM
+reload(CM)
+"""

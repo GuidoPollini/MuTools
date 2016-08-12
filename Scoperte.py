@@ -1,5 +1,34 @@
 """
 ========================================================================================
+W H A T   D O E S   " G L O B A L "   O B J E C T   M E A N   ?
+========================================================================================
+ - Don't pollute the userSetup.py ('cause it generates true globals)
+ - if an object it's defined inside a module, isn't it automatically not global ?
+   (i.e. protected by a namespace???)
+
+"""
+
+
+"""
+========================================================================================
+M A Y A  2 0 1 5     P Y T H O N      C L E A N     G L O B A L S
+========================================================================================
+        __builtins__ __builtin__ None
+             __doc__ None        None
+            __name__ None        None
+         __package__ None        None
+                cmds maya.cmds   C:\Program Files\Autodesk\Maya2015\Python\lib\site-packages\maya\cmds\__init__.py
+                 mel maya.mel    C:\Program Files\Autodesk\Maya2015\Python\lib\site-packages\maya\mel\__init__.py
+
+Note that [maya.cmds] and [maya.mel] are already imported...
+"""
+
+
+
+
+
+"""
+========================================================================================
 M O D U L E   A L I A S I E S
 ========================================================================================
 
