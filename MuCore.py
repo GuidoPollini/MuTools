@@ -752,13 +752,27 @@ def showHierarchy(mod):
 #  The closest Python comes to globals that are truly global to all of your program is 
 #  the __builtin__ module" ... Amen
 
+
 """
+=========================================================================================================
+
+M O D U L E S
+
+=========================================================================================================
+
+
+
+---------------------------------------------------------------------------------------------------------
+sys.modules == a <dict> of all imported modules ("moduleName": <moduleObject>)
+sys.modules('__main__') is the top level module (of the interpreter)
+---------------------------------------------------------------------------------------------------------
 Define:
 
 def inspectObject(obj):...
-def inspectGlobals():...
+def inspectGlobals():... call inspectObject on sys.modules['__main__'] == <__main__>
 
-Because inspecting a module is indeed iinspecting the object (a module, class, instance are objects)
+Because inspecting a module is indeed inspecting the object (a module, class, instance are objects)
+---------------------------------------------------------------------------------------------------------
 """
 
 
@@ -797,6 +811,18 @@ def inspectGlobals():
             print '{0:>20.20s}  {1}'.format(tipo, item)
         print   
 
+
+    """
+    import sys
+    modules = sys.modules
+    for x in sorted(modules):
+        print '{0:<40.40s}  '.format(x),
+        try:
+            print modules[x].__file__
+        except: 
+            print "..."    
+    Apparently globals() refers to dir(sys.modules['__main__'] which is the "MAIN MODULE" in the interpreter)
+    """
 
 
 

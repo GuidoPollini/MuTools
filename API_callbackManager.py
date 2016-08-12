@@ -1,4 +1,8 @@
 """
+MODULE DOC (Guido Pollini)
+"""
+
+"""
 import os
 if r'C:\Users\guido.pollini\Desktop\MuTools' not in OS.sys.path:
     OS.sys.path.append(r'C:\Users\guido.pollini\Desktop\MuTools')
@@ -29,6 +33,8 @@ def annihilateTurtle_callback(*args):
         MC.unloadPlugin('Turtle', force=True)
         result += ': Turtle annihilated:)'
     print result    
+
+print 'name =', __name__
 
 shittyVar = 'Can you read this?' 
 #id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
