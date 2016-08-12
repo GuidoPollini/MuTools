@@ -751,6 +751,17 @@ def showHierarchy(mod):
 # "The globals is perhaps a little misleading; globals() is essentially the locals() of a module. 
 #  The closest Python comes to globals that are truly global to all of your program is 
 #  the __builtin__ module" ... Amen
+
+"""
+Define:
+
+def inspectObject(obj):...
+def inspectGlobals():...
+
+Because inspecting a module is indeed iinspecting the object (a module, class, instance are objects)
+"""
+
+
 def inspectModule(mod):
     """
     For example to check for naming clashes, check __builtins__ (it's a module)

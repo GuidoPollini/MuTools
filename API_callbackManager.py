@@ -1,9 +1,17 @@
+"""
+import os
+if r'C:\Users\guido.pollini\Desktop\MuTools' not in OS.sys.path:
+    OS.sys.path.append(r'C:\Users\guido.pollini\Desktop\MuTools')
+import API_callbackManager as CM
+"""
+
+
 import maya.cmds     as MC
 import maya.OpenMaya as OM
 """
 <PyObject>
 All object types are extensions of this type. This is a type which contains the information Python needs to treat a pointer to an object as an object. 
-(it contains only the object’s reference count and a pointer to the corresponding type object)
+(it contains only the object's reference count and a pointer to the corresponding type object)
 
 
 OM.MSceneMessage.addCallback(...) returns  a <PyCObject> (<MCallbackid> in C++)
@@ -22,5 +30,6 @@ def annihilateTurtle_callback(*args):
         result += ': Turtle annihilated:)'
     print result    
 
-id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
-OM.MMessage.removeCallback(id)
+shittyVar = 'Can you read this?' 
+#id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
+#OM.MMessage.removeCallback(id)
