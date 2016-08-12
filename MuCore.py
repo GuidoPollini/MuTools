@@ -761,6 +761,22 @@ M O D U L E S
 =========================================================================================================
 
 
+Inserisci in ogni modulo un comando per dire all'utente cosa hai importato e da dove..
+print '[OK] Module "{0}" imported from "{1}"!'.format(__name__, __file__)
+
+ex:
+[OK] Module "API_callbackManager" imported from "C:\Users\guido.pollini\Desktop\MuTools\API_callbackManager.py"!
+
+
+
+
+
+
+Apparently the following objects are EXACTLY the same:
+ - globals()
+ - dir(sys.modules['__main__'])
+ - dir()
+
 
 ---------------------------------------------------------------------------------------------------------
 sys.modules == a <dict> of all imported modules ("moduleName": <moduleObject>)

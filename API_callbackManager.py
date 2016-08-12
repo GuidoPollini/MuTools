@@ -34,7 +34,7 @@ def annihilateTurtle_callback(*args):
         result += ': Turtle annihilated:)'
     print result    
 
-print 'name =', __name__
+print '[OK] Module "{0}" imported from "{1}"!'.format(__name__, __file__)
 
 shittyVar = 'Can you read this?' 
 #id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
