@@ -231,16 +231,11 @@ import shiboken
 
 import functools
 import inspect
+import os
 import time
 import types
 
-
-print
-print '+-------------------+'
-print '|      MU CORE      |'
-print '+-------------------+'
-print '       09/08/16+'
-print 
+print '[{0}] loading from "{1}"...'.format(__name__, __file__)
 
 
 DEBUG = False
@@ -395,6 +390,12 @@ class Timer(object):
 class Profiler(object):
     """ A context for cProfile """
     pass
+
+class MainPanelDisabled(object):
+    def __enter__(self):
+        MM.eval('paneLayout -e -manage false $gMainPane')
+    def __exit__(self, *args): 
+        MM.eval('paneLayout -e -manage true $gMainPane')
 
 
 
@@ -791,6 +792,19 @@ Because inspecting a module is indeed inspecting the object (a module, class, in
 ---------------------------------------------------------------------------------------------------------
 """
 
+
+"""
+******************************************************************************
+THIS IS A LOOOOOOOOOOT BETTER AND FASTER
+(as usual, comprehension lists RULES)
+
+it works because the order on 2ples gives priority to the first value
+******************************************************************************
+pippo = [(type(globals()[x]), x) for x in globals()]
+for x in sorted(pippo):
+    print '{0:>20.20s}      {1}'.format(x[0], x[1])
+
+"""
 
 def inspectModule(mod):
     """
@@ -1929,7 +1943,9 @@ def getObjectSets(self, **kwargs):
 
 
 
-
+t = os.path.getmtime(__file__) # Seconds passed between Epoch and last modification 
+formattedTime = time.strftime("%d/%m/%y, %H:%M:%S", time.localtime(t))
+print '[{0}] loaded (last update {1})'.format(__name__, formattedTime)
 
 
 

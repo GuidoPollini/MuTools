@@ -487,14 +487,7 @@ def addAudioMenu(parent=None, rootMenu='redNineTraxRoot'):
             log.info('New Red9 Sound subMenu added to current Menu : %s' % parent)
         else:
             raise StandardError('given parent for Red9 Sound Menu is invalid %s' % parent)
-    
-#    if not parent:
-#        print 'new r9Sound Menu added'
-#        cmds.menu(rootMenu, l=LANGUAGE_MAP._MainMenus_.sound_red9_sound, tearOff=True, allowOptionBoxes=True)
-#    else:
-#        print 'new r9Sound Menu added to parent menu', parent
-#        cmds.menu(rootMenu, l=LANGUAGE_MAP._MainMenus_.sound_red9_sound, tearOff=True, allowOptionBoxes=True, parent=parent)
-        
+
     cmds.menuItem(l=LANGUAGE_MAP._MainMenus_.sound_offset_manager, p=rootMenu,
                   ann=LANGUAGE_MAP._MainMenus_.sound_offset_manager_ann,
                   c="import Red9.core.Red9_Audio as r9Audio;r9Audio.AudioToolsWrap().show()")

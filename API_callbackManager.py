@@ -4,9 +4,16 @@ MODULE DOC (Guido Pollini)
 
 """
 import os
-if r'C:\Users\guido.pollini\Desktop\MuTools' not in OS.sys.path:
-    OS.sys.path.append(r'C:\Users\guido.pollini\Desktop\MuTools')
+if r'C:\Users\guido.pollini\Desktop\MuTools' not in os.sys.path:
+    os.sys.path.append(r'C:\Users\guido.pollini\Desktop\MuTools')
 import API_callbackManager as CM
+reload(CM)
+
+print '\n[OK] Module{0}!'.format(__name__)
+print '[MODULE GLOBALS]'
+for g in sorted(globals().keys()):
+  print ' ', g
+
 """
 
 
@@ -34,17 +41,13 @@ def annihilateTurtle_callback(*args):
         result += ': Turtle annihilated:)'
     print result    
 
-print '[OK] Module "{0}" imported from "{1}"!'.format(__name__, __file__)
-
-XXX = 'GLOBALONA from local'
-
+print '\n[OK] Module "{0}" imported from "{1}"!'.format(__name__, __file__)
 A_suckyVar  = 'globale?'
 A_fuckyVar  = 'globale?'
 A_shittyVar = 'globale?' 
-
-print '\n\nmoduleGlobals'
+print '[MODULE GLOBALS]'
 for g in sorted(globals().keys()):
-	print ' ', g
+  print '  {0:>20.20s}  {1}'.format(g, globals()[g])
 
 #id = OM.MSceneMessage.addCallback(OM.MSceneMessage.kBeforeNew, annihilateTurtle_callback)
 #OM.MMessage.removeCallback(id)
