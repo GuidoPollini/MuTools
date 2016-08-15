@@ -1,4 +1,24 @@
 """
+NOTA: apparenteente Maya salva le posizioni dei vertici/normali in FLOAT, non DOUBLE...
+pero i dati del transform reggnon i valori DOUBLE...
+
+e' vero???
+---------------------------------------------------------------------
+
+This method returns a pointer to the internal vertex list for this mesh. The points 
+are in local space.
+The points are stored in a single contiguous array of floats, first by coordinate, 
+then by element (xyzxyz...) There are three coordinate values, so each vertex is 
+stored in 12 bytes of data, and the total array length is 12*numVertices() bytes.
+
+This method is useful where performance is critical or memory resources are limited, 
+as it avoids having to make a copy of the points as is done by getVertices. 
+Care must be taken however as the returned pointer may become invalid if any 
+changes are made to the mesh.
+"""
+
+
+"""
 ========================================================================================
 W H A T   D O E S   " G L O B A L "   O B J E C T   M E A N   ?
 ========================================================================================
