@@ -59,11 +59,16 @@ def commandHandler(environment, responseCallable):
         print "==> SUCCESS\n"
 
     except Exception as exc:
-        print "DIO PORCO", exc
-        responseCallable("200 OK", [("Content-type", "text/plain")])
-        return "ERROR: can't executr the following statement:" + receivedCommand + str(exc)
+        print "==> ERROR", exc
+        #responseCallable("200 OK", [("Content-type", "text/plain")])
+        #return "ERROR: can't executr the following statement:" + receivedCommand + str(exc)
 
-    
+    finally:
+        print "1111111"
+        responseCallable("200 OK", [("Content-type", "text/plain")])
+        print "2222222"
+        return "fuckYou"
+    """
 
     if not environment.get("QUERY_STRING"):
         responseCallable("404 Not Found", [("Content-type", "text/plain")])
@@ -76,7 +81,7 @@ def commandHandler(environment, responseCallable):
         return "... QUIT!"
     
     return "OK"
-
+    """
 
 localIP = SOCKET.gethostbyname(SOCKET.gethostname())
 serverInstance = SS.make_server(localIP, 8000, commandHandler)

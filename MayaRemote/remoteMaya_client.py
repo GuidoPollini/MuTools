@@ -141,7 +141,8 @@ class MayaClient(object):
     def sendToServer(self, message):
         try:
             mayaServerURL = 'http://' + socket.gethostbyname(socket.gethostname()) + ':8000/?'
-            query = urllib2.urlopen(mayaServerURL + MayaClient._urlify(message))
+            query = urllib2.urlopen(mayaServerURL + MayaClient._urlify(message), data='') # With this (not None) it becomes a POST
+            #print query.read()
             print 'Message "' + message + '" sent!'
 
         except urllib2.URLError as exc:
