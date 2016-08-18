@@ -1,3 +1,41 @@
+"""
+----------------------------------------------------------------
+================================================================
+
+TROIAI DA RICICLARE
+
+================================================================
+----------------------------------------------------------------
+minTime         = MC.playbackOptions(query=True, minTime=True)
+maxTime         = MC.playbackOptions(query=True, maxTime=True)
+animStartTime   = MC.playbackOptions(query=True, animationStartTime=True)
+animEndTime     = MC.playbackOptions(query=True, animationEndTime=True)
+framesPerSecond = MC.playbackOptions(query=True, framesPerSecond=True)
+
+
+
+
+
+
+
+
+
+
+"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """
 
