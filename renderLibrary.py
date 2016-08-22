@@ -1,4 +1,11 @@
 """
+import imp as IMP
+moduleName = "PROJ_NEWLAYERSYSTEM__YAKARI_renderLibrary"
+IMP.load_source(moduleName, "C:/Users/guido.pollini/Desktop/myLocalModules/" + moduleName + ".py")
+PROJ_NEWLAYERSYSTEM__YAKARI_renderLibrary.initializeUI()
+"""
+
+"""
 ==================================================================================================================================================
 --------------------------------------------------------------------------------------------------------------------------------------------------
      YYYYYYY       YYYYYYY           AAA               KKKKKKKKK    KKKKKKK               AAA               RRRRRRRRRRRRRRRRR   IIIIIIIIII
@@ -64,7 +71,7 @@ Y8,        88  88  8b       d8  88       d8  ,adPPPPP88  88   `"Y8ba,
 """
 
 
-VERSION = "12july 17h00" # Nice formatting
+VERSION = "12july 09h30" # Nice formatting
 
 
 # shitty global variable to share height between different UI
@@ -114,7 +121,8 @@ if ACTIVATE_SHOTGUN:
 #--------------------------------------------------------------------------------------------------------------------------------------------------
 # DEBUGGING
 #--------------------------------------------------------------------------------------------------------------------------------------------------
-# I removed the debug checkbox; this shit activates:
+# I removed the debug checkbox; this shit activates:  
+
 # - 0000;finalFuncDebug()
 # - 0000;finalPrintDebug(message, data)
 FINAL_DEBUG = False
@@ -188,6 +196,11 @@ def getDarkGroupIdColor(index):
 #                "ch_yakar":     ["ch_yakar", None,           None,           None],
 #                "ch_fuckMe":    [None,       None,           None,           None]}
 ASSETS_DATA = {}
+
+# A dictionary containing evevtual assets imported more than once:
+# ex: {'ch_buffa': ['ch_buffa_1', 'ch_buffa_2', 'ch_buffa_3', 'ch_buffa_4', 'ch_buffa_5']}
+MULTIPLE_ASSETS_DATA = {}
+COLOR_LIGHTS_TO_COMBINE = {} 
 
 """ <== PURE ABOMINATION... bad design"""
 # an horrid global to force the default of the groupId... Really a bad decision...
@@ -609,7 +622,7 @@ def YAKARI_renderLibraryUI(*args):
 
 
     PROD_DUMP_MODE = MC.columnLayout()
-    0;MC.rowLayout(nc=4)
+    0;MC.rowLayout(nc=6)
     0;  MC.text(l="", w=2)
     0;  QtButton(handle="editAssetPartition_QTBUTTON", label="EDIT GROUPS", action=assetPartitionUI,  
                  lineColor=CYAN_L, background=CYAN_B, 
@@ -617,7 +630,16 @@ def YAKARI_renderLibraryUI(*args):
                  fontFamily="Arial", fontSize=13, fontWeight="bold",
                  annotation=HTMLFormatter("GLOBAL \"APPLY DUMP\"", ["In the follwing order:", " - apply dump info", " - postDump", " - apply dayPreset"], 80))
 
-    0;  MC.text(l="", w=28)
+
+    0;  MC.text(l="", w=2)
+    0;  QtButton(handle="combineCOLORLIGHT_QTBUTTON", label="+", action=combineCOLORLIGHTUI,  
+                 lineColor=CYAN_L, background=CYAN_B, 
+                 borderRadius=9, paddingTBLR=(0,0,0,0), margin=1, w=20, h=20,
+                 fontFamily="Arial", fontSize=20, fontWeight="bold", 
+                 annotation=HTMLFormatter("COMBINE COLOR_LIGHTs", ["Usually each asset has its COLOR_LIGHT pass;", "this allows to combine all the COLOR_LIGHTs", "when an asset has multiple instances."], 80))
+    0;  MC.text(l="", w=2)
+
+
     0;  QtButton(handle="globalLoadDumps_QTBUTTON", label="GLOBAL APPLY", action=pipelineGlobalLoadDumps,  
                  lineColor=BLUE_L, background=BLUE_B, 
                  borderRadius=12, paddingTBLR=(0,0,0,0), margin=1, w=196, h=26,
@@ -737,6 +759,17 @@ def treeViewDoNothing(*args):
     return False
 
 def build_ASSETS_DATA(*args):
+    #-------------------------------------------------------------------------------------------
+    # This func is called everytime a scene is loaded, new file, etc etc...
+    # We add here the build_MULTIPLE_ASSETS_DATA(), to activate or not the corresponding button
+    build_MULTIPLE_ASSETS_DATA()
+    if len(MULTIPLE_ASSETS_DATA) > 0:
+        # Activat ethe button only if there's some multiple asset
+        MC.button("combineCOLORLIGHT_QTBUTTON", edit=True, enable=True)
+    else:    
+        MC.button("combineCOLORLIGHT_QTBUTTON", edit=True, enable=False)
+
+    #-------------------------------------------------------------------------------------------
 
     """ BE HYPERSTRICT HERE!!! """
     # Detect:
@@ -1072,12 +1105,12 @@ def selectionListener(*args):
     MC.rowLayout("selectionPresets_rowLayout", edit=True, enable=0)
     menuItemsList = MC.optionMenu("selectionPresets_optionMenu", query=True, itemListLong=True)
     MC.deleteUI(menuItemsList, menuItem=True)
-    MC.menuItem(label='  ...  ', parent="selectionPresets_optionMenu")
+    MC.menuItem(label='...  ', parent="selectionPresets_optionMenu")
 
     if len(sel) == 1:
         assetName = getNamespace(sel[0])
         tokens = assetName.split("_")
-        text = "   ...   "   
+        text = "...   "   
         color = (.25,.25,.25)
         if len(tokens) in [2,3]:
             tag = tokens[0] + "_" + tokens[1]
@@ -1167,6 +1200,174 @@ def HTMLFormatter(title="", rowList=[], width=100):
         code = code + "<br>" + row
     code += "</font></p>"    
     return code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#=============================================================================================================
+#=============================================================================================================
+#
+# combine COLOR_LIGHTs
+#
+#=============================================================================================================
+#=============================================================================================================
+""" It's getting messier and messier... but it's too late to refactor everything """
+
+def build_MULTIPLE_ASSETS_DATA(*args):
+    global MULTIPLE_ASSETS_DATA
+
+    # Clear and rebuild
+    MULTIPLE_ASSETS_DATA = {}
+
+    sceneAssets = [x for x in MC.namespaceInfo(lon=True, r=True) if x.startswith(("ch_", "pr_", "ss_"))]
+
+    tempMultipleAssets = {}
+    for asset in sceneAssets:
+        # Next time use RegExp (and try to be less "hard" and to check better)
+        sourceAsset = asset.split("_")[0] + "_" + asset.split("_")[1]
+        if sourceAsset not in tempMultipleAssets:
+            tempMultipleAssets[sourceAsset] = [asset]
+        else:
+            tempMultipleAssets[sourceAsset].append(asset)
+    
+    # Create the true dictionary of multiple assets
+    MULTIPLE_ASSETS_DATA = {}
+    for asset in tempMultipleAssets:
+        if len(tempMultipleAssets[asset]) > 1:
+            # It's an asset with muiltiple instances
+            MULTIPLE_ASSETS_DATA[asset] = tempMultipleAssets[asset]
+
+
+    
+def combineCOLORLIGHTUI(*args):
+    # If we get here, the button was active and hence the dictionary
+    # MULTIPLE_ASSETS_DATA is not empty (i.e. we have multiple assets)
+    
+    if MC.window("combineCOLORLIGHT_WIN", ex=1):
+        MC.deleteUI("combineCOLORLIGHT_WIN")
+    MC.window("combineCOLORLIGHT_WIN", t="Combine COLOR_LIGHT layers", tlb=1, s=0, mb=0, tb=1)
+
+    # DEACTIVE MAIN WINDOW
+    MC.formLayout("GLOBAL_FORM", edit=True, enable=0)
+    mainUIGroupButtonsEnable(False)
+
+    COMBINE_FORMLAYOUT = MC.formLayout(nd=100)
+
+    0;TEXT_COLUMNLAYOUT = MC.columnLayout(bgc=(.3,.4,.3))
+    0;  QtText(label="Combine COLOR_LIGHTS layers", color=(220,240,220),paddingTBLR=(4, 0, 4, 0), margin=0, fontFamily="Arial", fontSize=18, fontWeight="Bold")
+    0;  QtText(label="<p align=\"left\">The following assets have multiple instances.<br>Select the ones for which you want an <br>unique combined COLOR_LIGHT layer<br>(NOTE: the grouping will be respected!)", 
+               paddingTBLR=(0, 0, 4, 0), color=(160,220,160), fontFamily="Arial", fontSize=14, fontWeight="normal")
+    0;  MC.setParent("..")
+
+
+
+    0;OPERATIONS_ROWCOLUMNLAYOUT = MC.rowColumnLayout(nc=2, cw=[(1,85), (2,200)], co=(1, "left", 10), cal=(1,"right"))
+    pointer = OMUI.MQtUtil.findLayout(OPERATIONS_ROWCOLUMNLAYOUT)      
+    widget  = SHIBOKEN.wrapInstance(long(pointer), QTGUI.QWidget)
+    widget.setStyleSheet("""font-size: 12px;""")
+
+    0;  MC.text(l="")
+    0;  MC.text(l="")
+
+    for asset in MULTIPLE_ASSETS_DATA:
+        MC.text(l="")    
+        MC.checkBox(asset + "_combineColorLight_checkBox", 
+                    label=asset + "  (" + str(len(MULTIPLE_ASSETS_DATA[asset])) + " instances)", 
+                    value=False)
+
+
+    0;  MC.text(l="")
+    0;  MC.text(l="")
+
+    MC.setParent("..")
+    0;  BUTTON_HOLDER = MC.columnLayout()
+    0;    QtButton(handle="bof", label="APPLY", action=applyCombineCOLORLIGHTUI,  
+                   lineColor=CYAN_L, background=(160,220,160) ,
+                   borderRadius=12, paddingTBLR=(0,0,0,0), margin=0, w=140, h=30,
+                   fontFamily="Arial", fontSize=14, fontWeight="bold") 
+    0;  MC.setParent("..")
+
+    MC.formLayout(COMBINE_FORMLAYOUT, edit=True, 
+                  attachForm=   [(TEXT_COLUMNLAYOUT, 'left', 0),
+                                 (TEXT_COLUMNLAYOUT, 'top', 0),
+                                 (TEXT_COLUMNLAYOUT, 'right', 0), 
+                                 (OPERATIONS_ROWCOLUMNLAYOUT, 'left', 0),
+                                 (OPERATIONS_ROWCOLUMNLAYOUT, 'right', 0), 
+                                 (BUTTON_HOLDER, 'bottom', 0), 
+                                 (BUTTON_HOLDER, 'left', 90)
+                                 ],
+                  attachControl=[(OPERATIONS_ROWCOLUMNLAYOUT, 'top', 0, TEXT_COLUMNLAYOUT)])
+    
+
+
+    MC.showWindow("combineCOLORLIGHT_WIN")
+    MC.window("combineCOLORLIGHT_WIN", edit=True, w=310, h=260)
+    
+    # sctipJob to reactivate the main UI when this window is closed
+    MC.scriptJob (uiDeleted=["combineCOLORLIGHT_WIN", enableMainUI])
+
+def applyCombineCOLORLIGHTUI(*args):
+    global COLOR_LIGHTS_TO_COMBINE
+    COLOR_LIGHTS_TO_COMBINE = {}
+
+    # Save the data in the global dictionary
+    for asset in MULTIPLE_ASSETS_DATA:
+        toBeCombined = MC.checkBox(asset + "_combineColorLight_checkBox", query=True, value=True) 
+        if toBeCombined:
+            COLOR_LIGHTS_TO_COMBINE[asset] = MULTIPLE_ASSETS_DATA[asset]
+    # Now, COLOR_LIGHT_TO_COMBINE holds the asset for which the COLOR_LIGHT layers must be combined         
+
+    # Close the window
+    if MC.window("combineCOLORLIGHT_WIN", ex=1):
+        MC.deleteUI("combineCOLORLIGHT_WIN")
+    
+#=============================================================================================================
+#=============================================================================================================
+#=============================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1864,6 +2065,33 @@ def loadDumpPreProd(path, namespaceContainer=""):
     appendReport("")  
     progressBarHide()
 
+
+
+def _getColorLightCombineGroup():
+    """"---------------------------------------------------------------------------
+    COMBINE/GROUP COLOR_LIGHT hack
+    -------------------------------------------------------------------------------
+    COLOR_LIGHTS_TO_COMBINE = {"ch_buffa": ["ch_buffa1", "ch_buffa2", "ch_buffa3"]}
+    getAssetGroupIdString(asset) ==> "00" or "01" or "02"...
+    """
+    COLOR_LIGHT_COMBINEGROUP = {}
+    for multipleAsset in COLOR_LIGHTS_TO_COMBINE:
+        groupIds = list({getAssetGroupIdString(x) for x in COLOR_LIGHTS_TO_COMBINE[multipleAsset]})
+        COLOR_LIGHT_COMBINEGROUP[multipleAsset] = {}
+        for i in range(len(groupIds)):
+            COLOR_LIGHT_COMBINEGROUP[multipleAsset][groupIds[i]] = multipleAsset + "_" + str(i+1) + ":COLOR_LIGHT"
+    
+    # COLOR_LIGHT_COMBINEGROUP is something like this: 
+    # {'ch_buffa': {'02': 'ch_buffa_1:COLOR_LIGHT', '03': 'ch_buffa_2:COLOR_LIGHT', 
+    #               '00': 'ch_buffa_3:COLOR_LIGHT', '01': 'ch_buffa_4:COLOR_LIGHT', 
+    #               '04': 'ch_buffa_5:COLOR_LIGHT'}} 
+    #    
+    # For each originalAsset, a dictionary <groupId: colorLight layer name> 
+    # (To fake Fusion's build script, we begin always with ch_buffa_1:COLOR_LIGHT, 1 not ZERo)
+    #
+    # COLOR_LIGHT_COMBINEGROUP == {} if there's no multiple asset
+    return COLOR_LIGHT_COMBINEGROUP
+
 def pipelineGlobalLoadDumps(*args):
     """ DEBUG """
     0000; funcDebug()
@@ -1902,6 +2130,11 @@ def pipelineGlobalLoadDumps(*args):
 
     printLog("\nAPPLYING DUMPS TO SCENE ASSETS")
 
+
+    # Build once the dict needed to combine/group the COLOR_LIGHT layers
+    # and pass it to the loadDump()
+    COLOR_LIGHT_COMBINEGROUP = _getColorLightCombineGroup()
+
     for assetNamespace in ASSETS_DATA:
 
         if ASSETS_DATA[assetNamespace][0] == None: 
@@ -1932,14 +2165,13 @@ def pipelineGlobalLoadDumps(*args):
 
         # ASSETS_DATA = {assetNamespace: [assetID, RENPath, AMBPath, [amb1, amb2, ..., ambk]]}
         appendReport("WORKING ON ASSET '" + assetNamespace + "' (YAKARI ID: " + ASSETS_DATA[assetNamespace][0] + ")", bars=True, barSymbol="=", newLines=0)
-        loadDump(ASSETS_DATA[assetNamespace][1], namespaceContainer=assetNamespace)
+        loadDump(ASSETS_DATA[assetNamespace][1], namespaceContainer=assetNamespace, colorLightCombineGroup=COLOR_LIGHT_COMBINEGROUP)
         0000; printDebug("\n\n\n")
 
     # move to defaultRenderLayer
     MC.editRenderLayerGlobals(currentRenderLayer="defaultRenderLayer")
     showReport("DUMPS GLOBALLY APPLIED", "SUCCESS")
     printLog("Dumps globally applied!", "SUCCESS")
-
 
 
 
@@ -1955,7 +2187,7 @@ def pipelineGlobalLoadDumps(*args):
 
     if POSTAPPLYDUMP_MANAGECOLOR_LIGHTLAYERS_FLAG:
         postApplyDump_manageCOLOR_LIGHTLayers()
-    
+
     if POSTAPPLYDUMP_MANAGESHADOWLIGHTS_FLAG:
         postApplyDump_manageShadowLights()
 
@@ -1968,7 +2200,7 @@ def pipelineGlobalLoadDumps(*args):
     if POSTAPPLYDUMP_RENDERINGMISCELLANEA_FLAG:
         postApplyDump_renderingMiscellanea()
 
-    combineAssetLayer_writeCallback()
+    #combineAssetLayer_writeCallback()
     """
     if POSTAPPLYDUMP_WRITEGROUPSHOTGUN_FLAG:
         postApplyDump_writeGroupsShotgun()
@@ -1992,8 +2224,8 @@ def pipelineGlobalLoadDumps(*args):
 
     """"""
     # Apply a renderSmooth (with the chosen level) and save for 3DSMAX
-    applyRenderingSmoothGlobally()
-    save3DsMaxData()
+    #applyRenderingSmoothGlobally()
+    #save3DsMaxData()
     """"""
     
     # Restore the viewport rendering preference
@@ -2382,7 +2614,239 @@ def getAssetGroupIdString(assetName):
     assetGroupIdString = str(rawAssetGroupIdString) if len(str(rawAssetGroupIdString)) > 1 else "0" + str(rawAssetGroupIdString)
     return assetGroupIdString    
 
-def loadDump(path, namespaceContainer=""):
+
+
+""" THIS VERSION SHOULD MANAGE PROPERLY THE NEW COLOR_LIGHT COMBINE SYSTEM """
+def loadDump(path, namespaceContainer="", colorLightCombineGroup={}):
+    """ DEBUG """
+    0000; funcDebug()
+    0000; printDebug("path: " + path)
+    0000; printDebug("namespace: " + namespaceContainer)
+
+
+    #-----------------------------------------------------------------------------------
+    # Load the '_REN.txt'
+    f = None
+    renderLayersDump = None
+    try:
+        f = open(path, "r")
+        renderLayersDump = JSON.loads(f.read())
+        printLog("RenderLayersDump loaded for '" + namespaceContainer +"'", "SUCCESS")
+    except Exception as e:
+        fatality ("Loading renderLayersDump for '" + namespaceContainer + "' FAILED!\n" + str(e))
+    finally:
+        if f != None:
+            f.close()
+
+    #-----------------------------------------------------------------------------------
+    # "defaulRenderLayer"
+    appendReport("APPLYING THE 'defaultRenderLayer' DUMP",  bars=True, barSymbol="-", newLines=0)
+
+    MC.setAttr("defaultRenderLayer.renderable", False) 
+    MC.editRenderLayerGlobals(currentRenderLayer="defaultRenderLayer")
+    defaultRenderLayerData = renderLayersDump["layers"]["defaultRenderLayer"]
+    renderLayersDump["layers"].pop("defaultRenderLayer") # Remove from list
+
+    # "defaultRenderLayer" has only (mesh)-transforms!!!
+    for meshTransformTag in defaultRenderLayerData.keys():
+        # FATALITY if it can't found unambiguously the corresponding node in scene
+        sceneMeshTransform = smartObjExists(meshTransformTag, type="DAG", namespaceContainer=namespaceContainer)
+        if sceneMeshTransform == None:
+            fatality("Can't resolve the dumpTag:\n\n - " + meshTransformTag + "\n\n(missing node, hierarchy problems or duplicates)")        
+        0000; printDebug("\n----------------------------------------------------------------\nTAG ASSOCIATION:")
+        0000; printDebug(meshTransformTag + "      ==>      " + sceneMeshTransform + "\n")
+
+        appendReport("APPLYING DUMP INFO '" + meshTransformTag + "' TO SCENE OBJECT '" + sceneMeshTransform + "'")
+        #appendReport("Working on '" + sceneMeshTransform + "'")
+        mesh = MC.listRelatives(sceneMeshTransform, shapes=True, noIntermediate=True, path=True)[0] # AVOID INTERMEDIATES + return A VALID NAME ()DAG PATH REQUIRED)
+        meshData = defaultRenderLayerData[meshTransformTag]
+        
+        #---------------------------------------------------------------------------------
+        # Assign base shader
+        shaderTag = meshData.pop("BASESHADER")
+
+        # There can be ONLY a "lambert1" (even namespaced) in the scene
+        # Thus, the tag "XXXX:lambert1" must be associated to "lambert1", disregarding the namespace confinement rule
+        if shaderTag[shaderTag.rfind(":")+1:] == "lambert1":
+            sceneShader = "lambert1"
+        else:    
+            sceneShader = smartObjExists(shaderTag, type="DG", namespaceContainer=namespaceContainer)
+        
+        if sceneShader != None:
+            shadingEngines = MC.listConnections(sceneShader + ".outColor", destination=True, source=False, type="shadingEngine")
+            if shadingEngines != None:
+                if len(shadingEngines) == 1:
+                    0000; printDebug("Applying shader " + sceneShader + "(" + shadingEngines[0]+ ") to mesh " + mesh)
+                    MC.sets(mesh, edit=True, forceElement=shadingEngines[0])
+                    appendReport("[OK] Base shader applied '" + sceneShader + "'")
+                else: 
+                    if sceneShader == "lambert1":
+                        # The "lambert1" is an ecception: it's connected to the particle shadingEngine too
+                        MC.sets(mesh, edit=True, forceElement="initialShadingGroup")
+                        appendReport("[OK] 'lambert1' applied")
+                    else:
+                        fatality("The shader:\n" + sceneShader + "\nhas more than one shadingEngine: CAN'T CHOOSE!", culprits=[sceneShader])
+            else: 
+                fatality("The shader:\n" + sceneShader + "\nhas NO shadingEngine", culprits=[sceneShader])
+        else:
+            fatality("Can't find shader <b>" + shaderTag + "</b> for mesh <b>" + sceneMeshTransform + "</b> <br>iIt was dumped, but missing here!", culprits=[sceneMeshTransform], title="\"_REN\" ERROR")
+
+        #---------------------------------------------------------------------------------
+        # Attributes
+        for attr in meshData:
+            attrFullname = mesh+ "." + attr
+            if MC.attributeQuery(attr, node=mesh, exists=True) and MC.getAttr(attrFullname, settable=True):
+                setAttr(attrFullname, meshData[attr])
+                appendReport("[OK] Base attribute applied '" + getShortDAGPath(mesh) + "." + attr + "'")
+            else:
+                fatality("The dumped attribute:\n" + attrFullName + "\ndoesn't exist or it's already connected in mesh:\n" + mesh, culprits=[mesh], title="\"_REN ERROR\"")
+        
+        appendReport("")    
+
+    
+    #-----------------------------------------------------------------------------------
+    # RenderLayers creation and overriding attributes
+    extraLayersDump = renderLayersDump["layers"] 
+    
+    """ Generate a proper progressBar """
+    numberOfTasks = 0
+    for layer in extraLayersDump:
+        numberOfTasks += len(extraLayersDump[layer])
+    progressBarInitialize(numberOfTasks)
+
+    for extraLayer in extraLayersDump.keys():
+        
+        # The extraLayers must have the correct namespace
+        sceneExtraLayer = namespaceContainer + (":" if namespaceContainer != "" else "") + extraLayer
+        
+        extraLayerInfo = extraLayersDump[extraLayer]
+        
+
+
+        """
+        ==================================================================
+        LAYER CREATION/ACTIVATION (or combine)
+        ==================================================================
+        """
+        # get asset's groupId
+        assetGroupIdString = getAssetGroupIdString(namespaceContainer)
+ 
+        """
+        print "-----------------------------"
+        print "ASSET: ", namespaceContainer 
+        print "GROUPID: ", assetGroupIdString
+        print "LAYER: ", extraLayer
+        print "-----------------------------"
+        """
+
+        if "COLOR_LIGHT" in extraLayer:
+            # COLOR LIGHT LAYER: never merge, create a new layer, respect the proper namespace
+
+            # Ex: pr_berry_88 ==> pr_berry
+            originalAsset = _getOriginalAssetName(namespaceContainer)
+            if originalAsset in colorLightCombineGroup:
+                # MULTIPLE ASSET
+                #
+                # {'ch_buffa': {'02': 'ch_buffa_1:COLOR_LIGHT', '03': 'ch_buffa_2:COLOR_LIGHT', 
+                #               '00': 'ch_buffa_3:COLOR_LIGHT', '01': 'ch_buffa_4:COLOR_LIGHT', 
+                #               '04': 'ch_buffa_5:COLOR_LIGHT'}} 
+                potentialNewLayer = colorLightCombineGroup[originalAsset][assetGroupIdString]
+                if not MC.objExists(potentialNewLayer):
+                    # It doesn't exist: create it and set it active
+                    newLayer = MC.createRenderLayer(name=potentialNewLayer, makeCurrent=True, empty=True)
+                else:
+                    MC.editRenderLayerGlobals(currentRenderLayer=potentialNewLayer)
+                    newLayer = potentialNewLayer  
+            else:
+                # NOT MULTIPLE AT ALL.. continue as usual
+                newLayer = MC.createRenderLayer(name=sceneExtraLayer, makeCurrent=True, empty=True)
+
+        else:
+            # it's a MERGED LAYER, named:
+            # _03_LAYERNAME        
+                
+            mergedNewLayerName = "_" + assetGroupIdString + "_" + extraLayer
+            if not MC.objExists(mergedNewLayerName):
+                # it doesn't exist: create the merged layer
+                newLayer = MC.createRenderLayer(name=mergedNewLayerName, makeCurrent=True, empty=True)
+            else:
+                # already created; just set it as active
+                MC.editRenderLayerGlobals(currentRenderLayer=mergedNewLayerName)
+                newLayer = mergedNewLayerName    
+
+
+
+
+        for nodeTag in extraLayerInfo:
+
+            """ TEEPEE FIX """
+            if "pr_tdo01" in namespaceContainer and "subset_tipi" in nodeTag:
+                # the infamous SS component; skip it
+                teepeeDebugPrint("LAYER " + extraLayer + ", skipped: " + nodeTag + "(" + namespaceContainer + ")")
+                continue
+            """ TEEPEE FIX END """   
+
+            # "smartObjExists" can detect if the override has to be done on a rendering node and act consequently
+            sceneNode = smartObjExists(nodeTag, type="GENERIC", namespaceContainer=namespaceContainer)
+            if sceneNode != None:
+                appendReport("APPLYING DUMP INFO '" + nodeTag + "' TO SCENE NODE '" + sceneNode + "'")
+                nodeInfo = extraLayerInfo[nodeTag]
+                #-----------------------------------------------------------
+                # membership
+                if "LAYERMEMBERSHIP" in nodeInfo.keys():
+                    """
+                    Only a transform can have this flag; put it in the layer... BUT:  
+                    To avoid parasitic membership of lights and cameras, apply ONLY membership of MESH TRANSFORMS
+                    """
+                    meshChildren = MC.listRelatives(sceneNode, children=True, type="mesh")
+                    if meshChildren != None:
+                        # it's a transform with a valid mesh... membership possible 
+                        MC.editRenderLayerMembers(newLayer, sceneNode, noRecurse=True)
+                        appendReport("[OK] Layer membership")
+                    nodeInfo.pop("LAYERMEMBERSHIP")
+                #-----------------------------------------------------------
+                # shader    
+                if "OVERRIDESHADER" in nodeInfo.keys():
+                    shaderTag =  nodeInfo["OVERRIDESHADER"]
+                    sceneShader = smartObjExists(shaderTag, type="DG", namespaceContainer=namespaceContainer)
+                    if sceneShader != None:
+                        shadingEngines = MC.listConnections(sceneShader + ".outColor", destination=True, source=False, type="shadingEngine")
+                        if shadingEngines != None and len(shadingEngines) == 1:
+                            mesh = MC.listRelatives(sceneNode, shapes=True, noIntermediate=True, path=True)[0] # Again, we have ambiguity on names
+                            MC.sets(mesh, edit=True, forceElement=shadingEngines[0])
+                            appendReport("[OK] Shader override '" + sceneShader + "'")
+                        else:
+                            fatality("Bad/missing shading engine for shader:\n" + sceneShader, culprits=[mesh, sceneShader])
+                    else:
+                        print newLayer
+                        print nodeTag
+                        print sceneNode
+                        fatality("MISSING SHADER\n\nThe shader:\n  -  " + shaderTag + 
+                                 "\nwas dumped as override of mesh:\n  -  " + nodeTag + 
+                                 "\nfor renderLayer: \n  -  " + extraLayer + 
+                                 "\nbut MISSING here!", culprits=[sceneNode], title="[LOAD DUMP ERROR]") 
+                    nodeInfo.pop("OVERRIDESHADER")
+                #-----------------------------------------------------------
+                # attribute overrides
+                for attr in nodeInfo.keys():
+                    attrFullname = sceneNode + "." + attr
+                    MC.editRenderLayerAdjustment(attrFullname) #now what follow will be an override on the active render layer 
+                    setAttr(attrFullname, nodeInfo[attr]) 
+                    appendReport("[OK] Attribute override '" + getShortDAGPath(sceneNode) + "." + attr + "'")
+            else:
+                fatality("The following dump tag can't be resolved:\n" + nodeTag)
+
+            appendReport("")
+            progressBarIncrement()
+
+        # End of construction for this layer
+        appendReport("\n\n")
+    
+    # End of layer construction   
+    appendReport("")  
+    progressBarHide()
+
+def __OLDVERSION_loadDump(path, namespaceContainer=""):
     """ DEBUG """
     0000; funcDebug()
     0000; printDebug("path: " + path)
@@ -2782,7 +3246,194 @@ def postApplyDump_manageNormalLights(*args):
             printLog("Shared normalLights with '" + assetNamespace + ":NORMAL'", "OK")
     """
 
+def _getOriginalAssetName(asset):
+    # ex: ch_buffa_123 ==> ch_buffa
+    tokens = asset.split("_")
+    return tokens[0] + "_" + tokens[1]
+
+
+
+""" THIS VERSION SHOULD HANDLE THE COLOR LIGHT NEW COMBINE SYSTEM """
 def postApplyDump_manageCOLOR_LIGHTLayers(*args):
+    """
+    NEW VERSION 2
+     - For each asset, add ONLY meshes of other assets of the same group!
+     - Keep the same namespace
+     - If it's an "atomic" asset, nothing will be done
+    
+    """
+
+    # Remove shader, then import it again
+    if MC.objExists("matteNoAlpha_COLOR_LIGHT"):
+        MC.delete("matteNoAlpha_COLOR_LIGHT")
+    if MC.objExists("matteNoAlpha_COLOR_LIGHT_SG"):
+        MC.delete("matteNoAlpha_COLOR_LIGHT_SG")
+    
+    try:
+        MC.file(MATTE_NO_ALPHA_COLOR_LIGHT_PATH, i=True, type="mayaAscii", ignoreVersion=True, mergeNamespacesOnClash=False)
+    except:
+        fatality("Can't import 'matteNoAlpha' shader!!!")
+    
+    printLog("\nMANAGING 'COLOR_LIGHT' LAYERS")
+    printLog("'matteNoAlpha' shader imported!", "SUCCESS")
+
+    # YAKARI assets
+    validAssets = [asset for asset in ASSETS_DATA if ASSETS_DATA[asset][0] != None]
+
+    """ TEEPEES FIX """
+    charPropAssets = {asset for asset in validAssets if asset.startswith(("ch", "pr")) and "pr_tdo02" not in asset} # "pr_tdo02" is a full-fledged SS (with bad TAG)
+    subsetAssets   = {asset for asset in validAssets if asset.startswith("ss") or "pr_tdo02" in asset}              # "pr_tdo02" is a full-fledged SS (with bad TAG)
+    """ TEEPEES FIX END """
+    
+    # Old version (no teepees!)
+    # charPropAssets = {asset for asset in validAssets if asset.startswith(("ch", "pr"))}
+    # subsetAssets   = {asset for asset in validAssets if asset.startswith("ss")}
+    
+ 
+    
+    # mesh tags to be ignored
+    excludedMeshes = ["shdw_", 
+                      "shdws_", 
+                      "col_", 
+                      "C_"]
+
+    progressBarInitialize(numberOfTasks=len(charPropAssets))
+
+    
+    """ Manage properly the combine and groups """
+    colorLightCombineGroup = _getColorLightCombineGroup()
+    # {'ch_buffa': {'02': 'ch_buffa_1:COLOR_LIGHT', '03': 'ch_buffa_2:COLOR_LIGHT', 
+    #               '00': 'ch_buffa_3:COLOR_LIGHT', '01': 'ch_buffa_4:COLOR_LIGHT', 
+    #               '04': 'ch_buffa_5:COLOR_LIGHT'}} 
+
+    
+    for asset in charPropAssets:
+        printDebug("\nWORKING ON " + asset)
+
+        originalAsset = _getOriginalAssetName(asset)
+        groupId = getAssetGroupIdString(asset)
+
+
+
+        """ Check if the asset is MULTIPLE """
+        if originalAsset in colorLightCombineGroup:   
+            # Multiple: the color light layer is shared
+            #print "CLCG", colorLightCombineGroup
+            #print "OA", originalAsset
+            #print "GI", groupId
+            colorLightLayer = colorLightCombineGroup[originalAsset][groupId]
+        else:
+            # Singleton: it owns a color light layer
+            colorLightLayer = asset + ":COLOR_LIGHT"
+
+
+
+        # Activate on mode "override" the proper renderLayer if possible
+        if not MC.objExists(colorLightLayer):
+            fatality("The following asset has no COLOR_LIGHT layer:\n  -  " + asset)
+        MC.editRenderLayerGlobals(currentRenderLayer=colorLightLayer, useCurrent=True, enableAutoAdjustments=True)
+
+        # For every other asset OF THE SAME GROUP, list the valid meshes and put them in the correct layer with shader override    
+        # (don't forget to cycle over the SSs... but only for "MATTE_")
+
+
+
+        """ TEEPEE FIX """
+        if "pr_tdo01" in asset:
+            # but for the hybrid teepee, it has to...
+            extraAssetsToIterate = (charPropAssets | subsetAssets)
+            teepeeDebugPrint("Working on " + asset) 
+        else:                
+            # Usually, an asset will not interact with itself
+            extraAssetsToIterate = (charPropAssets | subsetAssets) - {asset}     
+        """ TEEPEE FIX END """
+
+
+
+        for extraCharPropSSAsset in extraAssetsToIterate:
+            printDebug("  FROM " + extraCharPropSSAsset)
+            
+
+            """ If the extra asset belongs to the same COLOR_LIGHT combine, skip it """
+            """ (there's no reason to blacken it out!!!) """
+            # REMEMBER:
+            # COLOR_LIGHTS_TO_COMBINE = {"ch_buffa": ["ch_buffa1", "ch_buffa2", "ch_buffa3"]}
+
+            if originalAsset in colorLightCombineGroup and extraCharPropSSAsset in COLOR_LIGHTS_TO_COMBINE[originalAsset]:
+                # I presume this is sufficent... hope so 
+                continue
+
+
+            # Mask only on assets of the same group (NOTE THAT SS AND THE HYBRID "pr_tdo01" ARE EXCEPTION: they don't have a group)
+            if extraCharPropSSAsset not in subsetAssets and "pr_tdo01" not in extraCharPropSSAsset and "pr_tdo02" not in extraCharPropSSAsset:
+                # it's not an SS neither "pr_tdo01" or "pr_tdo02"... so work on it only if it belongs to the group
+                if getGroupFromAsset(extraCharPropSSAsset) != getGroupFromAsset(asset):
+                    # Different groups: skip!
+                    continue
+
+            # Get all the mesh belonging to an asset
+            meshTransforms = [transform for transform in MC.ls(extraCharPropSSAsset + ":*", type="transform")]  
+            """ you can't work directly on namespaces and meshes!!!
+                ALEMBIC destroys mesh namespaces... """    
+            # Detect the meshTransforms
+            for meshTransform in meshTransforms:
+                meshes = MC.listRelatives(meshTransform, shapes=True, noIntermediate=True, fullPath=True) or []
+                if len(meshes) > 0 and MC.nodeType(meshes[0]) == "mesh":
+                    mesh = meshes[0]
+                    isValid = True
+                    for tag in excludedMeshes:
+                        if tag in getParent(mesh):
+                            isValid = False
+                            break
+                    if isValid:
+                        printDebug(mesh)
+
+                        # membership and override shader
+
+                        if "ss_" in extraCharPropSSAsset and "MATTE_" not in meshTransform:
+                            # for SS, only the mesh "MATTE_" has to be managed
+                            continue
+                        
+                        """ TEEPEE FIX """
+                        # If we get here, "pr_tdo01" had not the group check...
+                        # Reenable it for all its meshes except "subset_tipi"
+                        if "pr_tdo01" in extraCharPropSSAsset: 
+                            if getGroupFromAsset(extraCharPropSSAsset) != getGroupFromAsset(asset):
+                                # Different group
+                                if "subset_tipi" in meshTransform:
+                                    # Different groups but it's its SS component... valid 
+                                    teepeeDebugPrint("Asset: " + asset + ", extra: " + extraCharPropSSAsset + "... mesh: " + meshTransform) 
+                                    teepeeDebugPrint("it's a SS part, but different grouping: MASK IT!\n")
+                                    pass
+                                else:
+                                    # Different groups and standard PR mesh; skip it
+                                    teepeeDebugPrint("Asset: " + asset + ", extra: " + extraCharPropSSAsset + "... mesh: " + meshTransform) 
+                                    teepeeDebugPrint("it's a PR part, but different grouping: SKIPPED!\n")
+                                    continue    
+
+                        if asset == extraCharPropSSAsset and "subset_tipi" not in meshTransform:
+                            # Asset merging with himself!
+                            # Obly exception: pr_tdo01... and only "subset_tipi" has to be moved
+                            teepeeDebugPrint("Asset: " + asset + ", extra: " + extraCharPropSSAsset + "... mesh: " + meshTransform) 
+                            teepeeDebugPrint("Only 'subsetTipi' needs some work: SKIPPED!\n")
+                            continue
+
+                        """ APPARENTLY, everything is fine for 'pr_tdo02', grouping has been disabled and all its meshes are SS """
+                        """ TEEPEE FIX END """
+
+                        MC.editRenderLayerMembers(colorLightLayer, getParent(mesh), noRecurse=True)
+                        MC.sets(mesh, edit=True, forceElement="matteNoAlpha_COLOR_LIGHT_SG") # We are on the proper layer, so this is an override
+
+        progressBarIncrement() 
+        printLog("RenderLayer 'COLOR_LIGHT' built for asset '" + asset + "'", "SUCCESS")
+
+    progressBarHide()
+
+    MC.editRenderLayerGlobals(currentRenderLayer="defaultRenderLayer")
+
+
+
+def __OLDVERSION_OLDVERSION_postApplyDump_manageCOLOR_LIGHTLayers(*args):
     """
     NEW VERSION
      - For each asset, add ONLY meshes of other assets of the same group!
@@ -4602,9 +5253,6 @@ def applyRenderingSmoothToMesh(mesh, smoothLevel):
 #======================================================================
 ALEMBIC_DEBUG = False
 
-def getIObjectFromName(name, IRoot):
-    return checkAndTraverse(IRoot, name)
-
 def traverseXForms(IObject, dataToDump):
     floatingPointLimit = 1e-11 
     metaData= IObject.getMetaData()
@@ -4668,7 +5316,7 @@ def traverseXForms(IObject, dataToDump):
     for IObjectChild in IObject.children:
         traverseXForms(IObjectChild, dataToDump)
 
-def save3DsMaxData(*args):
+def __OLDVERSION_save3DsMaxData(*args):
     printLog("")
     printLog("SAVING DATA FOR 3DSMAX")
 
@@ -4834,6 +5482,234 @@ def save3DsMaxData(*args):
     
 
     inViewMessage(message="'_DATAFOR3DSMAX.txt' successfully saved!", position="topLeft", time=2000, status="SUCCESS")
+
+def save3DsMaxData(*args):
+    printLog("")
+    printLog("SAVING DATA FOR 3DSMAX")
+
+
+    dataFor3DSMax = {}
+
+
+
+    #---------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
+    # ALEMBICS
+    #---------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
+    alembicPaths = set()
+
+    # Here we cheat, gather all exocortex node and recover the file info
+    exoNodes = MC.ls(type="ExocortexAlembicFile")
+
+    for exoNode in exoNodes:
+        
+        # Avoid "ExocortexAlembicFile" parasites by checking output connections
+        connections = MC.listConnections(exoNode + ".outFileName", source=False, destination=True) or []
+        print "\nOUTPUT CONNECTIONS ", exoNode, " --> ", len(connections)
+        if len(connections) == 0:
+            # PARASITE: skip it
+            print "PARASITE: skipped!!!"
+            continue
+
+        fileNameRaw = MC.getAttr(exoNode + ".fileName")
+        print "EXONODE: ", exoNode, "\nFILERAW: ", fileNameRaw
+        # the fucking $PROD_SERVER tag
+        if "$PROD_SERVER" in fileNameRaw: 
+            fileNameClean = fileNameRaw.replace("$PROD_SERVER", "Y:")
+        else: 
+            fileNameClean = fileNameRaw    
+        print fileNameClean 
+
+        tokens = fileNameClean.split("\\")
+        # we need only CH and PR, nothing more
+        if "_ch_" in tokens[-1] or "_pr_" in tokens[-1]:
+            alembicPaths.add(fileNameClean)
+
+    alembicPaths = list(alembicPaths) 
+
+    # now perform a recursion and store the results in a dictionary
+    dataToDump = {}    
+    progressBarInitialize(len(alembicPaths))
+    for alembicPath in alembicPaths:
+        alembicName = (alembicPath.split("/"))[-1]
+        printLog("EXTRACTING SCALE FROM ALEMBIC: " + alembicName)
+        print "ALEMBIC FILE = ", alembicPath
+        printLog("")
+
+        try:
+            IRoot = AL.Abc.IArchive(str(alembicPath)).getTop()        
+        except Exception as error:
+            fatality("ALEMBIC I/O ERROR: can't open the \".abc\" file (bad naming or missing)\nNODE = " + exoNode + "\nPATH = " + alembicPath)
+                    
+        traverseXForms(IRoot, dataToDump)
+        progressBarIncrement()
+    progressBarHide()    
+
+    # dataToDump is ready to be "dumped"...
+    dataFor3DSMax["scaleData"] = dataToDump
+
+
+
+    #----------------------------------------------------
+    #----------------------------------------------------
+    # "PURE" TRANSFORM VISIBILITY
+    #----------------------------------------------------
+    #----------------------------------------------------
+    printLog("CHECKING \"PURE TRANSFORMS\" VISIBILITY ANIMATION")
+
+    dataFor3DSMax["pureTransformVisibility"] = {}
+
+    allTransforms = MC.ls(type="transform")
+    pureTransforms ={}
+    for transform in allTransforms:
+        shapes = MC.listRelatives(transform, shapes=True) or []
+        if len(shapes) == 0:
+            # It's a pureTransform
+            pureTransforms[transform] = []
+
+    startTime = int(MC.playbackOptions(query=True, minTime=True)) 
+    endTime   = int(MC.playbackOptions(query=True, maxTime=True))
+    
+    try:
+        MM.eval("paneLayout -e -manage false $gMainPane") 
+        progressBarInitialize(endTime - startTime)
+
+        for time in range(startTime, endTime + 1):
+            for transform in pureTransforms:
+                MC.currentTime(time, update=True)
+                pureTransforms[transform].append(int(MC.getAttr(transform + ".visibility")))
+            progressBarIncrement()
+    
+    finally:
+        MM.eval("paneLayout -e -manage true $gMainPane")
+        progressBarHide()    
+
+    for x in pureTransforms:
+        temp = set(pureTransforms[x])
+        if len(temp) > 1:
+            # It's animated, save it
+            dataFor3DSMax["pureTransformVisibility"][x] = pureTransforms[x]
+    
+    # Simply delete the key if no pureTransforms' vis animation was found 
+    if len(dataFor3DSMax["pureTransformVisibility"]) == 0:
+        del dataFor3DSMax["pureTransformVisibility"]
+     
+
+    #----------------------------------------------------
+    #----------------------------------------------------
+    # SCENE DATA
+    #----------------------------------------------------
+    #----------------------------------------------------
+    dataFor3DSMax["imageSize"] = [MC.getAttr("defaultResolution.width"), 
+                                  MC.getAttr("defaultResolution.height")]
+
+    episode, shot = getProperEpisodeShotName()
+    if None not in (episode, shot):
+        cameraType = getShotCameraType_shotGun(episode, "sh" + shot)
+        try:
+            cameraName = MC.ls("*camera" + cameraType, recursive=True)[0]
+        except:
+            fatality("Can't find the proper camera!")
+        dataFor3DSMax["cameraName"] = cameraName # naming convention ("YKR405", "sh012")                               
+    else:
+        dataFor3DSMax["cameraName"] = None   
+
+
+
+    #----------------------------------------------------
+    #----------------------------------------------------
+    # SMOOTHNESS
+    #----------------------------------------------------
+    #----------------------------------------------------
+    dataFor3DSMax["renderingSmoothness"] = {}
+
+    meshes = MC.ls(type="mesh", noIntermediate=True, long=True, visible=True) or [] # not really necessary here; LS returns not None, but []
+    progressBarInitialize(numberOfTasks=len(meshes))
+
+    for mesh in meshes:
+        smoothness = MC.getAttr(mesh + ".renderSmoothLevel")
+        parent = MC.listRelatives(mesh, parent=True, path=False)[0] # should return the "minimal" path required
+        dataFor3DSMax["renderingSmoothness"][parent] = smoothness
+        progressBarIncrement()
+    progressBarHide()  
+
+    
+    if len(meshes) == 0:
+        # nothing to do , return
+        printLog("No valid mesh found!", "NULL")
+        return
+    
+    # DEBUG
+    #pprint(dataFor3DSMax["renderingSmoothness"])
+    
+
+    pprint(dataFor3DSMax)
+    return
+    
+    #------------------------------------------------------
+    #------------------------------------------------------
+    # NOW SAVE 
+    #------------------------------------------------------  
+    #------------------------------------------------------
+    
+    # The name of the .txt has to be like this:
+    #  "YKR405_012_DATAFOR3DSMAX.txt"
+    #  "YKR405_012B_DATAFOR3DSMAX.txt"
+    #  "YKR405_012_B_DATAFOR3DSMAX.txt"
+
+    episode, shot = getProperEpisodeShotName()
+
+
+
+    if None not in (episode, shot):
+        # Scene name is valid
+        shortDumpName = episode + "_" + shot + "_DATAFOR3DSMAX.txt"
+        path = "Y:\\01_SAISON_4\\09_EPISODES\\04_Fabrication_3D\\" + episode + "\\sh" + shot + "\\lit\\"
+
+        #00;print "episode, shot == ", episode, shot
+        #00;print "shortDumpName == ", shortDumpName
+        #00;print "path == ", path
+        
+        # Delete all files with the "_DATAFOR3DSMAX.tx" tag; then write a new one
+        items = OS.listdir(path) 
+        for item in items:
+            if "_DATAFOR3DSMAX" in item:
+                try:
+                    OS.remove(path + item)
+                except Exception as exc:
+                    fatality("Can't delete the file '" + item + "'!\nCan't proceed, sorry!")
+
+        dumpName = path + shortDumpName
+        fileHandle = None
+        try:
+            serialized = JSON.dumps(dataFor3DSMax, indent=2)
+            fileHandle = open(dumpName, "w")
+            fileHandle.write(serialized)
+            printLog("'" + shortDumpName + "' written in folder:\n                      " + cutInHalfString(path)[0] + "\n                      " + cutInHalfString(path)[1], "SUCCESS")
+        except Exception as e:
+            fatality("Can't save dump, sorry!\n" + str(e))
+        finally:
+            if fileHandle != None:
+                fileHandle.close()        
+
+    else:
+        fatality("This scene has not a valid name; can't save dump, sorry!")
+    
+
+    inViewMessage(message="'_DATAFOR3DSMAX.txt' successfully saved!", position="topLeft", time=2000, status="SUCCESS")
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
