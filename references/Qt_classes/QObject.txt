@@ -1,0 +1,59 @@
+Content of object [PySide.QtCore.QObject]
+                     __class__ <type 'Shiboken.ObjectType'>
+                   __delattr__ <slot wrapper '__delattr__' of 'PySide.QtCore.QObject' objects>
+                      __dict__ too long...
+                       __doc__ None
+                    __format__ <method '__format__' of 'object' objects>
+              __getattribute__ <slot wrapper '__getattribute__' of 'PySide.QtCore.QObject' objects>
+                      __hash__ <slot wrapper '__hash__' of 'object' objects>
+                      __init__ <slot wrapper '__init__' of 'PySide.QtCore.QObject' objects>
+                       __new__ <built-in method __new__ of Shiboken.ObjectType object at 0x000007FEECCBE170>
+                    __reduce__ <method '__reduce__' of 'object' objects>
+                 __reduce_ex__ <method '__reduce_ex__' of 'object' objects>
+                      __repr__ <slot wrapper '__repr__' of 'object' objects>
+                   __setattr__ <slot wrapper '__setattr__' of 'PySide.QtCore.QObject' objects>
+                    __sizeof__ <method '__sizeof__' of 'object' objects>
+                       __str__ <slot wrapper '__str__' of 'object' objects>
+              __subclasshook__ <built-in method __subclasshook__ of Shiboken.ObjectType object at 0x000007FEECCBE170>
+                  blockSignals <method 'blockSignals' of 'PySide.QtCore.QObject' objects>
+                    childEvent <method 'childEvent' of 'PySide.QtCore.QObject' objects>
+                      children <method 'children' of 'PySide.QtCore.QObject' objects>
+                       connect <built-in function connect>
+                 connectNotify <method 'connectNotify' of 'PySide.QtCore.QObject' objects>
+                   customEvent <method 'customEvent' of 'PySide.QtCore.QObject' objects>
+                   deleteLater <method 'deleteLater' of 'PySide.QtCore.QObject' objects>
+                     destroyed destroyed()
+                    disconnect <built-in function disconnect>
+              disconnectNotify <method 'disconnectNotify' of 'PySide.QtCore.QObject' objects>
+                dumpObjectInfo <method 'dumpObjectInfo' of 'PySide.QtCore.QObject' objects>
+                dumpObjectTree <method 'dumpObjectTree' of 'PySide.QtCore.QObject' objects>
+          dynamicPropertyNames <method 'dynamicPropertyNames' of 'PySide.QtCore.QObject' objects>
+                          emit <method 'emit' of 'PySide.QtCore.QObject' objects>
+                         event <method 'event' of 'PySide.QtCore.QObject' objects>
+                   eventFilter <method 'eventFilter' of 'PySide.QtCore.QObject' objects>
+                     findChild <method 'findChild' of 'PySide.QtCore.QObject' objects>
+                  findChildren <method 'findChildren' of 'PySide.QtCore.QObject' objects>
+                      inherits <method 'inherits' of 'PySide.QtCore.QObject' objects>
+            installEventFilter <method 'installEventFilter' of 'PySide.QtCore.QObject' objects>
+                  isWidgetType <method 'isWidgetType' of 'PySide.QtCore.QObject' objects>
+                     killTimer <method 'killTimer' of 'PySide.QtCore.QObject' objects>
+                    metaObject <method 'metaObject' of 'PySide.QtCore.QObject' objects>
+                  moveToThread <method 'moveToThread' of 'PySide.QtCore.QObject' objects>
+                    objectName <method 'objectName' of 'PySide.QtCore.QObject' objects>
+                        parent <method 'parent' of 'PySide.QtCore.QObject' objects>
+                      property <method 'property' of 'PySide.QtCore.QObject' objects>
+                     receivers <method 'receivers' of 'PySide.QtCore.QObject' objects>
+              registerUserData <built-in function registerUserData>
+             removeEventFilter <method 'removeEventFilter' of 'PySide.QtCore.QObject' objects>
+                        sender <method 'sender' of 'PySide.QtCore.QObject' objects>
+             senderSignalIndex <method 'senderSignalIndex' of 'PySide.QtCore.QObject' objects>
+                 setObjectName <method 'setObjectName' of 'PySide.QtCore.QObject' objects>
+                     setParent <method 'setParent' of 'PySide.QtCore.QObject' objects>
+                   setProperty <method 'setProperty' of 'PySide.QtCore.QObject' objects>
+                signalsBlocked <method 'signalsBlocked' of 'PySide.QtCore.QObject' objects>
+                    startTimer <method 'startTimer' of 'PySide.QtCore.QObject' objects>
+              staticMetaObject <PySide.QtCore.QMetaObject object at 0x000000002A52AE48>
+                        thread <method 'thread' of 'PySide.QtCore.QObject' objects>
+                    timerEvent <method 'timerEvent' of 'PySide.QtCore.QObject' objects>
+                            tr <method 'tr' of 'PySide.QtCore.QObject' objects>
+                        trUtf8 <method 'trUtf8' of 'PySide.QtCore.QObject' objects>

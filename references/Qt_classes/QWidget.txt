@@ -1,0 +1,333 @@
+Content of object [PySide.QtGui.QWidget]
+                DrawChildren  PySide.QtGui.QWidget.RenderFlag.DrawChildren
+          DrawWindowBackground  PySide.QtGui.QWidget.RenderFlag.DrawWindowBackground
+                    IgnoreMask  PySide.QtGui.QWidget.RenderFlag.IgnoreMask
+             PaintDeviceMetric  <type 'PySide.QtGui.QPaintDevice.PaintDeviceMetric'>
+                      PdmDepth  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmDepth
+                       PdmDpiX  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmDpiX
+                       PdmDpiY  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmDpiY
+                     PdmHeight  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmHeight
+                   PdmHeightMM  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmHeightMM
+                  PdmNumColors  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmNumColors
+               PdmPhysicalDpiX  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmPhysicalDpiX
+               PdmPhysicalDpiY  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmPhysicalDpiY
+                      PdmWidth  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmWidth
+                    PdmWidthMM  PySide.QtGui.QPaintDevice.PaintDeviceMetric.PdmWidthMM
+                    RenderFlag  <type 'PySide.QtGui.QWidget.RenderFlag'>
+                   RenderFlags  <type 'RenderFlags'>
+                     __class__  <type 'Shiboken.ObjectType'>
+                   __delattr__  <slot wrapper '__delattr__' of 'PySide.QtCore.QObject' objects>
+                      __dict__  too long...
+                       __doc__  None
+                    __format__  <method '__format__' of 'object' objects>
+              __getattribute__  <slot wrapper '__getattribute__' of 'PySide.QtCore.QObject' objects>
+                      __hash__  <slot wrapper '__hash__' of 'object' objects>
+                      __init__  <slot wrapper '__init__' of 'PySide.QtGui.QWidget' objects>
+                       __new__  <built-in method __new__ of Shiboken.ObjectType object at 0x000007FEEC8F6D40>
+                    __reduce__  <method '__reduce__' of 'object' objects>
+                 __reduce_ex__  <method '__reduce_ex__' of 'object' objects>
+                      __repr__  <slot wrapper '__repr__' of 'object' objects>
+                   __setattr__  <slot wrapper '__setattr__' of 'PySide.QtCore.QObject' objects>
+                    __sizeof__  <method '__sizeof__' of 'object' objects>
+                       __str__  <slot wrapper '__str__' of 'object' objects>
+              __subclasshook__  <built-in method __subclasshook__ of Shiboken.ObjectType object at 0x000007FEEC8F6D40>
+                   acceptDrops  <method 'acceptDrops' of 'PySide.QtGui.QWidget' objects>
+         accessibleDescription  <method 'accessibleDescription' of 'PySide.QtGui.QWidget' objects>
+                accessibleName  <method 'accessibleName' of 'PySide.QtGui.QWidget' objects>
+                   actionEvent  <method 'actionEvent' of 'PySide.QtGui.QWidget' objects>
+                       actions  <method 'actions' of 'PySide.QtGui.QWidget' objects>
+                activateWindow  <method 'activateWindow' of 'PySide.QtGui.QWidget' objects>
+                     addAction  <method 'addAction' of 'PySide.QtGui.QWidget' objects>
+                    addActions  <method 'addActions' of 'PySide.QtGui.QWidget' objects>
+                    adjustSize  <method 'adjustSize' of 'PySide.QtGui.QWidget' objects>
+            autoFillBackground  <method 'autoFillBackground' of 'PySide.QtGui.QWidget' objects>
+                backgroundRole  <method 'backgroundRole' of 'PySide.QtGui.QWidget' objects>
+                      baseSize  <method 'baseSize' of 'PySide.QtGui.QWidget' objects>
+                  blockSignals  <method 'blockSignals' of 'PySide.QtCore.QObject' objects>
+                   changeEvent  <method 'changeEvent' of 'PySide.QtGui.QWidget' objects>
+                       childAt  <method 'childAt' of 'PySide.QtGui.QWidget' objects>
+                    childEvent  <method 'childEvent' of 'PySide.QtCore.QObject' objects>
+                      children  <method 'children' of 'PySide.QtCore.QObject' objects>
+                  childrenRect  <method 'childrenRect' of 'PySide.QtGui.QWidget' objects>
+                childrenRegion  <method 'childrenRegion' of 'PySide.QtGui.QWidget' objects>
+                    clearFocus  <method 'clearFocus' of 'PySide.QtGui.QWidget' objects>
+                     clearMask  <method 'clearMask' of 'PySide.QtGui.QWidget' objects>
+                         close  <method 'close' of 'PySide.QtGui.QWidget' objects>
+                    closeEvent  <method 'closeEvent' of 'PySide.QtGui.QWidget' objects>
+                    colorCount  <method 'colorCount' of 'PySide.QtGui.QPaintDevice' objects>
+                       connect  <built-in function connect>
+                 connectNotify  <method 'connectNotify' of 'PySide.QtCore.QObject' objects>
+               contentsMargins  <method 'contentsMargins' of 'PySide.QtGui.QWidget' objects>
+                  contentsRect  <method 'contentsRect' of 'PySide.QtGui.QWidget' objects>
+              contextMenuEvent  <method 'contextMenuEvent' of 'PySide.QtGui.QWidget' objects>
+             contextMenuPolicy  <method 'contextMenuPolicy' of 'PySide.QtGui.QWidget' objects>
+                   createWinId  <method 'createWinId' of 'PySide.QtGui.QWidget' objects>
+                        cursor  <method 'cursor' of 'PySide.QtGui.QWidget' objects>
+    customContextMenuRequested  customContextMenuRequested(QPoint)
+                   customEvent  <method 'customEvent' of 'PySide.QtCore.QObject' objects>
+                   deleteLater  <method 'deleteLater' of 'PySide.QtCore.QObject' objects>
+                         depth  <method 'depth' of 'PySide.QtGui.QPaintDevice' objects>
+                       destroy  <method 'destroy' of 'PySide.QtGui.QWidget' objects>
+                     destroyed  destroyed()
+                       devType  <method 'devType' of 'PySide.QtGui.QWidget' objects>
+                    disconnect  <built-in function disconnect>
+              disconnectNotify  <method 'disconnectNotify' of 'PySide.QtCore.QObject' objects>
+                dragEnterEvent  <method 'dragEnterEvent' of 'PySide.QtGui.QWidget' objects>
+                dragLeaveEvent  <method 'dragLeaveEvent' of 'PySide.QtGui.QWidget' objects>
+                 dragMoveEvent  <method 'dragMoveEvent' of 'PySide.QtGui.QWidget' objects>
+                     dropEvent  <method 'dropEvent' of 'PySide.QtGui.QWidget' objects>
+                dumpObjectInfo  <method 'dumpObjectInfo' of 'PySide.QtCore.QObject' objects>
+                dumpObjectTree  <method 'dumpObjectTree' of 'PySide.QtCore.QObject' objects>
+          dynamicPropertyNames  <method 'dynamicPropertyNames' of 'PySide.QtCore.QObject' objects>
+                effectiveWinId  <method 'effectiveWinId' of 'PySide.QtGui.QWidget' objects>
+                          emit  <method 'emit' of 'PySide.QtCore.QObject' objects>
+                ensurePolished  <method 'ensurePolished' of 'PySide.QtGui.QWidget' objects>
+                    enterEvent  <method 'enterEvent' of 'PySide.QtGui.QWidget' objects>
+                         event  <method 'event' of 'PySide.QtGui.QWidget' objects>
+                   eventFilter  <method 'eventFilter' of 'PySide.QtCore.QObject' objects>
+                     findChild  <method 'findChild' of 'PySide.QtCore.QObject' objects>
+                  findChildren  <method 'findChildren' of 'PySide.QtCore.QObject' objects>
+                  focusInEvent  <method 'focusInEvent' of 'PySide.QtGui.QWidget' objects>
+                focusNextChild  <method 'focusNextChild' of 'PySide.QtGui.QWidget' objects>
+            focusNextPrevChild  <method 'focusNextPrevChild' of 'PySide.QtGui.QWidget' objects>
+                 focusOutEvent  <method 'focusOutEvent' of 'PySide.QtGui.QWidget' objects>
+                   focusPolicy  <method 'focusPolicy' of 'PySide.QtGui.QWidget' objects>
+            focusPreviousChild  <method 'focusPreviousChild' of 'PySide.QtGui.QWidget' objects>
+                    focusProxy  <method 'focusProxy' of 'PySide.QtGui.QWidget' objects>
+                   focusWidget  <method 'focusWidget' of 'PySide.QtGui.QWidget' objects>
+                          font  <method 'font' of 'PySide.QtGui.QWidget' objects>
+                      fontInfo  <method 'fontInfo' of 'PySide.QtGui.QWidget' objects>
+                   fontMetrics  <method 'fontMetrics' of 'PySide.QtGui.QWidget' objects>
+                foregroundRole  <method 'foregroundRole' of 'PySide.QtGui.QWidget' objects>
+                 frameGeometry  <method 'frameGeometry' of 'PySide.QtGui.QWidget' objects>
+                     frameSize  <method 'frameSize' of 'PySide.QtGui.QWidget' objects>
+                      geometry  <method 'geometry' of 'PySide.QtGui.QWidget' objects>
+            getContentsMargins  <method 'getContentsMargins' of 'PySide.QtGui.QWidget' objects>
+                   grabGesture  <method 'grabGesture' of 'PySide.QtGui.QWidget' objects>
+                  grabKeyboard  <method 'grabKeyboard' of 'PySide.QtGui.QWidget' objects>
+                     grabMouse  <method 'grabMouse' of 'PySide.QtGui.QWidget' objects>
+                  grabShortcut  <method 'grabShortcut' of 'PySide.QtGui.QWidget' objects>
+                graphicsEffect  <method 'graphicsEffect' of 'PySide.QtGui.QWidget' objects>
+           graphicsProxyWidget  <method 'graphicsProxyWidget' of 'PySide.QtGui.QWidget' objects>
+                      hasFocus  <method 'hasFocus' of 'PySide.QtGui.QWidget' objects>
+              hasMouseTracking  <method 'hasMouseTracking' of 'PySide.QtGui.QWidget' objects>
+                        height  <method 'height' of 'PySide.QtGui.QWidget' objects>
+                heightForWidth  <method 'heightForWidth' of 'PySide.QtGui.QWidget' objects>
+                      heightMM  <method 'heightMM' of 'PySide.QtGui.QPaintDevice' objects>
+                          hide  <method 'hide' of 'PySide.QtGui.QWidget' objects>
+                     hideEvent  <method 'hideEvent' of 'PySide.QtGui.QWidget' objects>
+                      inherits  <method 'inherits' of 'PySide.QtCore.QObject' objects>
+                  inputContext  <method 'inputContext' of 'PySide.QtGui.QWidget' objects>
+              inputMethodEvent  <method 'inputMethodEvent' of 'PySide.QtGui.QWidget' objects>
+              inputMethodHints  <method 'inputMethodHints' of 'PySide.QtGui.QWidget' objects>
+              inputMethodQuery  <method 'inputMethodQuery' of 'PySide.QtGui.QWidget' objects>
+                  insertAction  <method 'insertAction' of 'PySide.QtGui.QWidget' objects>
+                 insertActions  <method 'insertActions' of 'PySide.QtGui.QWidget' objects>
+            installEventFilter  <method 'installEventFilter' of 'PySide.QtCore.QObject' objects>
+               instanceCounter  <built-in function instanceCounter>
+     instanceOperationsCounter  <built-in function instanceOperationsCounter>
+                isActiveWindow  <method 'isActiveWindow' of 'PySide.QtGui.QWidget' objects>
+                  isAncestorOf  <method 'isAncestorOf' of 'PySide.QtGui.QWidget' objects>
+                     isEnabled  <method 'isEnabled' of 'PySide.QtGui.QWidget' objects>
+                   isEnabledTo  <method 'isEnabledTo' of 'PySide.QtGui.QWidget' objects>
+                  isFullScreen  <method 'isFullScreen' of 'PySide.QtGui.QWidget' objects>
+                      isHidden  <method 'isHidden' of 'PySide.QtGui.QWidget' objects>
+                 isLeftToRight  <method 'isLeftToRight' of 'PySide.QtGui.QWidget' objects>
+                   isMaximized  <method 'isMaximized' of 'PySide.QtGui.QWidget' objects>
+                   isMinimized  <method 'isMinimized' of 'PySide.QtGui.QWidget' objects>
+                       isModal  <method 'isModal' of 'PySide.QtGui.QWidget' objects>
+                 isRightToLeft  <method 'isRightToLeft' of 'PySide.QtGui.QWidget' objects>
+                     isVisible  <method 'isVisible' of 'PySide.QtGui.QWidget' objects>
+                   isVisibleTo  <method 'isVisibleTo' of 'PySide.QtGui.QWidget' objects>
+                  isWidgetType  <method 'isWidgetType' of 'PySide.QtCore.QObject' objects>
+                      isWindow  <method 'isWindow' of 'PySide.QtGui.QWidget' objects>
+              isWindowModified  <method 'isWindowModified' of 'PySide.QtGui.QWidget' objects>
+                 keyPressEvent  <method 'keyPressEvent' of 'PySide.QtGui.QWidget' objects>
+               keyReleaseEvent  <method 'keyReleaseEvent' of 'PySide.QtGui.QWidget' objects>
+               keyboardGrabber  <built-in function keyboardGrabber>
+                     killTimer  <method 'killTimer' of 'PySide.QtCore.QObject' objects>
+                languageChange  <method 'languageChange' of 'PySide.QtGui.QWidget' objects>
+                        layout  <method 'layout' of 'PySide.QtGui.QWidget' objects>
+               layoutDirection  <method 'layoutDirection' of 'PySide.QtGui.QWidget' objects>
+                    leaveEvent  <method 'leaveEvent' of 'PySide.QtGui.QWidget' objects>
+                        locale  <method 'locale' of 'PySide.QtGui.QWidget' objects>
+                   logicalDpiX  <method 'logicalDpiX' of 'PySide.QtGui.QPaintDevice' objects>
+                   logicalDpiY  <method 'logicalDpiY' of 'PySide.QtGui.QPaintDevice' objects>
+                         lower  <method 'lower' of 'PySide.QtGui.QWidget' objects>
+                       mapFrom  <method 'mapFrom' of 'PySide.QtGui.QWidget' objects>
+                 mapFromGlobal  <method 'mapFromGlobal' of 'PySide.QtGui.QWidget' objects>
+                 mapFromParent  <method 'mapFromParent' of 'PySide.QtGui.QWidget' objects>
+                         mapTo  <method 'mapTo' of 'PySide.QtGui.QWidget' objects>
+                   mapToGlobal  <method 'mapToGlobal' of 'PySide.QtGui.QWidget' objects>
+                   mapToParent  <method 'mapToParent' of 'PySide.QtGui.QWidget' objects>
+                          mask  <method 'mask' of 'PySide.QtGui.QWidget' objects>
+                 maximumHeight  <method 'maximumHeight' of 'PySide.QtGui.QWidget' objects>
+                   maximumSize  <method 'maximumSize' of 'PySide.QtGui.QWidget' objects>
+                  maximumWidth  <method 'maximumWidth' of 'PySide.QtGui.QWidget' objects>
+                    metaObject  <method 'metaObject' of 'PySide.QtCore.QObject' objects>
+                        metric  <method 'metric' of 'PySide.QtGui.QWidget' objects>
+                 minimumHeight  <method 'minimumHeight' of 'PySide.QtGui.QWidget' objects>
+                   minimumSize  <method 'minimumSize' of 'PySide.QtGui.QWidget' objects>
+               minimumSizeHint  <method 'minimumSizeHint' of 'PySide.QtGui.QWidget' objects>
+                  minimumWidth  <method 'minimumWidth' of 'PySide.QtGui.QWidget' objects>
+         mouseDoubleClickEvent  <method 'mouseDoubleClickEvent' of 'PySide.QtGui.QWidget' objects>
+                  mouseGrabber  <built-in function mouseGrabber>
+                mouseMoveEvent  <method 'mouseMoveEvent' of 'PySide.QtGui.QWidget' objects>
+               mousePressEvent  <method 'mousePressEvent' of 'PySide.QtGui.QWidget' objects>
+             mouseReleaseEvent  <method 'mouseReleaseEvent' of 'PySide.QtGui.QWidget' objects>
+                          move  <method 'move' of 'PySide.QtGui.QWidget' objects>
+                     moveEvent  <method 'moveEvent' of 'PySide.QtGui.QWidget' objects>
+                  moveToThread  <method 'moveToThread' of 'PySide.QtCore.QObject' objects>
+            nativeParentWidget  <method 'nativeParentWidget' of 'PySide.QtGui.QWidget' objects>
+              nextInFocusChain  <method 'nextInFocusChain' of 'PySide.QtGui.QWidget' objects>
+                normalGeometry  <method 'normalGeometry' of 'PySide.QtGui.QWidget' objects>
+                     numColors  <method 'numColors' of 'PySide.QtGui.QPaintDevice' objects>
+                    objectName  <method 'objectName' of 'PySide.QtCore.QObject' objects>
+           overrideWindowFlags  <method 'overrideWindowFlags' of 'PySide.QtGui.QWidget' objects>
+           overrideWindowState  <method 'overrideWindowState' of 'PySide.QtGui.QWidget' objects>
+                   paintEngine  <method 'paintEngine' of 'PySide.QtGui.QWidget' objects>
+                    paintEvent  <method 'paintEvent' of 'PySide.QtGui.QWidget' objects>
+                      painters  <attribute 'painters' of 'PySide.QtGui.QPaintDevice' objects>
+                paintingActive  <method 'paintingActive' of 'PySide.QtGui.QPaintDevice' objects>
+                       palette  <method 'palette' of 'PySide.QtGui.QWidget' objects>
+                        parent  <method 'parent' of 'PySide.QtCore.QObject' objects>
+                  parentWidget  <method 'parentWidget' of 'PySide.QtGui.QWidget' objects>
+                  physicalDpiX  <method 'physicalDpiX' of 'PySide.QtGui.QPaintDevice' objects>
+                  physicalDpiY  <method 'physicalDpiY' of 'PySide.QtGui.QPaintDevice' objects>
+                           pos  <method 'pos' of 'PySide.QtGui.QWidget' objects>
+          previousInFocusChain  <method 'previousInFocusChain' of 'PySide.QtGui.QWidget' objects>
+                      property  <method 'property' of 'PySide.QtCore.QObject' objects>
+                        raise_  <method 'raise_' of 'PySide.QtGui.QWidget' objects>
+                     receivers  <method 'receivers' of 'PySide.QtCore.QObject' objects>
+                          rect  <method 'rect' of 'PySide.QtGui.QWidget' objects>
+              registerUserData  <built-in function registerUserData>
+               releaseKeyboard  <method 'releaseKeyboard' of 'PySide.QtGui.QWidget' objects>
+                  releaseMouse  <method 'releaseMouse' of 'PySide.QtGui.QWidget' objects>
+               releaseShortcut  <method 'releaseShortcut' of 'PySide.QtGui.QWidget' objects>
+                  removeAction  <method 'removeAction' of 'PySide.QtGui.QWidget' objects>
+             removeEventFilter  <method 'removeEventFilter' of 'PySide.QtCore.QObject' objects>
+                        render  <method 'render' of 'PySide.QtGui.QWidget' objects>
+                       repaint  <method 'repaint' of 'PySide.QtGui.QWidget' objects>
+             resetInputContext  <method 'resetInputContext' of 'PySide.QtGui.QWidget' objects>
+                        resize  <method 'resize' of 'PySide.QtGui.QWidget' objects>
+                   resizeEvent  <method 'resizeEvent' of 'PySide.QtGui.QWidget' objects>
+               restoreGeometry  <method 'restoreGeometry' of 'PySide.QtGui.QWidget' objects>
+                  saveGeometry  <method 'saveGeometry' of 'PySide.QtGui.QWidget' objects>
+                        scroll  <method 'scroll' of 'PySide.QtGui.QWidget' objects>
+                        sender  <method 'sender' of 'PySide.QtCore.QObject' objects>
+             senderSignalIndex  <method 'senderSignalIndex' of 'PySide.QtCore.QObject' objects>
+                setAcceptDrops  <method 'setAcceptDrops' of 'PySide.QtGui.QWidget' objects>
+      setAccessibleDescription  <method 'setAccessibleDescription' of 'PySide.QtGui.QWidget' objects>
+             setAccessibleName  <method 'setAccessibleName' of 'PySide.QtGui.QWidget' objects>
+                  setAttribute  <method 'setAttribute' of 'PySide.QtGui.QWidget' objects>
+         setAutoFillBackground  <method 'setAutoFillBackground' of 'PySide.QtGui.QWidget' objects>
+             setBackgroundRole  <method 'setBackgroundRole' of 'PySide.QtGui.QWidget' objects>
+                   setBaseSize  <method 'setBaseSize' of 'PySide.QtGui.QWidget' objects>
+            setContentsMargins  <method 'setContentsMargins' of 'PySide.QtGui.QWidget' objects>
+          setContextMenuPolicy  <method 'setContextMenuPolicy' of 'PySide.QtGui.QWidget' objects>
+                     setCursor  <method 'setCursor' of 'PySide.QtGui.QWidget' objects>
+                   setDisabled  <method 'setDisabled' of 'PySide.QtGui.QWidget' objects>
+                    setEnabled  <method 'setEnabled' of 'PySide.QtGui.QWidget' objects>
+                setFixedHeight  <method 'setFixedHeight' of 'PySide.QtGui.QWidget' objects>
+                  setFixedSize  <method 'setFixedSize' of 'PySide.QtGui.QWidget' objects>
+                 setFixedWidth  <method 'setFixedWidth' of 'PySide.QtGui.QWidget' objects>
+                      setFocus  <method 'setFocus' of 'PySide.QtGui.QWidget' objects>
+                setFocusPolicy  <method 'setFocusPolicy' of 'PySide.QtGui.QWidget' objects>
+                 setFocusProxy  <method 'setFocusProxy' of 'PySide.QtGui.QWidget' objects>
+                       setFont  <method 'setFont' of 'PySide.QtGui.QWidget' objects>
+             setForegroundRole  <method 'setForegroundRole' of 'PySide.QtGui.QWidget' objects>
+                   setGeometry  <method 'setGeometry' of 'PySide.QtGui.QWidget' objects>
+             setGraphicsEffect  <method 'setGraphicsEffect' of 'PySide.QtGui.QWidget' objects>
+                     setHidden  <method 'setHidden' of 'PySide.QtGui.QWidget' objects>
+               setInputContext  <method 'setInputContext' of 'PySide.QtGui.QWidget' objects>
+           setInputMethodHints  <method 'setInputMethodHints' of 'PySide.QtGui.QWidget' objects>
+                     setLayout  <method 'setLayout' of 'PySide.QtGui.QWidget' objects>
+            setLayoutDirection  <method 'setLayoutDirection' of 'PySide.QtGui.QWidget' objects>
+                     setLocale  <method 'setLocale' of 'PySide.QtGui.QWidget' objects>
+                       setMask  <method 'setMask' of 'PySide.QtGui.QWidget' objects>
+              setMaximumHeight  <method 'setMaximumHeight' of 'PySide.QtGui.QWidget' objects>
+                setMaximumSize  <method 'setMaximumSize' of 'PySide.QtGui.QWidget' objects>
+               setMaximumWidth  <method 'setMaximumWidth' of 'PySide.QtGui.QWidget' objects>
+              setMinimumHeight  <method 'setMinimumHeight' of 'PySide.QtGui.QWidget' objects>
+                setMinimumSize  <method 'setMinimumSize' of 'PySide.QtGui.QWidget' objects>
+               setMinimumWidth  <method 'setMinimumWidth' of 'PySide.QtGui.QWidget' objects>
+              setMouseTracking  <method 'setMouseTracking' of 'PySide.QtGui.QWidget' objects>
+                 setObjectName  <method 'setObjectName' of 'PySide.QtCore.QObject' objects>
+                    setPalette  <method 'setPalette' of 'PySide.QtGui.QWidget' objects>
+                     setParent  <method 'setParent' of 'PySide.QtGui.QWidget' objects>
+                   setProperty  <method 'setProperty' of 'PySide.QtCore.QObject' objects>
+         setShortcutAutoRepeat  <method 'setShortcutAutoRepeat' of 'PySide.QtGui.QWidget' objects>
+            setShortcutEnabled  <method 'setShortcutEnabled' of 'PySide.QtGui.QWidget' objects>
+              setSizeIncrement  <method 'setSizeIncrement' of 'PySide.QtGui.QWidget' objects>
+                 setSizePolicy  <method 'setSizePolicy' of 'PySide.QtGui.QWidget' objects>
+                  setStatusTip  <method 'setStatusTip' of 'PySide.QtGui.QWidget' objects>
+                      setStyle  <method 'setStyle' of 'PySide.QtGui.QWidget' objects>
+                 setStyleSheet  <method 'setStyleSheet' of 'PySide.QtGui.QWidget' objects>
+                   setTabOrder  <built-in function setTabOrder>
+                    setToolTip  <method 'setToolTip' of 'PySide.QtGui.QWidget' objects>
+             setUpdatesEnabled  <method 'setUpdatesEnabled' of 'PySide.QtGui.QWidget' objects>
+                    setVisible  <method 'setVisible' of 'PySide.QtGui.QWidget' objects>
+                  setWhatsThis  <method 'setWhatsThis' of 'PySide.QtGui.QWidget' objects>
+             setWindowFilePath  <method 'setWindowFilePath' of 'PySide.QtGui.QWidget' objects>
+                setWindowFlags  <method 'setWindowFlags' of 'PySide.QtGui.QWidget' objects>
+                 setWindowIcon  <method 'setWindowIcon' of 'PySide.QtGui.QWidget' objects>
+             setWindowIconText  <method 'setWindowIconText' of 'PySide.QtGui.QWidget' objects>
+             setWindowModality  <method 'setWindowModality' of 'PySide.QtGui.QWidget' objects>
+             setWindowModified  <method 'setWindowModified' of 'PySide.QtGui.QWidget' objects>
+              setWindowOpacity  <method 'setWindowOpacity' of 'PySide.QtGui.QWidget' objects>
+                 setWindowRole  <method 'setWindowRole' of 'PySide.QtGui.QWidget' objects>
+                setWindowState  <method 'setWindowState' of 'PySide.QtGui.QWidget' objects>
+                setWindowTitle  <method 'setWindowTitle' of 'PySide.QtGui.QWidget' objects>
+                          show  <method 'show' of 'PySide.QtGui.QWidget' objects>
+                     showEvent  <method 'showEvent' of 'PySide.QtGui.QWidget' objects>
+                showFullScreen  <method 'showFullScreen' of 'PySide.QtGui.QWidget' objects>
+                 showMaximized  <method 'showMaximized' of 'PySide.QtGui.QWidget' objects>
+                 showMinimized  <method 'showMinimized' of 'PySide.QtGui.QWidget' objects>
+                    showNormal  <method 'showNormal' of 'PySide.QtGui.QWidget' objects>
+                signalsBlocked  <method 'signalsBlocked' of 'PySide.QtCore.QObject' objects>
+                          size  <method 'size' of 'PySide.QtGui.QWidget' objects>
+                      sizeHint  <method 'sizeHint' of 'PySide.QtGui.QWidget' objects>
+                 sizeIncrement  <method 'sizeIncrement' of 'PySide.QtGui.QWidget' objects>
+                    sizePolicy  <method 'sizePolicy' of 'PySide.QtGui.QWidget' objects>
+                    stackUnder  <method 'stackUnder' of 'PySide.QtGui.QWidget' objects>
+                    startTimer  <method 'startTimer' of 'PySide.QtCore.QObject' objects>
+              staticMetaObject  <PySide.QtCore.QMetaObject object at 0x000000002AAF0288>
+                     statusTip  <method 'statusTip' of 'PySide.QtGui.QWidget' objects>
+                         style  <method 'style' of 'PySide.QtGui.QWidget' objects>
+                    styleSheet  <method 'styleSheet' of 'PySide.QtGui.QWidget' objects>
+                   tabletEvent  <method 'tabletEvent' of 'PySide.QtGui.QWidget' objects>
+                 testAttribute  <method 'testAttribute' of 'PySide.QtGui.QWidget' objects>
+                        thread  <method 'thread' of 'PySide.QtCore.QObject' objects>
+                    timerEvent  <method 'timerEvent' of 'PySide.QtCore.QObject' objects>
+                       toolTip  <method 'toolTip' of 'PySide.QtGui.QWidget' objects>
+                            tr  <method 'tr' of 'PySide.QtCore.QObject' objects>
+                        trUtf8  <method 'trUtf8' of 'PySide.QtCore.QObject' objects>
+                    underMouse  <method 'underMouse' of 'PySide.QtGui.QWidget' objects>
+                 ungrabGesture  <method 'ungrabGesture' of 'PySide.QtGui.QWidget' objects>
+                   unsetCursor  <method 'unsetCursor' of 'PySide.QtGui.QWidget' objects>
+          unsetLayoutDirection  <method 'unsetLayoutDirection' of 'PySide.QtGui.QWidget' objects>
+                   unsetLocale  <method 'unsetLocale' of 'PySide.QtGui.QWidget' objects>
+                        update  <method 'update' of 'PySide.QtGui.QWidget' objects>
+                updateGeometry  <method 'updateGeometry' of 'PySide.QtGui.QWidget' objects>
+              updateMicroFocus  <method 'updateMicroFocus' of 'PySide.QtGui.QWidget' objects>
+                updatesEnabled  <method 'updatesEnabled' of 'PySide.QtGui.QWidget' objects>
+                 visibleRegion  <method 'visibleRegion' of 'PySide.QtGui.QWidget' objects>
+                     whatsThis  <method 'whatsThis' of 'PySide.QtGui.QWidget' objects>
+                    wheelEvent  <method 'wheelEvent' of 'PySide.QtGui.QWidget' objects>
+                         width  <method 'width' of 'PySide.QtGui.QWidget' objects>
+                       widthMM  <method 'widthMM' of 'PySide.QtGui.QPaintDevice' objects>
+                      winEvent  <method 'winEvent' of 'PySide.QtGui.QWidget' objects>
+                         winId  <method 'winId' of 'PySide.QtGui.QWidget' objects>
+                        window  <method 'window' of 'PySide.QtGui.QWidget' objects>
+                windowFilePath  <method 'windowFilePath' of 'PySide.QtGui.QWidget' objects>
+                   windowFlags  <method 'windowFlags' of 'PySide.QtGui.QWidget' objects>
+                    windowIcon  <method 'windowIcon' of 'PySide.QtGui.QWidget' objects>
+                windowIconText  <method 'windowIconText' of 'PySide.QtGui.QWidget' objects>
+                windowModality  <method 'windowModality' of 'PySide.QtGui.QWidget' objects>
+                 windowOpacity  <method 'windowOpacity' of 'PySide.QtGui.QWidget' objects>
+                    windowRole  <method 'windowRole' of 'PySide.QtGui.QWidget' objects>
+                   windowState  <method 'windowState' of 'PySide.QtGui.QWidget' objects>
+                   windowTitle  <method 'windowTitle' of 'PySide.QtGui.QWidget' objects>
+                    windowType  <method 'windowType' of 'PySide.QtGui.QWidget' objects>
+                             x  <method 'x' of 'PySide.QtGui.QWidget' objects>
+                             y  <method 'y' of 'PySide.QtGui.QWidget' objects>
