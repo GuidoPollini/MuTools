@@ -186,60 +186,58 @@ class Color(object):
                      self.RGB[2] + otherColor[2])          
    
 
-              
-class Button(QG.QPushButton):
-    def __init__(self, name=None, parent=None, text="...", 
-                       click_callback=None, baseColor=Color(100, 100, 100)):
-        super(Button, self).__init__(parent=parent)
-        if name:
-            self.setObjectName(name)
+
+class PushButton(QG.QPushButton):
+    def __init__(self, text='',
+                       fontSize=20,
+                       baseColor=Color(98, 98, 98),
+                       fixedWidth=None,
+                       fixedHeight=None,
+                       clicked_slot=None, 
+                       parentObject=None):
+
+        super(PushButton, self).__init__()
         self.setText(text)
         self.setCursor(QC.Qt.PointingHandCursor)
-        if click_callback:
-            print "connected"
-            self.clicked.connect(click_callback)
-        hoverColor   = baseColor + [30, 30, 30]
-        pressedColor = baseColor + [80, 80, 80]
-        styleSheet = """
-            QPushButton{
-                margin: 0px;
-                padding: 0px;
-                font-size: 20px; 
-                border-radius: """ + str(int(self.height()/2.0)) + """px; 
-                background-color: """ + str(baseColor) + """;
-            }
-            
-            QPushButton:hover{
-                background-color: """ + str(hoverColor) + """;
-            }      
-            
-            QPushButton:pressed{
-                background-color: """ + str(pressedColor) + """;
-                padding: 0px;
-            }
-        """            
 
-        # ==> ALTERNATIVE <==
-
+        hoverColor   = baseColor + [20, 20, 20]
+        pressedColor = baseColor + [40, 40, 40]
+       
         styleSheet = """
             QPushButton{{
                 margin: 0px;
                 padding: 0px;
-                font-size: 20px; 
+                font-size: {fontSize}px; 
                 border-radius: {borderRadius}px; 
-                background-color: {baseColor};
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(98, 98, 98),  stop:1.0 rgb(94, 94, 94));
+                border-style: outset;
+                border-width: 1px;
+                border-color: rgb(35, 35, 35);
             }}
             
             QPushButton:hover{{
-                background-color: {hoverColor};
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(110, 130, 180), stop:0.2 rgb(110, 110, 110),  stop:1.0 rgb(98, 98, 98));
             }}      
             
             QPushButton:pressed{{
-                background-color: {pressedColor};
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(110, 150, 200), stop:0.2 rgb(130, 130, 130),  stop:1.0 rgb(110, 110, 110));
                 padding: 0px;
             }}
-        """.format(borderRadius=12, baseColor=baseColor, hoverColor=hoverColor, pressedColor=pressedColor)        
+        """.format(fontSize=fontSize, borderRadius=4, baseColor=baseColor, hoverColor=hoverColor, pressedColor=pressedColor)     
+
         self.setStyleSheet(styleSheet)
+
+        if fixedWidth:
+            self.setFixedWidth(fixedWidth)
+
+        if fixedHeight:
+            self.setFixedHeight(fixedHeight)
+
+        if clicked_slot:
+            self.clicked.connect(clicked_slot)
+
+        if parentObject:
+            parentObject.addWidget(self)
 
 
 
@@ -247,14 +245,14 @@ class CheckBox(QG.QCheckBox):
     def __init__(self, text='',
                        initialChecked=False,
                        stateChanged_slot=None,
-                       parentLayout=None):
+                       parentObject=None):
 
         super(CheckBox, self).__init__(text)
         self.setChecked(initialChecked)
         self.setCursor(QC.Qt.PointingHandCursor) # It's clickable:)       
 
-        if parentLayout:
-            parentLayout.addWidget(self)
+        if parentObject:
+            parentObject.addWidget(self)
 
         if stateChanged_slot:
             self.stateChanged.connect(stateChanged_slot)
@@ -263,13 +261,15 @@ class CheckBox(QG.QCheckBox):
 
 class LabelComboBox(QG.QWidget):
     """
-    A simple [QLabel|QComboBox]
+    |QLabel QComboBox|
     """
     def __init__(self, text='', 
                        itemList=[], 
                        align='left', 
+                       comboBoxFixedWidth=None,
+                       labelFixedWidth=None,
                        currentIndexChanged_slot=None, 
-                       parentLayout=None):
+                       parentObject=None):
 
         super(LabelComboBox, self).__init__()
 
@@ -278,7 +278,9 @@ class LabelComboBox(QG.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         comboBox = QG.QComboBox()
-        comboBox.setCursor(QC.Qt.PointingHandCursor) # It's clickable:)        
+        comboBox.setCursor(QC.Qt.PointingHandCursor) # It's clickable:)  
+        if comboBoxFixedWidth:
+            comboBox.setFixedWidth(comboBoxFixedWidth)
         comboBox.addItems(itemList)
 
 
@@ -289,6 +291,8 @@ class LabelComboBox(QG.QWidget):
                           'right':  QC.Qt.AlignRight
         }
         label.setAlignment(possibleAligns[align])
+        if labelFixedWidth:
+            label.setFixedWidth(labelFixedWidth)
         layout.addWidget(comboBox)
         
         # Attach to the object
@@ -301,8 +305,8 @@ class LabelComboBox(QG.QWidget):
             self.comboBox.currentIndexChanged[str].connect(currentIndexChanged_slot)
 
         # Add to a layout
-        if parentLayout:
-            parentLayout.addWidget(self)
+        if parentObject:
+            parentObject.addWidget(self)
 
 
 
@@ -319,6 +323,59 @@ class LabelComboBox(QG.QWidget):
         print 'closeEvent for', self
         event.accept()
 
+
+class Log(QG.QGroupBox):
+    """
+    |   QLabel   |
+    |QTextBrowser|
+    """
+
+    def __init__(self, title='...', 
+                       parentObject=None):
+        super(Log, self).__init__()
+        self.setTitle('Log')   
+        self.setStyleSheet("""
+            color:rgb(140,140,140);
+            font-size: 12px;
+        """)
+
+        layout = QG.QVBoxLayout(self)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.textEdit = QG.QTextEdit()
+        self.textEdit.setAcceptRichText(True)
+        self.textEdit.setReadOnly(True)
+        self.textEdit.setStyleSheet("""
+            background-color: rgb(48, 48, 48);
+            color:rgb(200,200,200);
+            font-size: 13px;
+        """)
+        self.textEdit.setText('Ready to go...')
+
+        layout.addWidget(self.textEdit)
+
+        if parentObject:
+            parentObject.addWidget(self) 
+    
+    def _appendText(self, message):
+        message += ""
+        self.textEdit.append(message)
+
+    def normal(self, message):
+        self.textEdit.append(message)
+
+    def success(self, message):
+        message = '<b><font color="#CCFFCC">Success </font></b><font color="#AAFFAA">' + message + '</font>'
+        self.textEdit.append(message)
+
+    def warning(self, message):
+        message = '<b><font color="#FFFFCC">Warning </font></b><font color="#FFFFAA">' + message + '</font>'
+        self.textEdit.append(message)
+
+    def fatality(self, message):
+        message = '<b><font color="#FFCCCC">Fatality </font></b><font color="#FFAAAA">' + message + '</font>'
+        self.textEdit.append(message)
 
 
 class Window(QG.QWidget):
@@ -361,7 +418,7 @@ class Window(QG.QWidget):
         #-----------------------------------------------------------------------
         # Generic style
         #-----------------------------------------------------------------------
-        self.setStyleSheet('font-size:16px;')
+        self.setStyleSheet('font-size:14px;')
 
 
         #-----------------------------------------------------------------------
@@ -372,41 +429,23 @@ class Window(QG.QWidget):
         mainLayout.setContentsMargins(0, 0, 0, 0)
 
         #-----------------------------------------------------------------------
-        # Content
+        # TitleBar
         #-----------------------------------------------------------------------
         titleBar = QG.QLabel('Alembic export')
         titleBar.setObjectName('_windowTitleBar')
         titleBar.setAlignment(QC.Qt.AlignHCenter)
 
-        titleBar.setFixedHeight(26)
+        titleBar.setFixedHeight(24)
         titleBar.setStyleSheet("""
             background-color:rgb(115, 192, 255); 
             color:rgb(30,30,30);
-            font-size:20px;
+            font-size:18px;
+            padding: 0px 0px 2px 0px;
         """)
         mainLayout.addWidget(titleBar)
 
-        
-        horizontalShit = QG.QWidget()
-        #horizontalShit.setFixedHeight(20)
-        mainLayout.addWidget(horizontalShit)
-
-        horizontalLayout = QG.QHBoxLayout(horizontalShit)
-        horizontalLayout.setSpacing(2)
-        horizontalLayout.setContentsMargins(2, 2, 2, 2)
-
-        for i in range(5):
-            shit = QG.QPushButton()
-            shit.setFixedSize(20, 20)
-            shit.setStyleSheet('background-color:rgb(115, 192, 255);') 
-            horizontalLayout.addWidget(shit)
-        horizontalLayout.addStretch(1)
-        
-        shit = QG.QPushButton()
-        shit.setFixedSize(20, 20)
-        shit.setStyleSheet('background-color:rgb(115, 192, 255);') 
-        horizontalLayout.addWidget(shit)        
-
+    
+    
 
         #-----------------------------------------------------
         # Episode selector
@@ -416,8 +455,10 @@ class Window(QG.QWidget):
             text='Select an <b>episode</b>:', 
             itemList=episodeList, 
             align='right', 
+            labelFixedWidth=140,             
+            comboBoxFixedWidth=86,           
             currentIndexChanged_slot=self.currentEpisodeChanged_slot, 
-            parentLayout=mainLayout
+            parentObject=mainLayout
         ) 
 
 
@@ -426,11 +467,13 @@ class Window(QG.QWidget):
         #-----------------------------------------------------        
         shotList = []
         self.shotSelector = LabelComboBox(
-            text='<i>Select a <b>shot</b>:</i>', 
+            text='Select a <b>shot</b>:', 
             itemList=shotList, 
-            align='center', 
+            align='right', 
+            labelFixedWidth=140,             
+            comboBoxFixedWidth=86,             
             currentIndexChanged_slot=None, #self.currentShotChanged_slot,
-            parentLayout=mainLayout
+            parentObject=mainLayout
         )
         self.shotSelector.setDisabled(True)
 
@@ -440,39 +483,79 @@ class Window(QG.QWidget):
             text='Check me hard:)',
             initialChecked=True,
             stateChanged_slot=None,
-            parentLayout=mainLayout
+            parentObject=mainLayout
         )
         self.checkMe.setDisabled(True)
+
+
+        self.exportButton = PushButton(
+            text='EXPORT',
+            #baseColor=Color(100, 100, 100),
+            fixedWidth=100,
+            fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=mainLayout)
+        self.exportButton.setDisabled(True)
+
+
+        self.fixAllButton = PushButton(
+            text='Fix all',
+            #baseColor=Color(100, 100, 100),
+            fixedWidth=100,
+            fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=mainLayout)
+        self.fixAllButton.setDisabled(True)
+
+
+        self.fixAllButton = PushButton(
+            text='Fix all',
+            #baseColor=Color(100, 100, 100),
+            fixedWidth=100,
+            fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=mainLayout)
+        self.fixAllButton.setDisabled(True)
+        
+        
+        self.selectAllButton = PushButton(
+            text='Select all',
+            fontSize=16,
+            fixedWidth=100,
+            fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=mainLayout)
+        self.selectAllButton.setDisabled(True)
+
+        self.deselectAllButton = PushButton(
+            text='Deselect all',
+            fontSize=16,
+            fixedWidth=100,
+            fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=mainLayout)
+        self.deselectAllButton.setDisabled(True)
 
 
 
         splitter = QG.QSplitter()
         splitter.setOrientation(QC.Qt.Vertical)
         
-        for i in range(5):
-            edit = QG.QTextEdit()
-            splitter.addWidget(edit)
+        edit = QG.QTextEdit()
+        splitter.addWidget(edit)
 
+
+        self.consoleLog = Log(
+            parentObject=splitter
+        )
+
+        for i in range(40):
+            self.consoleLog.normal('Just fuck you... ' + str(i))
+            self.consoleLog.success('Just fuck you... ' + str(i))
+            self.consoleLog.warning('Just fuck you... ' + str(i))
+            self.consoleLog.fatality('Just fuck you... ' + str(i))
         mainLayout.addWidget(splitter)
 
-
-
-        #mainLayout.addStretch(1)
-        #browser = QG.QTextBrowser()
-        #browser.setFixedHeight(200)
-        #mainLayout.addWidget(browser)
-
-        help = QG.QLabel('FATALITY')
-        help.setObjectName('_windowTitleBar')
-        help.setAlignment(QC.Qt.AlignHCenter)
-
-        help.setFixedHeight(50)
-        help.setStyleSheet("""
-            background-color:rgb(255, 0, 0); 
-            color:rgb(30,30,30);
-            font-size:40px;
-        """)
-        mainLayout.addWidget(help)
 
 
 
@@ -499,7 +582,9 @@ class Window(QG.QWidget):
             # Reenable everything
             self.shotSelector.setDisabled(False)
             self.checkMe.setDisabled(False) 
-            
+            self.selectAllButton.setDisabled(False)
+            self.exportButton.setDisabled(False)
+
             array = range(10)
             strArray = [newEpisode + '_' + str(x) for x in array]
             self.shotSelector.setItems(strArray)
@@ -572,7 +657,7 @@ class Window(QG.QWidget):
 
 
 
-def run(*args):            
+def run(*args):
     myWin = Window(windowName='TEST')
     myWin.dock()
 
