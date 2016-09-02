@@ -184,8 +184,27 @@ class Color(object):
         return Color(self.RGB[0] + otherColor[0], 
                      self.RGB[1] + otherColor[1],
                      self.RGB[2] + otherColor[2])          
-   
 
+
+class VBoxLayout(QG.QVBoxLayout):
+    """
+    Reset spacing and content margins, nothing more:)
+    """
+    def __init__(self, *args, **kwargs):
+        super(VBoxLayout, self).__init__(*args, **kwargs)
+        self.setSpacing(0)
+        self.setContentsMargins(0, 0, 0, 0)
+
+
+class HBoxLayout(QG.QHBoxLayout):
+    """
+    Reset spacing and content margins, nothing more:)
+    """
+    def __init__(self, *args, **kwargs):
+        super(HBoxLayout, self).__init__(*args, **kwargs)
+        self.setSpacing(0)
+        self.setContentsMargins(0, 0, 0, 0)
+        
 
 class PushButton(QG.QPushButton):
     def __init__(self, text='',
@@ -273,9 +292,7 @@ class LabelComboBox(QG.QWidget):
 
         super(LabelComboBox, self).__init__()
 
-        layout = QG.QHBoxLayout(self)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout = HBoxLayout(self)
 
         comboBox = QG.QComboBox()
         comboBox.setCursor(QC.Qt.PointingHandCursor) # It's clickable:)  
@@ -339,9 +356,7 @@ class Log(QG.QGroupBox):
             font-size: 12px;
         """)
 
-        layout = QG.QVBoxLayout(self)
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout = VBoxLayout(self)
 
         self.textEdit = QG.QTextEdit()
         self.textEdit.setAcceptRichText(True)
@@ -358,6 +373,8 @@ class Log(QG.QGroupBox):
         if parentObject:
             parentObject.addWidget(self) 
     
+
+
     def _appendText(self, message):
         message += ""
         self.textEdit.append(message)
@@ -378,6 +395,83 @@ class Log(QG.QGroupBox):
         self.textEdit.append(message)
 
 
+#
+
+class AssetsModel(object):
+    pass
+
+class AssetsView(object):
+    pass
+
+
+
+class CategoryFrame(QG.QFrame):
+    def __init__(self, title='', parentObject=None):
+        super(CategoryFrame, self).__init__()
+        self.setMinimumHeight(80)
+        self.setFrameStyle(QG.QFrame.StyledPanel | QG.QFrame.Plain)
+        self.setStyleSheet("""
+            QFrame{
+                background-color: rgb(80, 80, 80);
+            }
+            QFrame:disabled{
+                background-color: rgb(70, 70, 70);
+            }
+        """)
+
+        layout = VBoxLayout(self)
+        title = QG.QLabel(title)
+        title.setFixedHeight(18)
+        title.setStyleSheet("""            
+            QLabel{
+                background-color:rgb(160, 180, 200);  
+                color:rgb(30,30,30);
+                font-size:16px;
+                padding: 0px 0px 2px 0px;
+                border-radius: 4px;
+            } 
+            QLabel:disabled{
+                background-color:rgb(80, 80, 80); 
+                color:rgb(40, 40, 40);
+
+                font-style: italic;
+            }
+        """)
+        layout.addWidget(title)
+        layout.addStretch()
+
+        if parentObject:
+            parentObject.addWidget(self)
+        
+        #-------------------------------------
+        # Model
+        #-------------------------------------
+        self._modelDict = None
+
+
+
+    def setModel(self, newModelDict):
+        """
+        There are equivalent:
+          catFr.setModel(None)
+          catFr.setModel({})
+        """
+          
+        if newModelDict is None or len(newModelDict) == 0:
+            self._modelDict = None
+        else:    
+            for item in newModelDict:
+                print item
+
+def callOne(*args, **kwargs):
+    print 1
+
+def callTwo(*args, **kwargs):
+    print 2
+
+def callThree(*args, **kwargs):
+    print 3
+    
 class Window(QG.QWidget):
     #-----------------------------
     # INITIALIZER
@@ -390,7 +484,6 @@ class Window(QG.QWidget):
         if MC.control(windowName, query=True, exists=True):
             MC.deleteUI(windowName)
         super(Window, self).__init__(getMayaWindow())
-        #self.setParent(getMayaWindow())
         
 
         #-----------------------------------------------------------------------
@@ -424,9 +517,7 @@ class Window(QG.QWidget):
         #-----------------------------------------------------------------------
         # Layout
         #-----------------------------------------------------------------------
-        mainLayout = QG.QVBoxLayout(self)
-        mainLayout.setSpacing(0)
-        mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainLayout = VBoxLayout(self)
 
         #-----------------------------------------------------------------------
         # TitleBar
@@ -441,11 +532,20 @@ class Window(QG.QWidget):
             color:rgb(30,30,30);
             font-size:18px;
             padding: 0px 0px 2px 0px;
+            border-radius: 4px;             
         """)
         mainLayout.addWidget(titleBar)
 
     
-    
+
+        #======================================================================
+        # Working area
+        #======================================================================
+        workingArea_widget = QG.QWidget()
+        workingArea_layout = VBoxLayout(workingArea_widget)
+
+
+
 
         #-----------------------------------------------------
         # Episode selector
@@ -458,7 +558,7 @@ class Window(QG.QWidget):
             labelFixedWidth=140,             
             comboBoxFixedWidth=86,           
             currentIndexChanged_slot=self.currentEpisodeChanged_slot, 
-            parentObject=mainLayout
+            parentObject=workingArea_layout
         ) 
 
 
@@ -473,77 +573,229 @@ class Window(QG.QWidget):
             labelFixedWidth=140,             
             comboBoxFixedWidth=86,             
             currentIndexChanged_slot=None, #self.currentShotChanged_slot,
-            parentObject=mainLayout
+            parentObject=workingArea_layout
         )
         self.shotSelector.setDisabled(True)
 
 
 
-        self.checkMe = CheckBox(
-            text='Check me hard:)',
-            initialChecked=True,
-            stateChanged_slot=None,
-            parentObject=mainLayout
-        )
-        self.checkMe.setDisabled(True)
 
+
+        #-----------------------------------------------------------------------------------------------------
+        # TOP BUTTON CONTAINER
+        #-----------------------------------------------------------------------------------------------------        
+        topButtonContainer = QG.QWidget()
+        topButtonContainer_layout = HBoxLayout(topButtonContainer)
 
         self.exportButton = PushButton(
             text='EXPORT',
-            #baseColor=Color(100, 100, 100),
-            fixedWidth=100,
+            fixedWidth=90,
             fixedHeight=24,
             #clicked_slot=None, 
-            parentObject=mainLayout)
+            parentObject=topButtonContainer_layout
+        )
         self.exportButton.setDisabled(True)
 
 
-        self.fixAllButton = PushButton(
-            text='Fix all',
-            #baseColor=Color(100, 100, 100),
-            fixedWidth=100,
-            fixedHeight=24,
-            #clicked_slot=None, 
-            parentObject=mainLayout)
-        self.fixAllButton.setDisabled(True)
+        topButtonContainer_layout.addStretch()
 
 
         self.fixAllButton = PushButton(
             text='Fix all',
-            #baseColor=Color(100, 100, 100),
-            fixedWidth=100,
+            fixedWidth=74,
             fixedHeight=24,
             #clicked_slot=None, 
-            parentObject=mainLayout)
+            parentObject=topButtonContainer_layout
+        )
         self.fixAllButton.setDisabled(True)
         
-        
+
         self.selectAllButton = PushButton(
             text='Select all',
             fontSize=16,
-            fixedWidth=100,
+            fixedWidth=76,
             fixedHeight=24,
             #clicked_slot=None, 
-            parentObject=mainLayout)
+            parentObject=topButtonContainer_layout
+        )
         self.selectAllButton.setDisabled(True)
+
 
         self.deselectAllButton = PushButton(
             text='Deselect all',
             fontSize=16,
-            fixedWidth=100,
+            fixedWidth=88,
             fixedHeight=24,
             #clicked_slot=None, 
-            parentObject=mainLayout)
+            parentObject=topButtonContainer_layout
+        )
         self.deselectAllButton.setDisabled(True)
+
+
+        workingArea_layout.addWidget(topButtonContainer)
+
+
+        #-----------------------------------------------------------------------------------------------------
+        # CENTRAL CONTAINER
+        #----------------------------------------------------------------------------------------------------- 
+        mainContent_scroller = QG.QScrollArea()
+        mainContent_scroller.verticalScrollBar().setStyleSheet("""
+            QScrollBar:vertical{
+                width: 16;
+                margin: 0px 0px 0px 0px;
+            }
+
+            QScrollBar:handle:vertical{
+                min-height: 10px;
+            }
+
+            QScrollBar:add-line:vertical{
+                background: none;
+                height: 99px;
+                subcontrol-position: bottom;
+                subcontrol-origin: margin;
+                background: cyan;
+
+            }
+
+            QScrollBar::sub-line:vertical {
+                background: none;
+                height: 45px;
+                subcontrol-position: top;
+                subcontrol-origin: margin;
+            }
+
+            QScrollBar::up-arrow:vertical { 
+                image:url('./icons/up_48.png'); 
+                height: 10px; 
+            }
+
+            QScrollBar::down-arrow:vertical {
+                image:url('./icons/down_48.png'); 
+                height: 10px; 
+            }    
+        """)
+                          
+        mainContent_scroller.setFrameStyle(QG.QFrame.NoFrame)
+        mainContent_scroller.setHorizontalScrollBarPolicy(QC.Qt.ScrollBarAlwaysOff)
+        mainContent_scroller.setWidgetResizable(True)
+
+        mainContent_widget = QG.QWidget()
+        mainContent_layout = QG.QVBoxLayout(mainContent_widget)
+        #mainContent_layout.setSpacing(10)
+        mainContent_layout.setContentsMargins(4, 12, 8, 4)
+
+
+
+
+
+        #===============================================================================================
+        # Category frames (CHPR, CAM, SS, ST, UNKNOWN)
+        #===============================================================================================
+
+        categories = ['Characters/props', 'Cameras', 'Subsets', 'Sets', 'Unknown']
+        self.categoryFrames = {}   
+        for category in categories:
+            newFrame = CategoryFrame(
+                title=category,
+                parentObject=mainContent_layout)
+            self.categoryFrames[category] = newFrame
+
+        for x in self.categoryFrames:
+            print x, self.categoryFrames[x]
+
+        self.categoryFrames['Unknown'].setDisabled(True)
+        self.categoryFrames['Subsets'].setDisabled(True)
+
+        #===============================================================================================
+        #===============================================================================================
+
+
+        cock = QG.QFrame()
+        cock.setFrameStyle(QG.QFrame.NoFrame)
+        cock.setFixedHeight(60)
+        cock.setStyleSheet("""
+            background-color:rgb(200, 100, 100);
+        """)
+        cock_layout = HBoxLayout(cock)
+        butt = QG.QPushButton('fuckYou')
+        butt.setStyleSheet("""
+            padding: 0px;
+            margin: 0px;
+            background-color:rgb(255, 200, 100);
+        """)
+        cock_layout.addWidget(butt)
+
+
+        mainContent_layout.addWidget(cock)
+
+        mainContent_layout.addStretch()
+
+
+
+
+        mainContent_scroller.setWidget(mainContent_widget)
+        workingArea_layout.addWidget(mainContent_scroller)
+
+
+        #-----------------------------------------------------------------------------------------------------
+        # BOTTOM BUTTON CONTAINER
+        #----------------------------------------------------------------------------------------------------- 
+        bottomButtonContainer = QG.QWidget()
+        bottomButtonContainer_layout = HBoxLayout(bottomButtonContainer)
+
+
+
+        pushMeButton = PushButton(
+            text='Push me',
+            fixedWidth=90,
+            fixedHeight=34,
+            parentObject=bottomButtonContainer_layout
+        )
+        pushMeButton.clicked.connect(callOne)
+        pushMeButton.clicked.connect(callTwo)
+        pushMeButton.clicked.connect(callThree)
+
+
+
+        bottomButtonContainer_layout.addStretch()
+
+        PushButton(
+            text='x',
+            fixedWidth=24,
+            fixedHeight=24,
+            parentObject=bottomButtonContainer_layout
+        )
+
+        PushButton(
+            text='?',
+            fixedWidth=24,
+            fixedHeight=24,
+            parentObject=bottomButtonContainer_layout
+        )
+
+
+        workingArea_layout.addWidget(bottomButtonContainer)
+
+
+
+
+
+
+
 
 
 
         splitter = QG.QSplitter()
         splitter.setOrientation(QC.Qt.Vertical)
         
-        edit = QG.QTextEdit()
-        splitter.addWidget(edit)
+        splitter.addWidget(workingArea_widget)
 
+
+
+        """ DISPLAY ALL AVAILABLE FONTS """
+        #sss = QG.QFontComboBox()
+        #splitter.addWidget(sss) 
 
         self.consoleLog = Log(
             parentObject=splitter
@@ -554,17 +806,25 @@ class Window(QG.QWidget):
             self.consoleLog.success('Just fuck you... ' + str(i))
             self.consoleLog.warning('Just fuck you... ' + str(i))
             self.consoleLog.fatality('Just fuck you... ' + str(i))
+
+
         mainLayout.addWidget(splitter)
 
 
-
-
-                
-
+        # At this point, the splitter's widget children are invisible;
+        # thus, splitter.sizes() == [0, 0, 0, ...]
         
         # Show it:)
         self.show()
         
+
+        """ FUCKING ATROCIOUS! Try sizePolicy/sizeHints... everything but this shit! """
+        logHeight = 40
+        sizes = splitter.sizes()
+        print 'SIZES:', sizes
+        totalHeight = sizes[0] + sizes[1]
+        newSizes = [totalHeight - logHeight, logHeight]
+        splitter.setSizes(newSizes)
 
 
         
@@ -581,7 +841,6 @@ class Window(QG.QWidget):
 
             # Reenable everything
             self.shotSelector.setDisabled(False)
-            self.checkMe.setDisabled(False) 
             self.selectAllButton.setDisabled(False)
             self.exportButton.setDisabled(False)
 
