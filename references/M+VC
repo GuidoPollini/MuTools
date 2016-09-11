@@ -1,0 +1,156 @@
+NOTA PER GUIDO
+Quello che hai fatto e' enorme. Stai gettando e fondaento per il futuro che arrivera' ed
+e' tutto piu' bello... E da speranza:)
+
+Non conta il risultato, a che tu abbia messo in oto una vita diversa.
+- APRITI (come non mai, perche' sta volta i messaggi sai mandarli e
+          il nuclo ti chiede esattamente questo...)
+- AMATI
+- riprendi il tuo corpo (sex, troia muscolosa)
+
+
+------------------------------------------------------------------------------------------------
+NOTE: a string object is immutable. Hence all methods that 'apparently' modify the string, in 
+reality returns a new string and the original object is immutated.
+ex:
+
+str.replace('xx', 'yy')         Returns a new string, but str is immutated
+str = str.replace('xx', 'yy')   Returns a new string and rebinds str. BUT IT'S REBINDING, NOT MUTATION
+
+--> strings can't be MUTATED, only CREATED and BOUND to names
+------------------------------------------------------------------------------------------------
+
+
+-----------------------------------------------------------------------
+Violating immutability
+Immutability does not imply that the object as stored in the computer's 
+memory is unwriteable. Rather, immutability is a compile-time construct 
+that indicates what a programmer can do through the normal interface of 
+the object, not necessarily what they can absolutely do.
+-----------------------------------------------------------------------
+
+a = ['x', 'y']
+# Effect:mutation, return:None
+print a.append(['A', 'B'])
+
+# Effect:nothing, return:appended
+print a.__add__(['fuck', 'you'])
+
+# Effect:mutation, return:appended
+print a.__iadd__(['shit', 'cock'])
+
+# Thus:
+# a.append(LIST)    mutation (same id)
+# a += LIST         mutation (same id)
+# a = a + LIST     REBINDING (id changed)
+#
+# The last one ia a "potential" rebinding, the first twos just two object methods 
+# (The second one is indeed __iadd__, nothing to do with the "bind statement" =)
+
+
+
+
+----------------------------------
+M+VC (aka MODEL-VIEW ARCHITECTURE)
+----------------------------------
+MVC is all about separation of concerns.
+
+The Model is responsible for managing the program's data (both private and client data). 
+The View/Controller is responsible for providing the outside world with the means to 
+interact with the program's client data.
+
+The Model provides an internal interface (API) to enable other parts of the program to interact 
+with it. The View/Controller provides an external interface (GUI/CLI/web form/high-level IPC/etc.) 
+to enable everything outwith the program to communicate with it.
+
+The Model is responsible for maintaining the integrity of the program's data, because 
+if that gets corrupted then it's game over for everyone. The View/Controller is responsible 
+for maintaining the integrity of the UI, making sure all text views are displaying up-to-date values, 
+disabling menu items that don't apply to the current focus, etc.
+
+The Model contains no View/Controller code; no GUI widget classes, no code for laying out dialog 
+boxes or receiving user input.
+The View/Controller contains no Model code; no code for validating URLs or performing SQL queries, 
+and no original state either: any data held by widgets is for display purposes only, and merely a 
+reflection of the true data stored in the Model.
+
+Now, here's the test of a true MVC design: the program should in essence be fully functional even 
+without a View/Controller attached. OK, the outside world will have trouble interacting with it in 
+that form, but as long as one knows the appropriate Model API incantations, the program will hold 
+and manipulate data as normal.
+
+Why is this possible? Well, the simple answer is that it's all thanks to the low coupling between 
+the Model and View/Controller layers. However, this isn't the full story. What's key to the whole 
+MVC pattern is the direction in which those connection goes: ALL instructions flow from the View/Controller 
+to the Model. The Model NEVER tells the View/Controller what to do.
+
+Why? Because in MVC, while the View/Controller is permitted to know a little about the Model 
+(specifically, the Model's API), but the Model is not allowed to know anything whatsoever 
+about the View/Controller.
+
+Why? Because MVC is about creating a clear separation of concerns.
+
+Why? To help prevent program complexity spiralling out of control and burying you, the developer, under it. 
+The bigger the program, the greater the number of components in that program. And the more connections exist 
+between those components, the harder it is for developers to maintain/extend/replace individual components, 
+or even just follow how the whole system works. Ask yourself this: when looking at a diagram of the program's 
+structure, would you rather see a tree or a cat's cradle? The MVC pattern avoids the latter by disallowing 
+circular connections: B can connect to A, but A cannot connect to B. In this case, A is the Model and B is 
+the View/Controller.
+
+BTW, if you're sharp, you'll notice a problem with the 'one-way' restriction just described: how can the Model 
+inform the View/Controller of changes in the Model's user data when the Model isn't even allowed to know that 
+the View/Controller, never mind send messages to it? But don't worry: there is a solution to this, and it's rather 
+neat even if it does seem a bit roundabout at first. We'll get back to that in a moment.
+
+In practical terms, then, a View/Controller object may, via the Model's API, 
+1. tell the Model to do things (execute commands), and 
+2. tell the Model to give it things (return data). 
+The View/Controller layer pushes instructions to the Model layer and pulls information from the Model layer.
+
+And that's where your first MyCoolListControl example goes wrong, because the API for that class requires 
+that information be pushed into it, so you're back to having a two-way coupling between layers, 
+violating the MVC rules and dumping you right back into the cat's cradle architecture that you were 
+[presumably] trying to avoid in the first place.
+
+Instead, the MyCoolListControl class should go with the flow, pulling the data it needs from the layer below, 
+when it needs it. In the case of a list widget, that generally means asking how many values there are and then 
+asking for each of those items in turn, because that's about the simplest and loosest way to do it and therefore 
+keeps what coupling there is to a minimum. And if the widget wants, say, to present those values to the user in 
+nice alphabetical order then that's its perogative; and its responsibility, of course.
+
+Now, one last conundrum, as I hinted at earlier: how do you keep the UI's display synchronised with the Model's 
+state in an MVC-based system?
+
+Here's the problem: many View objects are stateful, e.g. a checkbox may be ticked or unticked, a text field may 
+contain some editable text. However, MVC dictates that all user data be stored in the Model layer, so any data 
+held by other layers for display purposes (the checkbox's state, the text field's current text) must therefore 
+be a subsidiary copy of that primary Model data. But if the Model's state changes, the View's copy of that state 
+will no longer be accurate and needs to be refreshed.
+
+But how? The MVC pattern prevents the Model pushing a fresh copy of that information into the View layer. 
+Heck, it doesn't even allow the Model to send the View a message to say its state has changed.
+
+Well, almost. Okay, the Model layer isn't allowed to talk directly to other layers, since to do so would 
+require it knows something about those layers, and MVC rules prevent that. However, if a tree falls in a 
+forest and nobody's around to hear it, does it make a sound?
+
+----------------------------------------------------------------------------------------------------------------------
+The answer, you see, is to set up a notifications system, providing the Model layer with a place it can 
+announce to no-one in particular that it has just done something interesting. Other layers can then post 
+listeners with that notification system to listen for those announcements that they're actually interested in. 
+The Model layer doesn't need to know anything about who's listening (or even if anyone is listening at all!); 
+it just posts an announcement and then forgets about it. And if anyone hears that announcement and feels like 
+doing something afterwards - like asking the Model for some new data so it can update its on-screen display - then great. 
+The Model just lists what notifications it sends as part of its API definition; and what anyone else does with that 
+knowledge is up to them.
+----------------------------------------------------------------------------------------------------------------------
+
+MVC is preserved, and everyone is happy. Your application framework may well provide a built-in notifications system, 
+or you can write your own if not (see the 'observer pattern').
+
+...
+
+Anyway, hope that helps. Once you understand the motivations behind MVC, the reasons why things are done the way 
+they are starts to make sense, even when - at first glance - they seem more complex than necessary.
+

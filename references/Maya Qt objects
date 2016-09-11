@@ -1,0 +1,67 @@
+------------------------------------
+LIST OF QT-OBJECTS USED IN MAYA'S UI
+------------------------------------
+
+Already used:
+-------------
+QObject
+  QWidget (+ QPaintDevice)
+    QComboBox
+    QAbstractButton  
+      QPushButton 
+      QCheckBox         
+    QFrame
+      QSplitter
+      QAbstractScrollArea
+        QScrollArea
+        QTextEdit
+      QLabel
+  QLayout (+ QLayoutItem)
+    QBoxLayout
+      QVBoxLayout
+      QHBoxLayout
+  QTimer
+QPaintDevice
+QLayoutItem
+
+
+Never used:
+-----------
+?? QRadioButton
+?? QScrollBar
+?? QSplitterHandle
+?? QDockWidget
+?? QDoubleValidator
+?? QFocusFrame
+?? QAbstractListModel
+?? QAbstractTextDocumentLayout
+?? QAction
+?? QActionGroup
+?? QHeaderView
+?? QIntValidator
+?? QItemDelegate
+?? QItemSelectionModel
+?? QLineEdit
+?? QListView
+?? QListWidget
+?? QMenu
+?? QMenuBar
+?? QProgressBar
+?? QRubberBand
+?? QShortcut
+?? QSizeGrip
+?? QSlider
+?? QStackedLayout
+?? QStackedWidget
+?? QStandardItemModel
+?? QStatusBar
+?? QStyledItemDelegate
+?? QSyntaxHighlighter
+?? QTabBar
+?? QTabWidget
+?? QTableView
+?? QTextDocument
+?? QTextFrame
+?? QToolBar
+?? QToolButton
+?? QWidgetAction
