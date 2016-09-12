@@ -516,7 +516,7 @@ class CategoryFrame(QG.QFrame):
             QFrame{
                 background-color:rgb(160, 180, 200); 
                 font-size:18px;
-                padding: 0px 0px 0px 3px;
+                padding: 0px 3px 0px 3px;
                 border-radius: 0px;
             }
             QFrame:disabled{
@@ -565,20 +565,6 @@ class CategoryFrame(QG.QFrame):
         header_layout.addWidget(header_label)
 
 
-        # MU ICON
-        #----------------------
-        # Per renderle piu chiare quando ci passi sopra, come fossero buttons
-        # Possibilita:
-        # - background: url(""" + name + """) top center no-repeat;
-        # - paintEvent... (cosi la fai piu chiara automaticamente)
-        ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
-            size=12,
-            #clicked_slot=callOne,
-            parentObject=header_layout
-        )
-
-
         # OPTIONS ICON
         #----------------------
         ToolButton(
@@ -587,6 +573,18 @@ class CategoryFrame(QG.QFrame):
             #clicked_slot=callOne,            
             parentObject=header_layout
         )
+
+
+        PushButton(text='FIX ALL',
+                       fontSize=12,
+                       baseColor=Color(117, 123, 129),
+                       fixedWidth=54,
+                       fixedHeight=15,
+                       clicked_slot=None, 
+                       parentObject=header_layout)
+
+
+
 
 
         # PARENTING

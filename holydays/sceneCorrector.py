@@ -219,8 +219,7 @@ def isTypedTransform(node, allowedType='mesh', noIntermediate=True, onlyOne=True
 
     # The flag combination 'shapes + noIntermediate' is valid, 
     # but not 'type + noIntermediate' (the latter is ignored)
-    shapeChildren = MC.listRelatives(node, children=True, path=True, shapes=T
-        rue, noIntermediate=noIntermediate) or []
+    shapeChildren = MC.listRelatives(node, children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
     allowedShapeChildren = [x for x in shapeChildren if MC.nodeType(x) == allowedType]
     
     if onlyOne:
@@ -543,7 +542,7 @@ def run(*args):
 
     # Create a suitable 'renderSet'
     for root in rootTransforms:
-
+        print root
 
 
     prettyPrintList('PREFIXED', prefixedReferences)
