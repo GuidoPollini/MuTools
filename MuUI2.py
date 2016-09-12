@@ -186,6 +186,8 @@ class Color(object):
                      self.RGB[2] + otherColor[2])          
 
 
+
+
 class VBoxLayout(QG.QVBoxLayout):
     """
     Reset spacing and content margins, nothing more:)
@@ -196,6 +198,8 @@ class VBoxLayout(QG.QVBoxLayout):
         self.setContentsMargins(0, 0, 0, 0)
 
 
+
+
 class HBoxLayout(QG.QHBoxLayout):
     """
     Reset spacing and content margins, nothing more:)
@@ -204,7 +208,75 @@ class HBoxLayout(QG.QHBoxLayout):
         super(HBoxLayout, self).__init__(*args, **kwargs)
         self.setSpacing(0)
         self.setContentsMargins(0, 0, 0, 0)
+
         
+
+
+class ToolButton(QG.QToolButton):
+    def __init__(self, iconPath=None, 
+                       size=20,
+                       clicked_slot=None,
+                       parentObject=None):
+        super(ToolButton, self).__init__()
+        self.setStyleSheet("""
+            border-radius: 0px;         
+            padding: 0px;
+            margin: 0px;
+        """)
+        
+        self.setFixedSize(size, size)
+
+
+        if clicked_slot:
+            self.clicked.connect(clicked_slot)
+
+        if iconPath:
+            # Store the neutral/hover/clicked images and a "message" to .paintEvent
+            self.imageNeutral = QG.QImage(iconPath).scaled(size, size, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
+            self.imageHover = QG.QImage(iconPath).scaled(size * 1.2, size * 1.2, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
+            self.image = self.imageNeutral # Info used by .paintEvent to choose the brightness of the icon
+            self.isHover = False
+
+            # PROVA A  USARE QPAINTER fuori dal paintEvent per manipolare un image e 
+            # schiarirla con i compositionMode, poi salvala...
+
+        if parentObject:
+            parentObject.addWidget(self)
+    
+
+    def enterEvent(self, event):
+        """
+        When the mouse enter the widget, this is called; we save the relevant info 
+        (the icon must be higlighted) and we force the redraw (i.e. we call 
+        indirectly .paintEvent, which can read the extra info needed!)
+        """
+        self.isHover = True
+        self.image = self.imageHover # Save the info needed to .paintEvent to draw properly
+        self.update()                # <== force a call to .paintEvent
+        event.accept()               # No idea :(
+
+
+    def leaveEvent(self, event):
+        self.isHover = False        
+        self.image = self.imageNeutral
+        self.update()
+        event.accept()
+
+    def paintEvent(self, event):
+        # NO, il paintEvent NON e' ovviamente triggerato quando ci passi sopra... just fuck you!!!
+        #print self.underMouse()
+        #print self.isDown()
+
+        painter = QG.QPainter()
+        painter.begin(self)
+        painter.drawImage(0, 0, self.imageNeutral)   
+        if self.isHover:
+            painter.setCompositionMode(QG.QPainter.CompositionMode_Plus)   
+            painter.drawImage(0, 0, self.imageNeutral)             
+        painter.end()
+
+
+
 
 class PushButton(QG.QPushButton):
     def __init__(self, text='',
@@ -260,6 +332,7 @@ class PushButton(QG.QPushButton):
 
 
 
+
 class CheckBox(QG.QCheckBox):
     def __init__(self, text='',
                        initialChecked=False,
@@ -275,6 +348,7 @@ class CheckBox(QG.QCheckBox):
 
         if stateChanged_slot:
             self.stateChanged.connect(stateChanged_slot)
+
 
 
 
@@ -341,6 +415,8 @@ class LabelComboBox(QG.QWidget):
         event.accept()
 
 
+
+
 class Log(QG.QGroupBox):
     """
     |   QLabel   |
@@ -395,13 +471,17 @@ class Log(QG.QGroupBox):
         self.textEdit.append(message)
 
 
-#
+
 
 class AssetsModel(object):
     pass
 
+
+
+
 class AssetsView(object):
     pass
+
 
 
 
@@ -419,26 +499,101 @@ class CategoryFrame(QG.QFrame):
             }
         """)
 
-        layout = VBoxLayout(self)
-        title = QG.QLabel(title)
-        title.setFixedHeight(18)
-        title.setStyleSheet("""            
-            QLabel{
-                background-color:rgb(160, 180, 200);  
+        mainLayout = VBoxLayout(self)
+
+
+
+        #-----------------------------------------------------------------------------------------------------
+        # HEADER
+        #-----------------------------------------------------------------------------------------------------
+
+        # HOLDER
+        #----------------------
+        header = QG.QFrame()
+        header.setFrameStyle(QG.QFrame.NoFrame)
+        header.setFixedHeight(20)
+        header.setStyleSheet("""
+            QFrame{
+                background-color:rgb(160, 180, 200); 
+                font-size:18px;
+                padding: 0px 0px 0px 3px;
+                border-radius: 0px;
+            }
+            QFrame:disabled{
+                background-color:rgb(80, 80, 80); 
+                color:rgb(40, 40, 40);
+            }               
+        """)
+        header_layout = HBoxLayout(header)
+        
+        # SELECTALL CHECKBOX
+        #----------------------
+        self.selectAllCheckBox = QG.QCheckBox()
+        self.selectAllCheckBox.setChecked(False)
+        self.selectAllCheckBox.setCursor(QC.Qt.PointingHandCursor)
+        self.selectAllCheckBox.setStyleSheet("""
+            QCheckBox{
+                padding: 0px;
+                margin: 0px;
+                background-color:rgb(117, 123, 129);   
+                border-radius: 0px;
+            }
+            QCheckBox:disabled{
+                background-color:rgb(70, 70, 70); 
+            }             
+        """)
+        self.selectAllCheckBox.setFixedSize(14, 14)
+        header_layout.addWidget(self.selectAllCheckBox)
+
+
+
+        # LABEL
+        #----------------------
+        header_label = QG.QLabel(title)
+        header_label.setStyleSheet("""
+            QLabel{  
                 color:rgb(30,30,30);
                 font-size:16px;
                 padding: 0px 0px 2px 0px;
-                border-radius: 4px;
-            } 
+            }
             QLabel:disabled{
                 background-color:rgb(80, 80, 80); 
                 color:rgb(40, 40, 40);
-
-                font-style: italic;
-            }
+            }            
         """)
-        layout.addWidget(title)
-        layout.addStretch()
+        header_label.setAlignment(QC.Qt.AlignLeft)
+        header_layout.addWidget(header_label)
+
+
+        # MU ICON
+        #----------------------
+        # Per renderle piu chiare quando ci passi sopra, come fossero buttons
+        # Possibilita:
+        # - background: url(""" + name + """) top center no-repeat;
+        # - paintEvent... (cosi la fai piu chiara automaticamente)
+        ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
+            size=12,
+            #clicked_slot=callOne,
+            parentObject=header_layout
+        )
+
+
+        # OPTIONS ICON
+        #----------------------
+        ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/options_icon.png', 
+            size=16,
+            #clicked_slot=callOne,            
+            parentObject=header_layout
+        )
+
+
+        # PARENTING
+        #----------------------
+        mainLayout.addWidget(header)
+
+        mainLayout.addStretch()
 
         if parentObject:
             parentObject.addWidget(self)
@@ -463,15 +618,27 @@ class CategoryFrame(QG.QFrame):
             for item in newModelDict:
                 print item
 
+
+
+
 def callOne(*args, **kwargs):
     print 1
+
+
+
 
 def callTwo(*args, **kwargs):
     print 2
 
+
+
+
 def callThree(*args, **kwargs):
     print 3
     
+
+
+
 class Window(QG.QWidget):
     #-----------------------------
     # INITIALIZER
@@ -519,24 +686,75 @@ class Window(QG.QWidget):
         #-----------------------------------------------------------------------
         mainLayout = VBoxLayout(self)
 
-        #-----------------------------------------------------------------------
-        # TitleBar
-        #-----------------------------------------------------------------------
-        titleBar = QG.QLabel('Alembic export')
-        titleBar.setObjectName('_windowTitleBar')
-        titleBar.setAlignment(QC.Qt.AlignHCenter)
 
+
+
+
+        #-----------------------------------------------------------------------------------------------------
+        # TITLEBAR
+        #-----------------------------------------------------------------------------------------------------
+
+
+        # HOLDER
+        #----------------------
+        titleBar = QG.QFrame()
+        titleBar.setFrameStyle(QG.QFrame.NoFrame)
         titleBar.setFixedHeight(24)
         titleBar.setStyleSheet("""
             background-color:rgb(115, 192, 255); 
-            color:rgb(30,30,30);
             font-size:18px;
-            padding: 0px 0px 2px 0px;
-            border-radius: 4px;             
+            padding: 0px 0px 0px 0px;
+            border-radius: 2px;         
         """)
+        titleBar_layout = HBoxLayout(titleBar)
+        
+
+        # LABEL
+        #----------------------
+        titleLabel = QG.QLabel('Alembic export')
+        titleLabel.setStyleSheet("""
+            color:rgb(30,30,30);
+            padding: 0px;
+            margin: 0px;
+        """)
+        titleLabel.setAlignment(QC.Qt.AlignHCenter)
+        titleBar_layout.addWidget(titleLabel)
+
+
+        # MU ICON
+        #----------------------
+        # Per renderle piu chiare quando ci passi sopra, come fossero buttons
+        # Possibilita:
+        # - background: url(""" + name + """) top center no-repeat;
+        # - paintEvent... (cosi la fai piu chiara automaticamente)
+        ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
+            size=12,
+            #clicked_slot=callOne,
+            parentObject=titleBar_layout
+        )
+
+
+        # OPTIONS ICON
+        #----------------------
+        ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/options_icon.png', 
+            size=16,
+            #clicked_slot=callOne,            
+            parentObject=titleBar_layout
+        )
+
+
+        # PARENTING
+        #----------------------
         mainLayout.addWidget(titleBar)
 
-    
+
+        
+
+
+
+
 
         #======================================================================
         # Working area
@@ -684,6 +902,7 @@ class Window(QG.QWidget):
         mainContent_layout = QG.QVBoxLayout(mainContent_widget)
         #mainContent_layout.setSpacing(10)
         mainContent_layout.setContentsMargins(4, 12, 8, 4)
+        mainContent_widget.setDisabled(False)
 
 
 
@@ -701,33 +920,9 @@ class Window(QG.QWidget):
                 parentObject=mainContent_layout)
             self.categoryFrames[category] = newFrame
 
-        for x in self.categoryFrames:
-            print x, self.categoryFrames[x]
-
         self.categoryFrames['Unknown'].setDisabled(True)
         self.categoryFrames['Subsets'].setDisabled(True)
 
-        #===============================================================================================
-        #===============================================================================================
-
-
-        cock = QG.QFrame()
-        cock.setFrameStyle(QG.QFrame.NoFrame)
-        cock.setFixedHeight(60)
-        cock.setStyleSheet("""
-            background-color:rgb(200, 100, 100);
-        """)
-        cock_layout = HBoxLayout(cock)
-        butt = QG.QPushButton('fuckYou')
-        butt.setStyleSheet("""
-            padding: 0px;
-            margin: 0px;
-            background-color:rgb(255, 200, 100);
-        """)
-        cock_layout.addWidget(butt)
-
-
-        mainContent_layout.addWidget(cock)
 
         mainContent_layout.addStretch()
 
@@ -779,6 +974,10 @@ class Window(QG.QWidget):
 
 
 
+        CheckBox(text='NOTHING',
+                 initialChecked=False,
+                 stateChanged_slot=None,
+                 parentObject=workingArea_layout)
 
 
 
@@ -821,7 +1020,6 @@ class Window(QG.QWidget):
         """ FUCKING ATROCIOUS! Try sizePolicy/sizeHints... everything but this shit! """
         logHeight = 40
         sizes = splitter.sizes()
-        print 'SIZES:', sizes
         totalHeight = sizes[0] + sizes[1]
         newSizes = [totalHeight - logHeight, logHeight]
         splitter.setSizes(newSizes)
@@ -913,6 +1111,7 @@ class Window(QG.QWidget):
     def mouseReleaseEvent(self, event):
         self.isDragged = False      
     """
+
 
 
 
