@@ -9,6 +9,11 @@ import functools
 import os
 import time
 
+# To per-object override a method:
+#  def _override(self, ...): ...
+#  myObj.methodToOverride = types.MethodType(_override, myObj) 
+import types    
+
 
 
 
@@ -225,7 +230,7 @@ class ToolButton(QG.QToolButton):
         """)
         
         self.setFixedSize(size, size)
-
+        self.setCursor(QC.Qt.PointingHandCursor)
 
         if clicked_slot:
             self.clicked.connect(clicked_slot)
@@ -281,6 +286,7 @@ class ToolButton(QG.QToolButton):
 class PushButton(QG.QPushButton):
     def __init__(self, text='',
                        fontSize=20,
+                       fontWeight='normal',
                        baseColor=Color(98, 98, 98),
                        fixedWidth=None,
                        fixedHeight=None,
@@ -293,14 +299,17 @@ class PushButton(QG.QPushButton):
 
         hoverColor   = baseColor + [20, 20, 20]
         pressedColor = baseColor + [40, 40, 40]
-       
+        
+        print baseColor
+        #background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(98, 98, 98),  stop:1.0 rgb(94, 94, 94));
         styleSheet = """
             QPushButton{{
                 margin: 0px;
                 padding: 0px;
                 font-size: {fontSize}px; 
+                font-weight: {fontWeight};
                 border-radius: {borderRadius}px; 
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(98, 98, 98),  stop:1.0 rgb(94, 94, 94));
+                background: {baseColor};
                 border-style: outset;
                 border-width: 1px;
                 border-color: rgb(35, 35, 35);
@@ -314,7 +323,7 @@ class PushButton(QG.QPushButton):
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(110, 150, 200), stop:0.2 rgb(130, 130, 130),  stop:1.0 rgb(110, 110, 110));
                 padding: 0px;
             }}
-        """.format(fontSize=fontSize, borderRadius=4, baseColor=baseColor, hoverColor=hoverColor, pressedColor=pressedColor)     
+        """.format(fontSize=fontSize, fontWeight=fontWeight, borderRadius=4, baseColor=baseColor, hoverColor=hoverColor, pressedColor=pressedColor)     
 
         self.setStyleSheet(styleSheet)
 
@@ -484,24 +493,113 @@ class AssetsView(object):
 
 
 
+class CategoryFrameItem(QG.QFrame):
+    def __init__(self, label='fuckYou', parentObject=None):
+        super(CategoryFrameItem, self).__init__()
+        self.layout = HBoxLayout(self)
+
+        self.setFrameStyle(QG.QFrame.NoFrame)
+        self.setFixedHeight(22)
+        self.setStyleSheet(""" 
+            QFrame{      
+                padding: 0px 4px 0px 4px;
+            }
+            QFrame:hover{
+                background-color:rgb(81, 106, 126);   
+            }    
+        """)
+        
+
+        # SELECT CHECKBOX
+        #----------------------
+        self.selectCheckBox = QG.QCheckBox()
+        self.selectCheckBox.setChecked(False)
+        self.selectCheckBox.setCursor(QC.Qt.PointingHandCursor)
+        self.selectCheckBox.setStyleSheet("""
+            QCheckBox{
+                padding: 0px;
+                margin: 0px;
+                background-color:rgb(54, 54, 54);   
+                border-radius: 0px;
+            }
+            QCheckBox:disabled{
+                background-color:rgb(40, 40, 40); 
+            }             
+        """)
+        self.selectCheckBox.setFixedSize(12, 12)
+
+        self.layout.addWidget(self.selectCheckBox)
+
+
+        # LABEL
+        #----------------------
+        self.label = QG.QLabel(label)
+        self.label.setStyleSheet("""
+            QLabel{  
+                padding: 4px 0px 0px 8px;
+                margin: 0px 0px 0px 0px;
+                color:rgb(244, 244, 244);
+                font-size:12px;
+            }          
+            
+        """)
+        self.label.setAlignment(QC.Qt.AlignLeft)
+        self.label.setCursor(QC.Qt.PointingHandCursor)
+
+        self.layout.addWidget(self.label)
+
+        self.fixButton = PushButton(text='FIX',
+                       fontSize=10,
+                       fontWeight='bold',
+                       baseColor=Color(117, 117, 117),
+                       fixedWidth=36,
+                       fixedHeight=15,
+                       clicked_slot=None, 
+                       parentObject=self.layout)
+
+        # PARENTING
+        #----------------------
+        if parentObject:
+            parentObject.addWidget(self)
+
+    def select():    
+        pass
+
+    def toggleSelection():
+        pass
+
+
 
 class CategoryFrame(QG.QFrame):
     def __init__(self, title='', parentObject=None):
+        #------------------------------------------
+        # Invece di infognarti nella table et delegates, stavolta
+        # fai tutto manualmente...
+        self.title = title
+        self.items = []
+        #------------------------------------------
+
+
         super(CategoryFrame, self).__init__()
-        self.setMinimumHeight(80)
         self.setFrameStyle(QG.QFrame.StyledPanel | QG.QFrame.Plain)
         self.setStyleSheet("""
             QFrame{
-                background-color: rgb(80, 80, 80);
+                padding: 0px;
+                margin: 0px;
+                background-color: rgb(70, 70, 70);
             }
             QFrame:disabled{
                 background-color: rgb(70, 70, 70);
             }
         """)
 
-        mainLayout = VBoxLayout(self)
+        # Don't set the minimumSize for the QFrame, otherwise what follows wont work:
+        self.setSizePolicy(QG.QSizePolicy.Preferred, QG.QSizePolicy.Fixed)
+        #
 
+        self.mainLayout = VBoxLayout(self)
 
+        
 
         #-----------------------------------------------------------------------------------------------------
         # HEADER
@@ -511,10 +609,10 @@ class CategoryFrame(QG.QFrame):
         #----------------------
         header = QG.QFrame()
         header.setFrameStyle(QG.QFrame.NoFrame)
-        header.setFixedHeight(20)
+        header.setFixedHeight(24)
         header.setStyleSheet("""
             QFrame{
-                background-color:rgb(160, 180, 200); 
+                background-color:rgb(85, 85, 85); 
                 font-size:18px;
                 padding: 0px 3px 0px 3px;
                 border-radius: 0px;
@@ -535,14 +633,22 @@ class CategoryFrame(QG.QFrame):
             QCheckBox{
                 padding: 0px;
                 margin: 0px;
-                background-color:rgb(117, 123, 129);   
+                background-color:rgb(54, 54, 54);   
                 border-radius: 0px;
             }
             QCheckBox:disabled{
-                background-color:rgb(70, 70, 70); 
+                background-color:rgb(40, 40, 40); 
             }             
         """)
-        self.selectAllCheckBox.setFixedSize(14, 14)
+        self.selectAllCheckBox.setFixedSize(16, 16)
+
+        
+        def _selectAllCheckBox_stateChanged_slot(state):
+            # Again, it's a 'closure'
+            print self.title, state
+        self.selectAllCheckBox.stateChanged.connect(_selectAllCheckBox_stateChanged_slot)
+        
+
         header_layout.addWidget(self.selectAllCheckBox)
 
 
@@ -552,9 +658,10 @@ class CategoryFrame(QG.QFrame):
         header_label = QG.QLabel(title)
         header_label.setStyleSheet("""
             QLabel{  
-                color:rgb(30,30,30);
+                color:rgb(244, 244, 244);
                 font-size:16px;
-                padding: 0px 0px 2px 0px;
+                padding: 0px 0px 0px 0px;
+                margin: 0px 0px 0px 0px;
             }
             QLabel:disabled{
                 background-color:rgb(80, 80, 80); 
@@ -562,24 +669,25 @@ class CategoryFrame(QG.QFrame):
             }            
         """)
         header_label.setAlignment(QC.Qt.AlignLeft)
+        header_label.setCursor(QC.Qt.PointingHandCursor)
+
         header_layout.addWidget(header_label)
 
+        # Override the .mousePressEvent
+        def _mousePressEvent(innerSelf, event):
+            # Note: this is a closure (we need the 'outerSelf', not the 'innerSelf')
+            self.selectAllCheckBox.toggle()
+        header_label.mousePressEvent = types.MethodType(_mousePressEvent, header_label)
 
-        # OPTIONS ICON
-        #----------------------
-        ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/options_icon.png', 
-            size=16,
-            #clicked_slot=callOne,            
-            parentObject=header_layout
-        )
+
 
 
         PushButton(text='FIX ALL',
                        fontSize=12,
-                       baseColor=Color(117, 123, 129),
-                       fixedWidth=54,
-                       fixedHeight=15,
+                       fontWeight='bold',
+                       baseColor=Color(117, 117, 117),
+                       fixedWidth=58,
+                       fixedHeight=18,
                        clicked_slot=None, 
                        parentObject=header_layout)
 
@@ -589,18 +697,34 @@ class CategoryFrame(QG.QFrame):
 
         # PARENTING
         #----------------------
-        mainLayout.addWidget(header)
+        self.mainLayout.addWidget(header)
 
-        mainLayout.addStretch()
+
+        #mainLayout.addStretch()
 
         if parentObject:
             parentObject.addWidget(self)
         
+
         #-------------------------------------
         # Model
         #-------------------------------------
         self._modelDict = None
 
+
+    def populate(self, itemList): 
+        # Clear everything and redraw
+        for item in itemList:
+            self.items.append(CategoryFrameItem(label=item, parentObject=self.mainLayout))
+
+
+    def __getitem__(self, index):
+        # To allow something like:
+        #   chFrame['pippoPippo'].isChecked()
+        #   chFrame[4].setChecked()
+        #   chFrame[4].disableFixButton()
+        #   ... 
+        pass
 
 
     def setModel(self, newModelDict):
@@ -620,20 +744,76 @@ class CategoryFrame(QG.QFrame):
 
 
 def callOne(*args, **kwargs):
-    print 1
+    print 'callOne ', args, kwargs
 
 
 
 
 def callTwo(*args, **kwargs):
-    print 2
+    print 'callTwo ', args, kwargs
 
 
 
 
 def callThree(*args, **kwargs):
-    print 3
+    print 'callThree ', args, kwargs
     
+
+
+
+class TitleBar(QG.QFrame):
+    def __init__(self, title='...', parentObject=None):
+        super(TitleBar, self).__init__()
+        self = QG.QFrame()
+        self.setFrameStyle(QG.QFrame.NoFrame)
+
+        self.setFixedHeight(24)
+        self.setStyleSheet("""
+            background-color:rgb(115, 192, 255); 
+            font-size:18px;
+            padding: 0px 0px 0px 0px;
+            border-radius: 2px;         
+        """)
+        self.layout = HBoxLayout(self)
+        
+
+        # LABEL
+        #----------------------
+        self.label = QG.QLabel(title)
+        self.label.setStyleSheet("""
+            color:rgb(30,30,30);
+            padding: 0px;
+            margin: 0px;
+        """)
+        self.label.setAlignment(QC.Qt.AlignHCenter)
+        self.layout.addWidget(self.label)
+
+
+        # MU ICON
+        #----------------------
+        self.muIcon =ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
+            size=12,
+            #clicked_slot=callOne,
+            parentObject=self.layout
+        )
+
+
+        # OPTIONS ICON
+        #----------------------
+        self.optionsIcon = ToolButton(
+            iconPath='C:/Users/guido.pollini/Desktop/options_icon.png', 
+            size=16,
+            #clicked_slot=callOne,            
+            parentObject=self.layout
+        )
+
+
+        # PARENTING
+        #----------------------
+        if parentObject:
+            parentObject.addWidget(self)
+
 
 
 
@@ -669,8 +849,8 @@ class Window(QG.QWidget):
         mayaPosition = getMayaWindow().pos()
         self.move(mayaPosition + QC.QPoint(100, 100))
         # Size
-        self.setMinimumSize(300, 300)
-        self.resize(300, 600)
+        self.setMinimumSize(200, 300)
+        self.resize(200, 600)
 
 
         #-----------------------------------------------------------------------
@@ -687,68 +867,10 @@ class Window(QG.QWidget):
 
 
 
-
         #-----------------------------------------------------------------------------------------------------
         # TITLEBAR
         #-----------------------------------------------------------------------------------------------------
-
-
-        # HOLDER
-        #----------------------
-        titleBar = QG.QFrame()
-        titleBar.setFrameStyle(QG.QFrame.NoFrame)
-        titleBar.setFixedHeight(24)
-        titleBar.setStyleSheet("""
-            background-color:rgb(115, 192, 255); 
-            font-size:18px;
-            padding: 0px 0px 0px 0px;
-            border-radius: 2px;         
-        """)
-        titleBar_layout = HBoxLayout(titleBar)
-        
-
-        # LABEL
-        #----------------------
-        titleLabel = QG.QLabel('Alembic export')
-        titleLabel.setStyleSheet("""
-            color:rgb(30,30,30);
-            padding: 0px;
-            margin: 0px;
-        """)
-        titleLabel.setAlignment(QC.Qt.AlignHCenter)
-        titleBar_layout.addWidget(titleLabel)
-
-
-        # MU ICON
-        #----------------------
-        # Per renderle piu chiare quando ci passi sopra, come fossero buttons
-        # Possibilita:
-        # - background: url(""" + name + """) top center no-repeat;
-        # - paintEvent... (cosi la fai piu chiara automaticamente)
-        ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
-            size=12,
-            #clicked_slot=callOne,
-            parentObject=titleBar_layout
-        )
-
-
-        # OPTIONS ICON
-        #----------------------
-        ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/options_icon.png', 
-            size=16,
-            #clicked_slot=callOne,            
-            parentObject=titleBar_layout
-        )
-
-
-        # PARENTING
-        #----------------------
-        mainLayout.addWidget(titleBar)
-
-
-        
+        TitleBar(title='Alembic Export', parentObject=mainLayout)
 
 
 
@@ -896,11 +1018,18 @@ class Window(QG.QWidget):
         mainContent_scroller.setHorizontalScrollBarPolicy(QC.Qt.ScrollBarAlwaysOff)
         mainContent_scroller.setWidgetResizable(True)
 
-        mainContent_widget = QG.QWidget()
+
+
+
+        mainContent_widget = QG.QFrame()
+        mainContent_widget.setFrameStyle(QG.QFrame.StyledPanel | QG.QFrame.Plain)
+
+        mainContent_widget.setStyleSheet("""
+            background-color: rgb(60, 60, 60);
+        """)
         mainContent_layout = QG.QVBoxLayout(mainContent_widget)
-        #mainContent_layout.setSpacing(10)
-        mainContent_layout.setContentsMargins(4, 12, 8, 4)
-        mainContent_widget.setDisabled(False)
+        mainContent_layout.setSpacing(8)
+        mainContent_layout.setContentsMargins(8, 8, 8, 8)
 
 
 
@@ -916,10 +1045,13 @@ class Window(QG.QWidget):
             newFrame = CategoryFrame(
                 title=category,
                 parentObject=mainContent_layout)
+            
+            newFrame.populate(['A', 'B', 'C', 'D'])
+
             self.categoryFrames[category] = newFrame
 
-        self.categoryFrames['Unknown'].setDisabled(True)
-        self.categoryFrames['Subsets'].setDisabled(True)
+        #self.categoryFrames['Unknown'].setDisabled(True)
+        #self.categoryFrames['Subsets'].setDisabled(True)
 
 
         mainContent_layout.addStretch()
@@ -969,16 +1101,6 @@ class Window(QG.QWidget):
 
 
         workingArea_layout.addWidget(bottomButtonContainer)
-
-
-
-        CheckBox(text='NOTHING',
-                 initialChecked=False,
-                 stateChanged_slot=None,
-                 parentObject=workingArea_layout)
-
-
-
 
 
 
@@ -1065,7 +1187,7 @@ class Window(QG.QWidget):
         if MC.window('SHIT', ex=True):
             MC.deleteUI('SHIT')    
         MC.window('SHIT')
-        floating = MC.paneLayout(configuration='single', width=400, height=300)
+        floating = MC.paneLayout(configuration='single', width=300, height=300)
         MC.dockControl('alembicExportDock', area='right', allowedArea=['right', 'left'], content='SHIT', label='Alembic export')
         
         MC.control('TEST', e=True, p=floating)

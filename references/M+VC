@@ -74,19 +74,22 @@ The View/Controller contains no Model code; no code for validating URLs or perfo
 and no original state either: any data held by widgets is for display purposes only, and merely a 
 reflection of the true data stored in the Model.
 
-Now, here's the test of a true MVC design: the program should in essence be fully functional even 
-without a View/Controller attached. OK, the outside world will have trouble interacting with it in 
-that form, but as long as one knows the appropriate Model API incantations, the program will hold 
-and manipulate data as normal.
+-----------------------------------------------------------------------------------------------------
+Now, here's the test of a true MVC design: 
+  the program should in essence be fully functional even 
+  without a View/Controller attached. OK, the outside world will have trouble interacting with it in 
+  that form, but as long as one knows the appropriate Model API incantations, the program will hold 
+  and manipulate data as normal.
+-----------------------------------------------------------------------------------------------------
 
 Why is this possible? Well, the simple answer is that it's all thanks to the low coupling between 
 the Model and View/Controller layers. However, this isn't the full story. What's key to the whole 
-MVC pattern is the direction in which those connection goes: ALL instructions flow from the View/Controller 
-to the Model. The Model NEVER tells the View/Controller what to do.
+MVC pattern is the direction in which those connection goes: 
 
-Why? Because in MVC, while the View/Controller is permitted to know a little about the Model 
-(specifically, the Model's API), but the Model is not allowed to know anything whatsoever 
-about the View/Controller.
+  - ALL instructions flow from the View/Controller to the Model. 
+  - The Model NEVER tells the View/Controller what to do.
+  - The View/Controller is permitted to know a little about the Model (specifically, the Model's API)
+  - The Model is not allowed to know anything whatsoever about the View/Controller.
 
 Why? Because MVC is about creating a clear separation of concerns.
 
@@ -106,7 +109,8 @@ neat even if it does seem a bit roundabout at first. We'll get back to that in a
 In practical terms, then, a View/Controller object may, via the Model's API, 
 1. tell the Model to do things (execute commands), and 
 2. tell the Model to give it things (return data). 
-The View/Controller layer pushes instructions to the Model layer and pulls information from the Model layer.
+
+THE VIEW/CONTROLLER LAYER PUSHES INSTRUCTIONS TO THE MODEL LAYER AND PULLS INFORMATION FROM THE MODEL LAYER.
 
 And that's where your first MyCoolListControl example goes wrong, because the API for that class requires 
 that information be pushed into it, so you're back to having a two-way coupling between layers, 
@@ -136,7 +140,7 @@ require it knows something about those layers, and MVC rules prevent that. Howev
 forest and nobody's around to hear it, does it make a sound?
 
 ----------------------------------------------------------------------------------------------------------------------
-The answer, you see, is to set up a notifications system, providing the Model layer with a place it can 
+The answer, you see, is to set up a NOTIFICATIONS SYSTEM, providing the Model layer with a place it can 
 announce to no-one in particular that it has just done something interesting. Other layers can then post 
 listeners with that notification system to listen for those announcements that they're actually interested in. 
 The Model layer doesn't need to know anything about who's listening (or even if anyone is listening at all!); 
