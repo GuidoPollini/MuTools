@@ -300,7 +300,6 @@ class PushButton(QG.QPushButton):
         hoverColor   = baseColor + [20, 20, 20]
         pressedColor = baseColor + [40, 40, 40]
         
-        print baseColor
         #background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgb(98, 98, 98),  stop:1.0 rgb(94, 94, 94));
         styleSheet = """
             QPushButton{{
@@ -435,7 +434,8 @@ class Log(QG.QGroupBox):
     def __init__(self, title='...', 
                        parentObject=None):
         super(Log, self).__init__()
-        self.setTitle('Log')   
+        self.setTitle('Log')  
+        self.setFlat(True) 
         self.setStyleSheet("""
             color:rgb(140,140,140);
             font-size: 12px;
@@ -447,7 +447,7 @@ class Log(QG.QGroupBox):
         self.textEdit.setAcceptRichText(True)
         self.textEdit.setReadOnly(True)
         self.textEdit.setStyleSheet("""
-            background-color: rgb(48, 48, 48);
+            background-color: rgb(42, 42, 42);
             color:rgb(200,200,200);
             font-size: 13px;
         """)
@@ -494,15 +494,41 @@ class AssetsView(object):
 
 
 class CategoryFrameItem(QG.QFrame):
-    def __init__(self, label='fuckYou', parentObject=None):
+    def __init__(self, parentFrame=None, label='fuckYou', status='ok', parentObject=None):
+        self.status = status
+        
+        print 'CategoryFrameItem:', label, '->', status
+
         super(CategoryFrameItem, self).__init__()
+
+
+        #-----------------------------------
+        # To talk with its parent frame
+        self.parentFrame = parentFrame
+        #-----------------------------------
+
+
         self.layout = HBoxLayout(self)
 
         self.setFrameStyle(QG.QFrame.NoFrame)
         self.setFixedHeight(22)
+
+        
+        # Choose color depending on status
+        """
+        if status == 'ok':
+            backgroundColor = ''
+        elif status == 'bad':
+            backgroundColor = 'background-color:rgb(64, 48, 42);'
+        elif status == 'fatal': 
+            backgroundColor = 'background-color:rgb(255, 66, 47);'
+        """
+        backgroundColor = ''
+
         self.setStyleSheet(""" 
             QFrame{      
                 padding: 0px 4px 0px 4px;
+                """ + backgroundColor + """
             }
             QFrame:hover{
                 background-color:rgb(81, 106, 126);   
@@ -512,61 +538,83 @@ class CategoryFrameItem(QG.QFrame):
 
         # SELECT CHECKBOX
         #----------------------
-        self.selectCheckBox = QG.QCheckBox()
-        self.selectCheckBox.setChecked(False)
-        self.selectCheckBox.setCursor(QC.Qt.PointingHandCursor)
-        self.selectCheckBox.setStyleSheet("""
-            QCheckBox{
-                padding: 0px;
-                margin: 0px;
-                background-color:rgb(54, 54, 54);   
-                border-radius: 0px;
-            }
-            QCheckBox:disabled{
-                background-color:rgb(40, 40, 40); 
-            }             
-        """)
-        self.selectCheckBox.setFixedSize(12, 12)
+        if status == 'ok':
+            self.selectCheckBox = QG.QCheckBox()
+            self.selectCheckBox.setChecked(False)
+            self.selectCheckBox.setCursor(QC.Qt.PointingHandCursor)
+            self.selectCheckBox.setStyleSheet("""
+                QCheckBox{
+                    padding: 0px;
+                    margin: 0px;
+                    background-color:rgb(54, 54, 54);   
+                    border-radius: 0px;
+                }
+                QCheckBox::indicator:checked{
+                }
+                QCheckBox:disabled{
+                    background-color:rgb(40, 40, 40); 
+                }             
+            """)
+            self.selectCheckBox.setFixedSize(12, 12)
 
-        self.layout.addWidget(self.selectCheckBox)
+            self.layout.addWidget(self.selectCheckBox)
+
+        else:
+            # BETTER: create a widget placeHodler and create or not the checkBox inside it!
+            self.placeHolder = QG.QWidget()
+            self.placeHolder.setFixedSize(12, 12)
+            self.layout.addWidget(self.placeHolder)
+
+
 
 
         # LABEL
         #----------------------
+
+        # Choose color depending on status
+        if status == 'ok':
+            color = 'color:rgb(210, 210, 210);'
+        elif status == 'bad':
+            color = 'color:rgb(250, 230, 180);'
+        elif status == 'fatal': 
+            color = 'color:red;'
+
+
+
         self.label = QG.QLabel(label)
         self.label.setStyleSheet("""
             QLabel{  
                 padding: 4px 0px 0px 8px;
                 margin: 0px 0px 0px 0px;
-                color:rgb(244, 244, 244);
+                """ + color + """
                 font-size:12px;
-            }          
-            
+            }    
         """)
         self.label.setAlignment(QC.Qt.AlignLeft)
         self.label.setCursor(QC.Qt.PointingHandCursor)
 
         self.layout.addWidget(self.label)
 
-        self.fixButton = PushButton(text='FIX',
-                       fontSize=10,
-                       fontWeight='bold',
-                       baseColor=Color(117, 117, 117),
-                       fixedWidth=36,
-                       fixedHeight=15,
-                       clicked_slot=None, 
-                       parentObject=self.layout)
+        if status == 'bad':
+            self.fixButton = PushButton(text='FIX',
+                fontSize=10,
+                fontWeight='bold',
+                baseColor=Color(117, 117, 117),
+                fixedWidth=36,
+                fixedHeight=15,
+                clicked_slot=None, 
+                parentObject=self.layout)
 
         # PARENTING
         #----------------------
         if parentObject:
             parentObject.addWidget(self)
 
-    def select():    
-        pass
+    def select(self, state=True):
+        if self.status == 'ok':     
+            self.selectCheckBox.setChecked(state)
+            print self.parentFrame.title
 
-    def toggleSelection():
-        pass
 
 
 
@@ -576,7 +624,27 @@ class CategoryFrame(QG.QFrame):
         # Invece di infognarti nella table et delegates, stavolta
         # fai tutto manualmente...
         self.title = title
-        self.items = []
+        
+
+
+        """
+        In questo caso forse non conta molto, ma se vuoi emettere un segnale
+        ogni volta che la lista cambia dimensione (o semplicemente cambia),
+        non puoi accedere direttamente a essa:
+        - incapsulare i modifiers (append, delete, rebind, clear) in methods
+        - ogni method che altera sensibilmente l'oggetto, emettera' il SIGNAL
+
+        Altrimenti servirebbe un eventLoop che controlla periodicamente le modifiche
+        !!! se non e' incapsulato e qualcuno accede ai dati privati senza
+        passare per i setter, NESSUN SEGNALE SARA EMESSO
+
+        SE QUALCUNO CAMBIA DI NASCOSTO IL VALORE, e' illegale 
+        ... da qui la ragione di incapsulare in oggetti con parti "private"
+        """
+        
+        # THIS ONE MUST BE PRIVATE... otherwise you can't emit SIGNALS and synchronize
+        self._items = []
+        
         #------------------------------------------
 
 
@@ -586,7 +654,7 @@ class CategoryFrame(QG.QFrame):
             QFrame{
                 padding: 0px;
                 margin: 0px;
-                background-color: rgb(70, 70, 70);
+                background-color: rgb(42, 42, 42);
             }
             QFrame:disabled{
                 background-color: rgb(70, 70, 70);
@@ -612,7 +680,7 @@ class CategoryFrame(QG.QFrame):
         header.setFixedHeight(24)
         header.setStyleSheet("""
             QFrame{
-                background-color:rgb(85, 85, 85); 
+                background-color:rgb(60, 60, 60); 
                 font-size:18px;
                 padding: 0px 3px 0px 3px;
                 border-radius: 0px;
@@ -633,8 +701,12 @@ class CategoryFrame(QG.QFrame):
             QCheckBox{
                 padding: 0px;
                 margin: 0px;
-                background-color:rgb(54, 54, 54);   
+                background-color:rgb(48, 48, 48);   
                 border-radius: 0px;
+            }
+            QCheckBox::indicator{
+                width: 16px;
+                height: 16px;
             }
             QCheckBox:disabled{
                 background-color:rgb(40, 40, 40); 
@@ -646,6 +718,11 @@ class CategoryFrame(QG.QFrame):
         def _selectAllCheckBox_stateChanged_slot(state):
             # Again, it's a 'closure'
             print self.title, state
+            if state == 0:
+                self._deselectAllItems()
+            if state == 2:
+                self._selectAllItems()
+
         self.selectAllCheckBox.stateChanged.connect(_selectAllCheckBox_stateChanged_slot)
         
 
@@ -658,10 +735,13 @@ class CategoryFrame(QG.QFrame):
         header_label = QG.QLabel(title)
         header_label.setStyleSheet("""
             QLabel{  
-                color:rgb(244, 244, 244);
+                color:rgb(220, 220, 220);
                 font-size:16px;
                 padding: 0px 0px 0px 0px;
                 margin: 0px 0px 0px 0px;
+            }
+            QLabel:hover{
+                color: rgb(255, 255, 255);
             }
             QLabel:disabled{
                 background-color:rgb(80, 80, 80); 
@@ -670,7 +750,6 @@ class CategoryFrame(QG.QFrame):
         """)
         header_label.setAlignment(QC.Qt.AlignLeft)
         header_label.setCursor(QC.Qt.PointingHandCursor)
-
         header_layout.addWidget(header_label)
 
         # Override the .mousePressEvent
@@ -679,6 +758,10 @@ class CategoryFrame(QG.QFrame):
             self.selectAllCheckBox.toggle()
         header_label.mousePressEvent = types.MethodType(_mousePressEvent, header_label)
 
+
+        
+        # Add a spacer...
+        header_layout.addStretch()
 
 
 
@@ -712,12 +795,31 @@ class CategoryFrame(QG.QFrame):
         self._modelDict = None
 
 
+
+    """"""""""""""""""""""""""""""""""""""""""""""""""""""
+    # QUESTI E' POTENZIALMENTE PERICOLOSO: modifica la lista
+    # E se non emette un segnale opportuno sei fottuto
+
     def populate(self, itemList): 
         # Clear everything and redraw
-        for item in itemList:
-            self.items.append(CategoryFrameItem(label=item, parentObject=self.mainLayout))
+
+        # Order = ok | bad | fatal
+        orderedItems =      sorted([x for x in itemList if itemList[x] == 'ok'])
+        orderedItems.extend(sorted([x for x in itemList if itemList[x] == 'bad']))
+        orderedItems.extend(sorted([x for x in itemList if itemList[x] == 'fatal']))
+
+        for item in orderedItems:
+            self._items.append(CategoryFrameItem(parentFrame=self, label=item, status=itemList[item], parentObject=self.mainLayout))
+    """"""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
+    def _selectAllItems(self):
+        for item in self._items:
+            item.select(True)
+    def _deselectAllItems(self):
+        for item in self._items:
+            item.select(False)
+   
     def __getitem__(self, index):
         # To allow something like:
         #   chFrame['pippoPippo'].isChecked()
@@ -1025,10 +1127,11 @@ class Window(QG.QWidget):
         mainContent_widget.setFrameStyle(QG.QFrame.StyledPanel | QG.QFrame.Plain)
 
         mainContent_widget.setStyleSheet("""
-            background-color: rgb(60, 60, 60);
+            background-color: rgb(42, 42, 42); 
+            margin: 4px 0px 4px 0px;
         """)
         mainContent_layout = QG.QVBoxLayout(mainContent_widget)
-        mainContent_layout.setSpacing(8)
+        mainContent_layout.setSpacing(12)
         mainContent_layout.setContentsMargins(8, 8, 8, 8)
 
 
@@ -1039,14 +1142,49 @@ class Window(QG.QWidget):
         # Category frames (CHPR, CAM, SS, ST, UNKNOWN)
         #===============================================================================================
 
-        categories = ['Characters/props', 'Cameras', 'Subsets', 'Sets', 'Unknown']
+        categories = ['Characters/props', 'Cameras', 'Subsets', 'Unknown'] # 'Sets',
         self.categoryFrames = {}   
         for category in categories:
             newFrame = CategoryFrame(
                 title=category,
                 parentObject=mainContent_layout)
             
-            newFrame.populate(['A', 'B', 'C', 'D'])
+            if category == 'Characters/props':
+                chData = {
+                    'ch_yakar': 'ok', 
+                    'ch_guido': 'bad', 
+                    'ch_nibel': 'bad', 
+                    'ch_helly': 'fatal'
+                }
+                newFrame.populate(chData)
+
+            if category == 'Subsets':
+                ssData = {
+                    'ss_shit1': 'ok',
+                    'ss_fuck3': 'ok', 
+                    'ss_infecte': 'ok',
+                    'ss_bordello': 'bad',
+                    'ss_woaaah': 'fatal', 
+                    'ss_666': 'ok', 
+                    'ss_guidoPollini': 'bad'
+                }
+                newFrame.populate(ssData)
+
+            if category == 'Cameras':
+                camData = {
+                    'cam_proj': 'ok', 
+                    'cam_hd': 'ok', 
+                    'cam_extra': 'ok'
+                }
+                newFrame.populate(camData)
+
+            if category == 'Unknown':
+                unData = {
+                    'spazzatura': 'ok', 
+                    'immondizia': 'ok', 
+                    'pattume': 'ok'
+                }
+                newFrame.populate(unData)
 
             self.categoryFrames[category] = newFrame
 
