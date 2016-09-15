@@ -7,7 +7,6 @@ import shiboken
 
 import functools
 import os
-import time
 
 # To per-object override a method:
 #  def _override(self, ...): ...
@@ -18,7 +17,46 @@ import types
 
 
 
-print '[{0}.py] Loading module from "{1}"...'.format(__name__, __file__)
+
+
+
+
+
+
+
+
+
+"""
+======================================================================
+QUESTO DEVE ESSER EMESSO DENTRO MUCORE... in modo da
+avere un output standard...
+
+E PER I MODULI LO VOGLIO NELL'OUTPUT WINDOW, non nello scriptEditor
+======================================================================
+"""
+
+import sys
+import time
+def moduleLoading_message():
+    sys.__stdout__.write('\n\n[{0}.py] Loading module from "{1}"...'.format(__name__, __file__))
+
+def moduleLoaded_message():    
+    lastModification = os.path.getmtime(__file__) # Seconds passed between Epoch and last modification 
+    formattedLastModification = time.strftime("%d/%m/%y, %H:%M:%S", time.localtime(lastModification))
+    sys.__stdout__.write('\n[{0}.py] Module loaded! Last update {1}.\n'.format(__name__, formattedLastModification))
+
+
+moduleLoading_message()
+
+
+
+
+
+
+
+
+
+
 
 
 """
@@ -164,31 +202,80 @@ NOTE:
 
 
 
-class Color(object):
-    def __init__(self, r, g, b):
-        self.RGB = [r, g, b]
-        self._clamp()
-    
-    def __getitem__(self, index):
-        return self.RGB[index]
-        
-    def __setitem__(self, index, value):
-        self.RGB[index] = value
-        self._clamp()
-    
-    def _clamp(self):
-        self.RGB = [max(min(x, 255), 0) for x in self.RGB]
-        return self
-                
-    def __str__(self):
-        # Reprentation compatible with styleSheets    
-        return "rgb" +str(tuple(self.RGB))
 
+
+
+class Color(QG.QColor):
+    """
+    I derive from QG.QColor only to parasite the conversions RGB <=> HSL.
+    - Components will be clamped to [0, 255], not floored to 0 as in QColor;
+    - The alpha component will always be 255;
+    """
+
+
+    #-----------------------------
+    # INITIALIZER
+    #-----------------------------
+    def __init__(self, r, g, b):
+        # Clamp interval: [0, 255]
+        clampedColor = [max(min(x, 255), 0) for x in [r, g, b]]
+        super(Color, self).__init__(*clampedColor)
+        self.setAlpha(255)
+        
+
+
+    #-----------------------------
+    # MAGIC METHODS
+    #-----------------------------
     def __add__(self, otherColor):
-        # Accept: <Color>, <list>, <tuple>
-        return Color(self.RGB[0] + otherColor[0], 
-                     self.RGB[1] + otherColor[1],
-                     self.RGB[2] + otherColor[2])          
+        # 'otherColor' can be a <Color>, a <3-list> or <3-tuple>
+        # ("it quacks/moves/shits like a duck, hence it's a duck")
+        result = [self[i] + otherColor[i] for i in [0, 1, 2]]
+        return Color(*result)
+
+
+    def __getitem__(self, colorIndex):
+        colorGetters = [self.red, self.green, self.blue]
+        return colorGetters[colorIndex]()      
+
+
+    def __iadd__(self, otherColor):
+        self = self + otherColor
+        return self
+
+
+    def __repr__(self):
+        """
+        Return the string 'rgb(#,#,#)', compatible with Qt styleSheets
+        """
+        colorString = 'rgb({},{},{})'.format(self[0], self[1], self[2])
+        return colorString
+
+
+    def __setitem__(self, colorIndex, value):
+        colorSetters = [self.setRed, self.setGreen, self.setBlue]
+        colorSetters[colorIndex](max(min(value, 255), 0))
+
+
+    def __str__(self):
+        return self.__repr__()  
+
+
+
+    #-----------------------------
+    # METHODS
+    #----------------------------- 
+    def addToValue(self, addend):
+        hsva = list(self.getHsv()) #hsva
+        hsva[2] = max(min(hsva[2] + addend, 255), 0)
+        self.setHsv(*hsva)
+
+    def lighten(self, factor):
+        pass
+
+
+    def darken(self, factor):    
+        pass
 
 
 
@@ -1210,14 +1297,15 @@ class Window(QG.QWidget):
 
 
         pushMeButton = PushButton(
-            text='Push me',
-            fixedWidth=90,
+            text='Spawn remote Maya',
+            fixedWidth=180,
             fixedHeight=34,
+            clicked_slot=spawnRemoteMaya, 
             parentObject=bottomButtonContainer_layout
         )
-        pushMeButton.clicked.connect(callOne)
-        pushMeButton.clicked.connect(callTwo)
-        pushMeButton.clicked.connect(callThree)
+        #pushMeButton.clicked.connect(callOne)
+        #pushMeButton.clicked.connect(callTwo)
+        #pushMeButton.clicked.connect(callThree)
 
 
 
@@ -1382,9 +1470,89 @@ def run(*args):
 
 
 
-t = os.path.getmtime(__file__) # Seconds passed between Epoch and last modification 
-formattedTime = time.strftime("%d/%m/%y, %H:%M:%S", time.localtime(t))
-print '[{0}.py] SUCCESS: module loaded! Last update {1}.'.format(__name__, formattedTime)
+
+
+
+
+
+
+#=====================================================================================================================
+#=====================================================================================================================
+import subprocess
+import getpass
+import os
+def spawnRemoteMaya():
+    actualEnv = os.environ.copy() # .copy() is a <dict> method for shallow copy
+    varToNullify = ["MAYADEV_APP_PATH", "LOCAL_PATH", "SERVER_PATH", "PROMPT", "MAYA_APP_PATH", "MAYA_CUSTOM_TEMPLATE_PATH"]
+    for var in varToNullify:
+        actualEnv[var] = ""
+ 
+    modifiedVars = {
+        "MAYA_MODULE_PATH": "C:/Program Files/Autodesk/Maya2015/modules;C:/Users/guido.pollini/Documents/maya/2015-x64/modules;C:/Users/guido.pollini/Documents/maya/modules;C:/Program Files/Common Files/Autodesk Shared/Modules/maya/2015",
+        "PYTHONPATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
+        "MAYA_PRESET_PATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/presets;C:/ExocortexAlembic/Maya2015/Module/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/presets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/maya_bifrost_liquid;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x_passes;C:/Program Files/Autodesk/mentalrayForMaya2015/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/presets",
+        "XBMLANGPATH": "C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/icons;C:/Users/guido.pollini/Documents/maya/prefs/icons;C:/ProgramData/Autodesk/maya/2015;C:/Program Files/Autodesk/Maya2015/icons;C:/Program Files/Autodesk/Maya2015/app-defaults;C:/Program Files/Autodesk/Maya2015/icons/paintEffects;C:/Program Files/Autodesk/Maya2015/icons/fluidEffects;C:/Program Files/Autodesk/Maya2015/icons/hair;C:/Program Files/Autodesk/Maya2015/icons/cloth;C:/Program Files/Autodesk/Maya2015/icons/live;C:/Program Files/Autodesk/Maya2015/icons/fur;C:/Program Files/Autodesk/Maya2015/icons/muscle;C:/Program Files/Autodesk/Maya2015/icons/turtle;C:/Program Files/Autodesk/Maya2015/icons/FBX;C:/Program Files/Autodesk/Maya2015/icons/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/icons;C:/ExocortexAlembic/Maya2015/Module/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/icons;C:/Program Files/Autodesk/mentalrayForMaya2015/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/icons",
+        "MAYA_PLUG_IN_PATH": "C:/Users/guido.pollini/Documents/maya/2015-x64/plug-ins;C:/Users/guido.pollini/Documents/maya/plug-ins;C:/Program Files/Autodesk/Maya2015/bin/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/plug-ins;C:/ExocortexAlembic/Maya2015/Module/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/plug-ins;C:/Program Files/Autodesk/mentalrayForMaya2015/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/plug-ins",
+        "PATH": "C:/Program Files/Autodesk/Maya2015/bin/Cg;C:/Program Files/Autodesk/Maya2015/bin;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/Program Files/TortoiseGit/bin;C:/Program Files (x86)/Skype/Phone/;C:/windows/system32/config/systemprofile/.dnx/bin;C:/Program Files/Microsoft DNX/Dnvm/;C:/Program Files/Microsoft SQL Server/130/Tools/Binn/;C:/Program Files/Microsoft SQL Server/120/Tools/Binn/;C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/;C:/Program Files/Microsoft SQL Server/110/Tools/Binn/;C:/Program Files (x86)/Microsoft SDKs/TypeScript/1.0/;C:/Users/guido.pollini/AppData/Local/Google/Chrome/Application;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/wamp/bin/php/php5.6.15;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/bin;C:/Program Files/Autodesk/mentalrayForMaya2015/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/bin",
+        "MAYA_SCRIPT_PATH": "Y:/01_SAISON_4/09_EPISODES/04_Fabrication_3D/YKR400/sh004/lay/maya/work/scripts;C:/Users/guido.pollini/Documents/maya/2015-x64/scripts;C:/Users/guido.pollini/Documents/maya/scripts;C:/Users/guido.pollini/Documents/maya/2015-x64/presets;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/shelves;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/markingMenus;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/scripts;C:/Program Files/Autodesk/Maya2015/scripts;C:/Program Files/Autodesk/Maya2015/scripts/startup;C:/Program Files/Autodesk/Maya2015/scripts/others;C:/Program Files/Autodesk/Maya2015/scripts/AETemplates;C:/Program Files/Autodesk/Maya2015/scripts/unsupported;C:/Program Files/Autodesk/Maya2015/scripts/paintEffects;C:/Program Files/Autodesk/Maya2015/scripts/fluidEffects;C:/Program Files/Autodesk/Maya2015/scripts/hair;C:/Program Files/Autodesk/Maya2015/scripts/cloth;C:/Program Files/Autodesk/Maya2015/scripts/live;C:/Program Files/Autodesk/Maya2015/scripts/fur;C:/Program Files/Autodesk/Maya2015/scripts/muscle;C:/Program Files/Autodesk/Maya2015/scripts/turtle;C:/Program Files/Autodesk/Maya2015/scripts/FBX;C:/Program Files/Autodesk/Maya2015/scripts/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
+        "MAYA_PLUG_IN_RESOURCE_PATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/resources;C:/ExocortexAlembic/Maya2015/Module/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/resources;C:/Program Files/Autodesk/mentalrayForMaya2015/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/resources"
+    }
+    for var in modifiedVars:
+        actualEnv[var] = modifiedVars[var]
+
+    #actualEnv["PROD_SERVER"] = "Y:"    
+
+
+
+
+    # Path to Toonkit's plug-ins
+    userName = getpass.getuser()
+    #actualEnv["MAYA_PLUG_IN_PATH"] += ";C:/Users/" + userName + "/Documents/WKG_Yakari/Toonkit_Module/Maya2015/plug-ins"
+    # If the server is on the WKG_Yakari, apparently the userSetup.py is automatically invoked... why?
+
+
+
+
+
+    # OBSCENE... replace "guido.pollini" with the local userName
+    for var in modifiedVars:
+        modifiedVars[var] = modifiedVars[var].replace("guido.pollini", userName)
+
+
+
+
+    SW_MINIMIZE = 6
+    info = subprocess.STARTUPINFO()
+    info.dwFlags = subprocess.STARTF_USESHOWWINDOW
+    info.wShowWindow = SW_MINIMIZE
+
+    remoteMayaProcess = subprocess.Popen("maya.exe", env=actualEnv, startupinfo=info) 
+
+    QG.QApplication.setActiveWindow(getMayaWindow())    
+    
+    #\"Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/remoteMaya_server.py\"", env=actualEnv, startupinfo=info)
+
+#=====================================================================================================================
+#=====================================================================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+moduleLoaded_message()
+
 
 
 """
