@@ -1,12 +1,14 @@
 """
-import os as OS
-muPath = r'yout shitty path'
-if muPath not in OS.sys.path:
-    OS.sys.path.append(muPath)
+import os 
+myFuckingPath = "C:/Users/guido.pollini/Desktop/MuTools/"
+if myFuckingPath not in os.sys.path:
+        os.sys.path.append(myFuckingPath)
 
-import MuCore
-reload(MuCore)
-MU = MuCore
+import MuTools.MuCore
+#reload(MuTools.MuCore)
+
+MU = MuTools.MuCore
+
 """
 
 
@@ -219,6 +221,9 @@ ISSUES:
  
 
 '''
+import MuTools.MuUtils
+reload(MuTools.MuUtils)
+
 
 import maya.cmds         as MC
 import maya.OpenMaya     as OM
@@ -235,7 +240,10 @@ import os
 import time
 import types
 
-print '[{0}] loading from "{1}"...'.format(__name__, __file__)
+
+# Loading module...
+MuTools.MuUtils.moduleLoadingMessage()
+
 
 
 DEBUG = False
@@ -1942,10 +1950,8 @@ def getObjectSets(self, **kwargs):
 
 
 
-
-t = os.path.getmtime(__file__) # Seconds passed between Epoch and last modification 
-formattedTime = time.strftime("%d/%m/%y, %H:%M:%S", time.localtime(t))
-print '[{0}] loaded (last update {1})'.format(__name__, formattedTime)
+# Module loaded!
+MuTools.MuUtils.moduleLoadedMessage()
 
 
 
