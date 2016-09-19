@@ -19,17 +19,19 @@ def _getModuleCallerInfo():
     #  ['reload(MuTools.MuUtils)\n'], 
     #  0
     # )
+    #
+    # Note that item [1] is the module path! 
 
     outerFrames = inspect.getouterframes(inspect.currentframe())
 
-    # Actual stack
-    # -----------------------------------------------------------------
-    # (0) _getModuleCallerInfo                      (Here)
-    # (1) moduleLoadingMessage/moduleLoadedMessage  (Here)
-    # (2) the caller module                         (The caller module)
-    # (3) ...                                       (Irrelevant)
-    # (4) ...                                       ...
-    # ...
+    # Actual stack (in this special case, we need item [2])
+    # ---------------------------------------------------------------------
+    #     (0) _getModuleCallerInfo                      (Here)
+    #     (1) moduleLoadingMessage/moduleLoadedMessage  (Here)
+    # ==> (2) the caller module                         (The caller module)
+    #     (3) ...                                       (Irrelevant)
+    #     (4) ...                                       ...
+    #     ...
 
     callerStackIndex = 2 
     moduleName = inspect.getmodulename(outerFrames[callerStackIndex][1])
@@ -44,16 +46,21 @@ def moduleLoadingMessage():
     # sys.__stdout__ is the original outputHandler, in this case the 'outputWindow' of Maya.
     # When the UI is available, 'print' outputs to sys.stdout!
     moduleName, moduleFile = _getModuleCallerInfo()
-    sys.__stdout__.write('\n\n# [{0}.py] Loading module from "{1}"...'.format(moduleName, moduleFile))
+    sys.__stdout__.write('\n#[{0}.py] Loading module from "{1}"...'.format(moduleName, moduleFile))
 
 
 
-def moduleLoadedMessage():  
+def moduleLoadedMessage():
     moduleName, moduleFile = _getModuleCallerInfo()
     lastModification = os.path.getmtime(moduleFile) # Seconds passed between Epoch and last modification 
     formattedLastModification = time.strftime('%d/%m/%y, %H:%M:%S', time.localtime(lastModification))
-    sys.__stdout__.write('\n# [{0}.py] Module loaded! Last update {1}.\n'.format(moduleName, formattedLastModification))
+    sys.__stdout__.write('\n#[{0}.py] Module loaded! Last update {1}.'.format(moduleName, formattedLastModification))
 
+
+
+def genericMessage(message):
+    moduleName, moduleFile = _getModuleCallerInfo()
+    sys.__stdout__.write('\n#[{0}.py] {1}'.format(moduleName, message))
 
 
 
