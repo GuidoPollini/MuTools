@@ -6,9 +6,9 @@
 **MuCore**
 
 DGNode
-  longName
-  name
-  shortName
+- longName
+- name
+- shortName [DEPRECATED]
   
 DAGNode
 - getParent()
