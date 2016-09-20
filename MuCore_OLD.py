@@ -399,6 +399,8 @@ class Profiler(object):
     """ A context for cProfile """
     pass
 
+
+
 class MainPanelDisabled(object):
     def __enter__(self):
         MM.eval('paneLayout -e -manage false $gMainPane')
