@@ -127,23 +127,21 @@ Scene             [GLOBALS]
 
 
 
-"""
-MAYA_TYPES = [
-    'kTransform',
-    'kMesh'
-]
-"""
 
 class MuNode(object):
     #-----------------------------
     # CONSTRUCTOR
     #-----------------------------
     
+
     """
+    # THIS DOESN'T WORK AT ALL... 
+    # It's probable that at this point of the code, these classes don't exist yet...
     implementedTypes = {
         'kTransform': Transform
     }   
     """
+
 
     def __new__(cls, nodeName):
         printDebug('MuNode.__new__')
