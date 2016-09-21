@@ -1,3 +1,8 @@
+__version__ = '1.0.0' # 'MAJOR.MINOR.PATCH'
+
+
+
+
 import MuTools.MuUtils as MUT
 reload(MUT)
 
@@ -66,6 +71,7 @@ class RootNamespaceActive(object):
         MC.namespace(set=self.originalNamespace)
 
 
+
 class DefaultViewportActive(object):
     def __enter__(self):
         # A "viewport" is a panel of type "modelPanel"
@@ -80,12 +86,14 @@ class DefaultViewportActive(object):
             MC.modelEditor(panel, edit=True, rendererName= self.oldViewportsConfiguration[panel])
 
 
+
 class DefaultRenderLayerActive(object):
     def __enter__(self):
         self.originalLayer = MC.editRenderLayerGlobals(query=True, currentRenderLayer=True)
         MC.editRenderLayerGlobals(currentRenderLayer="defaultRenderLayer") 
     def __exit__(self, *args):
         MC.editRenderLayerGlobals(currentRenderLayer=self.originalLayer) 
+
 
 
 class RenderLayerActive(object):
@@ -106,6 +114,7 @@ class RenderLayerActive(object):
         MC.editRenderLayerGlobals(currentRenderLayer=self.originalRenderLayer) 
 
 
+
 class TimerActive(object):
     def __enter__(self):
         self.startTime = time.clock()
@@ -114,6 +123,7 @@ class TimerActive(object):
         print "Elapsed time:", time.clock() - self.startTime
         print "-"*80
         print  
+
 
 
 class ProfilerActive(object):
@@ -308,6 +318,16 @@ ________________________________________________________________________________
 #======================================================================================================  
 class Scene(object):
     @staticmethod
+    def getNodeSelection(filter=None):
+        """
+        Filter the selectionList with 'type=DGNode' 
+        """
+        selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
+        return Bundle(selectionNames)
+
+
+
+    @staticmethod
     def getSets():
         # listSets(allSets=True) is SEVERELY broken:
         #  - 2 parasites (unselectionable fake sets) comes out
@@ -316,7 +336,8 @@ class Scene(object):
         sets = MC.ls(type="objectSet") 
         # or MC.ls(sets=True), same thing
         
-        return Bundle(*sets)
+        return Bundle(sets)
+
 
 
     @staticmethod    
@@ -342,7 +363,8 @@ class Scene(object):
                         worldChildren.append(nodeName)
             else:
                 break
-        return Bundle(*worldChildren)
+        return Bundle(worldChildren)
+
 
 
     @staticmethod
@@ -365,6 +387,7 @@ class Scene(object):
         return isolatedNodes                
 
 
+
     @staticmethod
     def getSceneNamespaces(*args):
         with RootNamespaceActive():
@@ -372,6 +395,7 @@ class Scene(object):
             sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
         return sceneNamespaces
     
+
 
     @staticmethod
     def getReferences():
@@ -474,6 +498,7 @@ METHODS        (@SORTED)
 
 """""""""""""""""""""""""""""""""""
 CLASS HIERARCHY
+
 -----------------------------------
 Bundle            [MASSIVES]
 MuNode            [FACTORY]
@@ -491,60 +516,7 @@ Scene             [GLOBALS]
 
 
 
-
-class MuNode(object):
-    #-----------------------------
-    # CONSTRUCTOR
-    #-----------------------------
     
-
-    """
-    # THIS DOESN'T WORK AT ALL... 
-    # It's probable that at this point of the code, these classes don't exist yet...
-    implementedTypes = {
-        'kTransform': Transform
-    }   
-    """
-
-
-    def __new__(cls, nodeName):
-        printDebug('MuNode.__new__')
-
-        selList = OM.MSelectionList()
-        try:
-            # The API method .add fails if node doesn't exist or there's 
-            # a DAG ambiguity, but MC.objExists doesn't in case of ambiguity!!!
-            selList.add(nodeName)     
-
-        except:
-            # 'nodeName' is not bound to a Maya node...
-            # It could be an attribute??? No idea 
-            raise NameFatality(nodeName)  
-        
-        mObject = OM.MObject()
-        selList.getDependNode(0, mObject)
-        
-        nodeAPIType = mObject.apiTypeStr() 
-        
-        if nodeAPIType == 'kTransform':
-            # A transform
-            return Transform(mObject)
-        
-        if nodeAPIType == 'kMesh':
-            # A mesh
-            return Mesh(mObject)
-
-        
-        elif mObject.hasFn(OM.MFn.kDagNode):
-            # Generic DAGNode
-            return DAGNode(mObject)
-
-        else:
-            # Generic DGNode    
-            return DGNode(mObject)    
-
-
-            
 
 
 
@@ -615,7 +587,8 @@ class DGNode(object):
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
 
         _type = mObject.apiTypeStr()
-        
+        print 'APIType', _type
+
         if _type == 'kTransform':
             self._pointer = OM.MFnTransform(mObject)
         
@@ -686,9 +659,111 @@ class DGNode(object):
 
 
 
-class Reference(DGNode):
-    """ Maya manages the referenced files with a node... of course:) """
-    pass
+
+
+class Reference(object):
+    """ SE NON SBAGLIO, UNA REFERENCE DEVE PER FORZA ESSERE LEGATA A UN NODO
+        allora potrei wrappare il corrispondente nodo e attaccare sta merda a lui!!!
+        Cosi da ridurre le cose estranee a maya
+    """
+    #-----------------------------
+    # INITIALIZER
+    #-----------------------------       
+    def __init__(self, filePath):
+        self.filePath = filePath
+
+
+
+    #-----------------------------
+    # MAGIC METHODS
+    #-----------------------------
+    def __repr__(self):
+        representation = '"{0}"({1})<Reference>'.format(self.namespace, self.filePath)
+        return representation
+
+
+    #-----------------------------
+    # METHODS
+    #-----------------------------  
+    @property
+    def cleanFilePath(self):
+        return self.filePath.split('{')[0]
+
+
+
+    @property
+    def isBroken(self):
+        return os.path.isfile(self.cleanFilePath)
+
+
+
+    @property
+    def namespace(self):
+        """
+        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
+        """
+        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
+        # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
+        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
+        """ ... protect everything!!! """
+        if MC.namespace(exists=potentialNamespace):
+            return potentialNamespace
+        else:
+            return None  
+
+
+
+    @property
+    def originalName(self):
+        originalName = self.filePath.split('/')[-1].split('{')[0].replace('.ma', '')
+        return originalName
+
+
+
+    @property
+    def referenceNode(self):
+        return MC.file(self.filePath, query=True, referenceNode=True)
+    
+
+
+    """
+    ==========================================================================
+    'Reference' will be subclasse to add specific methods!
+    MuTools MUST stay neutral...
+    ==========================================================================
+
+    @property
+    def category(self):
+        knownAssetTags = ['ch', 'pr', 'st', 'ss']
+        # Recover the 'asset type'
+        assetTag = 'unknown'
+        for tag in knownAssetTags:
+            if self.originalName.startswith(tag + '_'):
+                assetTag = tag
+        # The camera is not a Shotgun asset        
+        if self.originalName == 'yak_camera':
+            assetTag = 'cam'    
+        
+        return assetTag   
+
+
+    @property
+    def renderSet(self):
+        if self.namespace is None:
+            # A shitty prefix; fatal...
+            return None
+        potentialRenderSet = self.namespace + ':RenderSet'
+        if not (MC.objExists(potentialRenderSet) and MC.nodeType(potentialRenderSet) == 'objectSet'):
+            return None    
+        
+        return potentialRenderSet
+
+    """
+
+
+
+
+
 
 
 
@@ -765,6 +840,8 @@ class DAGNode(DGNode):
 
 
 
+
+
 class Transform(DAGNode):
     """=========================================================="""
     """ Only a <transform> (and its derived) can have "children" """
@@ -822,7 +899,7 @@ class Transform(DAGNode):
             children = MC.listRelatives(self.name, children=True, type=type_flag, path=True) or []
 
         #return [MuNode(x) for x in children]
-        return Bundle(*children)
+        return Bundle(children)
 
 
 
@@ -851,7 +928,7 @@ class Transform(DAGNode):
             meshChildren = [x for x in meshChildren if MC.getAttr(x + '.intermediateObject') == 0]
         
         #return [MuNode(x) for x in meshChildren]
-        return Bundle(*meshChildren)
+        return Bundle(meshChildren)
         
 
 
@@ -891,6 +968,9 @@ class Transform(DAGNode):
     def isNurbsCurveTransform(self):
         return self.isTypedTransform(allowedType='nurbsCurve', noIntermediate=True, onlyOne=False)
     """  
+
+
+
 
 
 
@@ -996,6 +1076,8 @@ class Mesh(DAGNode):
         if self.isInstanced():
            MC.error("[FATAL] Instanced, not implemented!")
         """
+
+
 
 
 
@@ -1212,7 +1294,19 @@ class Bundle(object):
     # INITIALIZER
     #-----------------------------    
     def __init__(self, *args):
-        self._objectList = [MuNode(x) for x in args]
+        """
+        Bundle(<list of str>)
+        Bundle(*strArgs)
+        ex:
+          ... = Bundle(['node1', 'node2', ...])
+          ... = Bundle('node1, 'node2', ...)
+        """
+        if len(args) == 1:
+            # List/tuple
+            self._objectList = [MuNode(x) for x in args[0]]
+        else:
+            # args
+            self._objectList = [MuNode(x) for x in args]
     
 
 
@@ -1290,6 +1384,47 @@ Bundle.registerMassiveMethods(DGNode)
 
 
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+===============================================================================================================================================
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+FACTORIES
+
+_______________________________________________________________________________________________________________________________________________
+===============================================================================================================================================
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+class XXX(object):
+    def __init__(self):
+        self._data = [
+            ('kMesh',         'mesh',      Mesh,      OM.MFnMesh),
+            ('kReference',    'reference', Reference, OM.MFnDependencyNode), 
+            ('kSet',          'objectSet', ObjectSet, OM.MFnSet),
+            ('kTransform',    'transform', Transform, OM.MFnTransform),
+
+            ('kGenericNode',   None,       DGNode,    OM.MFnDependencyNode),
+            ('kGenericShape',  None,       DAGNode,   OM.MFnDagNode)
+        ]
+
+    def APIType(self):
+        return self._data[0]
+
+    def MELType(self):
+        return self._data[1]
+
+    def MUType(self):
+        return self._data[2]
+
+    def functionSet(self):  
+        return self._data[3]
+  
+
+"""
+Ex: 
+  myFuncSet = WRAPPED_NODES['kMesh']['functionSet'](...)
+  return WRAPPED_NODES['kMesh']['MuType'](pointer)
+"""
+#WRAPPED_NODES = {x[0]: {'MuType': x[1], 'functionSet':x[2]} for x in _DATA} 
 
 
 
@@ -1297,104 +1432,86 @@ Bundle.registerMassiveMethods(DGNode)
 
 
 
-class Reference(object):
-    """ SE NON SBAGLIO, UNA REFERENCE DEVE PER FORZA ESSERE LEGATA A UN NODO
-        allora potrei wrappare il corrispondente nodo e attaccare sta merda a lui!!!
-        Cosi da ridurre le cose estranee a maya
-    """
+class MuNode(object):
     #-----------------------------
-    # INITIALIZER
-    #-----------------------------       
-    def __init__(self, filePath):
-        self.filePath = filePath
-
-
-
+    # CONSTRUCTOR
     #-----------------------------
-    # MAGIC METHODS
-    #-----------------------------
-    def __repr__(self):
-        representation = '"{0}"({1})<Reference>'.format(self.namespace, self.filePath)
-        return representation
-
-
-    #-----------------------------
-    # METHODS
-    #-----------------------------  
-    @property
-    def cleanFilePath(self):
-        return self.filePath.split('{')[0]
-
-
-
-    @property
-    def isBroken(self):
-        return os.path.isfile(self.cleanFilePath)
-
-
-
-    @property
-    def namespace(self):
+    def __new__(cls, nodeArgument):
         """
-        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
+        'nodeArgument' can be a 'str' or an object of a MuNode subclass of MuNode:
+          MuNode('nodeName')  --> wrappedNode  (creates the wrapper)
+          MuNode(wrappedNode) --> wrappedNode  (just another bound name)
         """
-        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
-        # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
-        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
-        """ ... protect everything!!! """
-        if MC.namespace(exists=potentialNamespace):
-            return potentialNamespace
+
+        printDebug('MuNode.__new__', nodeArgument)
+
+
+
+        #---------------------------------------------------------
+        # It's already a wrappedNode (i.e. derived from DGNode)
+        #---------------------------------------------------------
+        if issubclass(type(nodeArgument), DGNode):
+            return nodeArgument
+
+
+
+        #---------------------------------------------------------
+        # It's probably the name of a Maya node
+        #---------------------------------------------------------
+        selList = OM.MSelectionList()
+        try:
+            # The API method .add fails if node doesn't exist or there's 
+            # a DAG ambiguity, but MC.objExists doesn't in case of ambiguity!!!
+            selList.add(nodeArgument)     
+
+        except:
+            # 'nodeArgument' is not bound to a Maya node...
+            # It could be an attribute??? No idea 
+            raise NameFatality(nodeArgument)  
+        
+        mObject = OM.MObject()
+        selList.getDependNode(0, mObject)
+        
+        nodeAPIType = mObject.apiTypeStr() 
+        
+        if nodeAPIType == 'kTransform':
+            # A transform
+            return Transform(mObject)
+        
+        if nodeAPIType == 'kMesh':
+            # A mesh
+            return Mesh(mObject)
+
+        
+        elif mObject.hasFn(OM.MFn.kDagNode):
+            # Generic DAGNode
+            return DAGNode(mObject)
+
         else:
-            return None  
+            # Generic DGNode    
+            return DGNode(mObject)    
 
 
 
-    @property
-    def originalName(self):
-        originalName = self.filePath.split('/')[-1].split('{')[0].replace('.ma', '')
-        return originalName
 
-
-
-    @property
-    def referenceNode(self):
-        return MC.file(self.filePath, query=True, referenceNode=True)
-    
-
-
+class MuObject(object):
     """
-    ==========================================================================
-    'Reference' will be subclasse to add specific methods!
-    MuTools MUST stay neutral...
-    ==========================================================================
-
-    @property
-    def category(self):
-        knownAssetTags = ['ch', 'pr', 'st', 'ss']
-        # Recover the 'asset type'
-        assetTag = 'unknown'
-        for tag in knownAssetTags:
-            if self.originalName.startswith(tag + '_'):
-                assetTag = tag
-        # The camera is not a Shotgun asset        
-        if self.originalName == 'yak_camera':
-            assetTag = 'cam'    
-        
-        return assetTag   
-
-
-    @property
-    def renderSet(self):
-        if self.namespace is None:
-            # A shitty prefix; fatal...
-            return None
-        potentialRenderSet = self.namespace + ':RenderSet'
-        if not (MC.objExists(potentialRenderSet) and MC.nodeType(potentialRenderSet) == 'objectSet'):
-            return None    
-        
-        return potentialRenderSet
-
+    For objects which don't have a nodal representative in Maya;
+    probably useless, but who knows...
     """
+    pass        
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

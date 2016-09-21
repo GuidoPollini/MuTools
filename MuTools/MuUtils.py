@@ -1,9 +1,80 @@
+__version__ = '1.0.0' # 'MAJOR.MINOR.PATCH'
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Version 'MAJOR.MINOR.PATCH'
+
+- 'PATCH' must be incremented if only backwards compatible bug fixes are 
+  introduced. A bug fix is defined as an internal change that fixes incorrect 
+  behavior.
+
+- 'MINOR' must be incremented if new, backwards compatible functionality is 
+  introduced to the public API. It MUST be incremented if any public API 
+  functionality is marked as deprecated. It may be incremented if substantial
+  new functionality or improvements are introduced within the private code. 
+  It MAY include patch level changes. Patch version MUST be reset to 0 when 
+  minor version is incremented.
+
+- 'MAJOR' must be incremented if any backwards incompatible changes are 
+  introduced to the public API. It MAY include minor and patch level changes.
+  Patch and minor version MUST be reset to 0 when major version is 
+  incremented.
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
+
+
 import inspect
 import os
 import sys
 import time
 
 
+
+def inspectMuTools():
+    """
+    {'MuTools.MuCore':  {'lastModification': '21/09/16, 16:15:05',
+                         'path':             'C:\\Users\\guido.pollini\\Desktop\\MuTools\\MuTools\\MuCore.pyc',
+                         'version':          '1.0.0'},
+     'MuTools.MuUI':    None,
+     'MuTools.MuUtils': {'lastModification': '21/09/16, 16:22:01',
+                         'path':             'C:\\Users\\guido.pollini\\Desktop\\MuTools\\MuTools\\MuUtils.py',
+                         'version':          '1.0.0'}
+    }
+    """
+
+    loadedModules = sys.modules 
+    muModules = [
+        'MuTools.MuUtils',
+        'MuTools.MuCore',
+        'MuTools.MuUI'
+    ]  
+    
+    muModulesDict = {}
+    for modName in muModules:
+        muModulesDict[modName] = None
+        if modName in loadedModules:
+            moduleObject              = loadedModules[modName]
+            version                   = moduleObject.__version__
+            path                      = moduleObject.__file__
+            lastModification          = os.path.getmtime(path)  
+            formattedLastModification = time.strftime('%d/%m/%y, %H:%M:%S', time.localtime(lastModification))
+
+            muModulesDict[modName] = {
+                'version':          version,
+                'path':             path,
+                'lastModification': formattedLastModification
+            }
+               
+    return muModulesDict
+
+
+
+class Module(object):
+    def loadingLog():
+        pass
+    def loadedLog():
+        pass    
 
 
 def _getModuleCallerInfo():
@@ -64,13 +135,10 @@ def genericMessage(message):
 
 
 
-
 moduleLoadingMessage()
 
 #
 # ...
 #
-
 moduleLoadedMessage()
-
 
