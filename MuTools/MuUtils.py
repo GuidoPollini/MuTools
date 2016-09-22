@@ -35,6 +35,39 @@ from MuTools.MuUtils import *
 
 
 
+
+"""
+#--------------------------------------------------------
+# HACK TO FORCE A RECURSIVE RELOAD, by simply calling
+# the reload on the first module; don't pollute each
+# module with hacks to force reload
+#--------------------------------------------------------
+
+import os
+import sys
+import types.ModuleType
+
+def recursiveModuleReload(module, paths=[''], mdict={}):
+    
+    if module not in mdict:
+        # Modules reloaded from this module
+        mdict[module] = [] 
+    
+    reload(module)
+
+    for attributeName in dir(module):
+        attribute = getattr(module, attributeName)
+        if type(attribute) is types.ModuleType:
+            if attribute not in mdict[module]:
+                if attribute.__name__ not in sys.builtin_module_names:
+                    if os.path.dirname(attribute.__file__) in paths:
+                        mdict[module].append(attribute)
+                        recursiveModuleReload(attribute, paths, mdict)
+    reload(module)
+"""
+
+
+
 import inspect
 import os
 import sys
@@ -68,6 +101,9 @@ STRING OUTPUT (print, debug, fileLog)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 class Log(object):
     pass
+
+
+
 """
 import logging
 

@@ -511,7 +511,20 @@ class DGNode(object):
 
     #-----------------------------
     # MAGIC METHODS
-    #-----------------------------
+    #-----------------------------    
+    def __getattr__(self, attr):
+        # '__getattr__' is called only when the Python object has not an 
+        # attribute named 'attr'; hence we try to ask the same attribute 
+        # to the underlying DependNode
+        try:
+            return MC.getAttr(self.name + '.' + attr)
+        except Exception as exc:
+            # Even the DependNode can't answer
+            print '[fuckYou] Maya attribute error:', exc
+            raise exc
+
+
+
     def __repr__(self):
         # Format: "name"<Type>
         return '"{0}"<{1}>'.format(self.name, self.type)      
@@ -547,6 +560,24 @@ class DGNode(object):
 
 
 
+    #========================================================
+    def lock(self):
+        try:
+            self._pointer.setLocked(True)
+        except:
+            # Pointer failure, referenced object etc ect
+            pass
+    def unlock(self):
+        try:
+            self._pointer.setLocked(False)
+        except: 
+            # as for .lock()
+            pass
+    def isLocked(self):    
+        return self._pointer.isLocked()
+    def isReferenced(self):
+        return self._pointer.isFromReferencedFile()    
+    #========================================================    
 
 
 
