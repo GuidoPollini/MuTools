@@ -309,6 +309,18 @@ def massiveMethod(func):
 
 SCENE METHODS
 
+
+Why do I need this shit?
+Simple, just compare:
+
+  name = MC.file(query=True, sceneName=True, shortName=True)
+  name = MC.file(q=True, sn=True, shn=True)
+  name = Scene.getName()
+
+  save = MC.file(query=True, anyModified=True)
+  save = MC.file(q=True, am=True)
+  save = Scene.isModified()
+
 _______________________________________________________________________________________________________________________________________________
 ===============================================================================================================================================
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -317,9 +329,147 @@ ________________________________________________________________________________
 # SCENE METHODS
 #======================================================================================================  
 class Scene(object):
+    """
+    'MC.file' shitty flags:
+    -----------------------
+      activate
+      activeProxy
+      anyModified
+      applyTo
+      buildLoadSettings
+      channels
+      cleanReference
+      command
+      compress
+      constraints
+      constructionHistory
+      copyNumberList
+      defaultExtensions
+      defaultNamespace
+      deferReference
+      editCommand
+      errorStatus
+      executeScriptNodes
+      exists
+      expandName
+      exportAll
+      exportAnim
+      exportAnimFromReference
+      exportAsReference
+      exportAsSegment
+      exportSelected
+      exportSelectedAnim
+      exportSelectedAnimFromReference
+      exportSelectedNoReference
+      exportUnloadedReferences
+      expressions
+      flushReference
+      force
+      groupLocator
+      groupName
+      groupReference
+      i
+      ignoreVersion
+      importReference
+      lastFileOption
+      lastTempFile
+      list
+      loadAllDeferred
+      loadAllReferences
+      loadNoReferences
+      loadReference
+      loadReferenceDepth
+      loadSettings
+      location
+      lockContainerUnpublished
+      lockFile
+      lockReference
+      mapPlaceHolderNamespace
+      mergeNamespacesOnClash
+      modified
+      moveSelected
+      namespace
+      newFile
+      open
+      options
+      parentNamespace
+      postSaveScript
+      preSaveScript
+      preserveName
+      preserveReferences
+      prompt
+      proxyManager
+      proxyTag
+      reference
+      referenceDepthInfo
+      referenceNode
+      removeDuplicateNetworks
+      removeReference
+      rename
+      renameAll
+      renameToSave
+      renamingPrefix
+      renamingPrefixList
+      resetError
+      returnNewNodes
+      save
+      saveDiskCache
+      saveReference
+      saveReferencesUnloaded
+      saveTextures
+      sceneName
+      segment
+      selectAll
+      shader
+      sharedNodes
+      sharedReferenceFile
+      shortName
+      strict
+      swapNamespace
+      type
+      uiConfiguration
+      unloadReference
+      unresolvedName
+      usingNamespaces
+      withoutCopyNumber
+      writable
+    """
+
+
     @staticmethod
-    def getName():
-        return None
+    def isModified():
+        return MC.file(query=True, anyModified=True)
+
+
+
+    # Which is better?
+    #
+    #   short = Scene.getName()
+    #   long  = Scene.getName(long=True)
+    #
+    #   short = Scene.getName()
+    #   long  = Scene.getLongName()
+    #
+    # ... The second one:)
+
+    @staticmethod
+    def getName(long=False):
+        """ 'expandName' ??? To resolve things like $PROJECT/fuckMe/now ? """
+        sceneName = MC.file(query=True, sceneName=True, shortName=not long)
+        return sceneName if sceneName != '' else None
+
+
+    @staticmethod
+    def getLongName():
+        return Scene.getName(long=True)
+
+
+    @staticmethod
+    def getType():
+        # - "mayaAscii"
+        # - "mayaBinary"
+        compatibleTypes = MC.file(query=True, type=True) # This is a list of compatible types
+        return compatibleTypes[0]
 
 
     @staticmethod

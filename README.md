@@ -5,23 +5,40 @@
 
 **MuCore**
 
-DGNode
+
+*Scene* [ALL STATIC]
+- isModified()
+- getName()
+- getLongName()
+- getType()
+- getNodeSelection()
+- getSets()
+- getChildren()
+- getIsolatedNodes()
+- getReferences()
+
+
+
+*DGNode*
 - longName
 - name
 - shortName [DEPRECATED]
   
-DAGNode
+
+*DAGNode*
 - getParent()
 - isInstanced()
   
-Transform
+
+*Transform*
 - getChildren()
 - getMesh()
 - getMeshes()
 - isPureTransform()
 - isMeshTransform()
   
-Mesh
+
+*Mesh*
 - getSmoothMeshDict()
 - setSmoothMesh()
   
