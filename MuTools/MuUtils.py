@@ -46,7 +46,17 @@ import time
 
 
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                  POSITIONAL                KEYWORDED              EXTRA_POSITIONAL      EXTRA KEYWORDED
+def FUNCTION(  a0, a1, ..., am,      k0=d0, k1=d1, ..., kn=dn,          *args,               **kwargs     ):...
 
+When called with FUNCTION(PASSED_POSITIONAL, PASSED_KEYWORDED):
+ - POSITIONAL is filled with the first items in PASSED_POSITIONAL, and what's left is put in EXTRA_POSITIONAL
+ - each item of PASSED_KEYWORDED which is not in KEYWORDED is put in EXTRA_KEYWORDED
+
+Put it simply: POSITIONAL and KEYWORDED rule; what's left goes into *args (list) or **kwargs (dict).
+Note that the order here IS fundamental: *args and **kwargs must be the latter ones!
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
 
@@ -126,19 +136,15 @@ ________________________________________________________________________________
 def inspectMuTools():
     """
     {'MuTools.MuCore':  {'lastModification': '21/09/16, 16:15:05',
-                         'path':             'C:\\Users\\guido.pollini\\Desktop\\MuTools\\MuTools\\MuCore.pyc',
-                         'version':          '1.0.0'},
-     'MuTools.MuUI':    None,
-     'MuTools.MuUtils': {'lastModification': '21/09/16, 16:22:01',
-                         'path':             'C:\\Users\\guido.pollini\\Desktop\\MuTools\\MuTools\\MuUtils.py',
-                         'version':          '1.0.0'}
-    }
+                         'path':             '.../MuCore.pyc',
+                         'version':          '1.0.0'}, ...}
     """
 
     loadedModules = sys.modules 
     muModules = [
         'MuTools.MuUtils',
         'MuTools.MuCore',
+        'MuTools.MuScene',
         'MuTools.MuUI'
     ]  
     
