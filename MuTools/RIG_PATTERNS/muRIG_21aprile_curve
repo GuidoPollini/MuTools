@@ -1,0 +1,140 @@
+=======================================================
+TRUCCO PER AVERE SCRIPTJOB 
+attivi e disattivi quando vuoi
+... senno puoi utilizzare un POINTER GLOBAL C++ via MEL
+=======================================================
+
+import maya.cmds as MC
+
+if MC.window("_selectionListener_scriptJob", ex=True):
+    MC.deleteUI("_selectionListener_scriptJob")
+MC.window("_selectionListener_scriptJob", t="Shit")
+MC.columnLayout()
+MC.text("guide_text", l="GUIDE: ")
+MC.showWindow()
+
+
+def _selectionListener(*args):
+    sel = MC.ls(sl=True)
+    if len(sel) == 1 and "BETTER" in sel[0]:
+        message = "GUIDE: " + sel[0]
+    else:    
+        message = "GUIDE: ..."
+    MC.text("guide_text", edit=True, l=message)     
+MC.scriptJob(event=["SelectionChanged", _selectionListener], parent="_selectionListener_scriptJob") 
+
+
+
+====================================================================================
+SAVING CURVES
+====================================================================================
+import maya.cmds as MC
+from pprint import pprint
+
+def getNurbsCurveData(curveName):
+    """
+    nurbsCurveData = {"degree": 3, 
+                      "form": 0,
+                      "localControlVertices": [(0,0,0), ...], 
+                      "knotVector": [1,2,3,4, ...]}
+    """
+    nurbsCurveData = {}
+    
+    curveShapes = MC.listRelatives("XXX", shapes=True, fullPath=True) or []
+    print curveShapes
+    if len(curveShapes) != 1:
+        print "[ERROR] Only implemented for exactly one nurbsCurve shape!"
+        return None
+    else:
+        curveShape = curveShapes[0]
+            
+    nurbsCurveData["degree"] = MC.getAttr(curveShape + ".degree")
+    nurbsCurveData["form"] = MC.getAttr(curveShape + ".form")
+    nurbsCurveData["localCVs"] = MC.getAttr(curveShape + ".controlPoints[*]")
+
+    # To recover the "knotVector", you need to ask to a "curveInfo"
+    curveInfo = MC.createNode("curveInfo")
+    MC.connectAttr(curveShape + ".local", curveInfo + ".inputCurve")
+    nurbsCurveData["knotVector"] = MC.getAttr(curveInfo + ".knots")[0]
+    MC.delete(curveInfo)
+    
+    return nurbsCurveData
+
+ncd = getNurbsCurveData("XXX")
+
+# Notes:
+# - it's the knotVector that determines if a curve is "closed"
+# - "periodic" <==> form == 2
+# - apparently, even for "circles", we don't need "weights"
+
+merda = MC.curve(periodic=True if ncd["form"] == 2 else False, 
+                 degree=ncd["degree"], 
+                 knot=ncd["knotVector"], 
+                 point=ncd["localCVs"])
+
+if MC.objExists("DIOPORCO"):
+    MC.delete("DIOPORCO")
+MC.rename(merda, "DIOPORCO")
+
+
+
+
+NURBS CURVES
+
+import maya.cmds as MC
+""" apparently all the data you need to identify a curve is here
+
+curve(string, 
+      [append=boolean], 
+      [bezier=boolean], 
+      [degree=float], 
+      [editPoint=[linear, linear, linear]], 
+      [knot=float], 
+      [objectSpace=boolean], 
+      [periodic=boolean], 
+      [point=[linear, linear, linear]], 
+      [pointWeight=[linear, linear, linear, float]], 
+      [replace=boolean], 
+      [worldSpace=boolean])
+probably, sometimes, you need to close the curve
+i.e. to recover Form(open = 0, closed = 1, periodic = 2)
+... or it it's also a matter of KNOTS... i.e. 
+periodic --> periodic form
+particular Knot tipe --> closed
+
+so, to rebuild a symmetric one, use "curve" and 
+    if form == 2:
+        periodic = True
+    else:
+        periodic = False
+It's the knot that determines "closed" (ma probablmente anch eil periodico... epr cui e inutile)    
+"""
+JSON-salva sta roba...
+niente XML se non serve
+
+NOTA: per fare la simmetria forse puoi direttamente rimpiazzare la curva sul posto con 
+      "You can replace an existing curve by using the "-r/replace" flag"
+
+nurbsCurveData = {"degree": 3, 
+                  "form": 0,
+                  "localControlVertices": [(0,0,0), ...], 
+                  "weights": [1,2,3,4, ...], 
+                  "knotVector": [1,2,3,4, ...]
+                 }       
+
+# info from <nurbsCurve> node
+print "DEG", MC.getAttr("shape.degree")
+print "FORM", MC.getAttr("shape.form")
+print "CP local?", MC.getAttr("shape.controlPoints[*]")
+
+# for everything ele, you need to connect an <curveInfo> node
+print "KNOTS ", MC.getAttr("CI.knots")[0]
+print "WEIGHTS ", MC.getAttr("CI.weights")[0]
+print "CP world?", MC.getAttr("CI.controlPoints[*]")
+
+""" NOT NECESSARY, use the [*] syntax
+indices = MC.getAttr("CI.controlPoints", mi=1)
+print "CP"
+for i in indices:
+    print MC.getAttr("CI.cp[" + str(i) + "]")[0]
+"""    

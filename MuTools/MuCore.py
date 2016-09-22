@@ -1,4 +1,4 @@
-__version__ = '1.0.0' # 'MAJOR.MINOR.PATCH'
+__version__ = '1.0.1' # 'MAJOR.MINOR.PATCH'
 
 
 
@@ -318,6 +318,11 @@ ________________________________________________________________________________
 #======================================================================================================  
 class Scene(object):
     @staticmethod
+    def getName():
+        return None
+
+
+    @staticmethod
     def getNodeSelection(filter=None):
         """
         Filter the selectionList with 'type=DGNode' 
@@ -411,6 +416,27 @@ class Scene(object):
         #----------------------------------------------------------------------------------
         referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
         return [Reference(x) for x in referencedFiles]
+
+
+    """
+    ===========================================================================
+    TO DO (probably)
+
+    minTime         = MC.playbackOptions(query=True, minTime=True)
+    maxTime         = MC.playbackOptions(query=True, maxTime=True)
+    animStartTime   = MC.playbackOptions(query=True, animationStartTime=True)
+    animEndTime     = MC.playbackOptions(query=True, animationEndTime=True)
+    framesPerSecond = MC.playbackOptions(query=True, framesPerSecond=True)
+    ===========================================================================
+    """
+
+
+
+
+
+
+
+
 
 
 
@@ -587,7 +613,6 @@ class DGNode(object):
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
 
         _type = mObject.apiTypeStr()
-        print 'APIType', _type
 
         if _type == 'kTransform':
             self._pointer = OM.MFnTransform(mObject)

@@ -40,20 +40,87 @@ import os
 import sys
 import time
 
+
+
+
+
+
+
+
+
+
+
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+STRING OUTPUT (print, debug, fileLog)
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+class Log(object):
+    pass
+"""
 import logging
+
+logPath = 'C:/Users/guido.pollini/Desktop/MuTools/muLog.log'
+logger = logging.getLogger('spamApplication')
+
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s  %(levelname)s - %(message)s')
+consoleHandler.setFormatter(formatter)
+#logger.addHandler(consoleHandler)
+logger.info('FUCK YOU')
+for x in logger.handlers:
+    print x.get_name()
+    #logger.removeHandler(x)
+
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter('%(message)s')
-fh = logging.FileHandler('C:/Users/Guido/Desktop/mySuperLog.txt', mode='w')
+fh = logging.FileHandler('C:/Users/guido.pollini/Desktop/MuTools/mySuperLog.txt', mode='w')
 fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
-logger.debug('Just fuck you.')
+logger.debug('Just fuck you.')    
+"""    
 
 
-class Log(object):
-    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+===================================================================================
+'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+NO IDEA
+
+___________________________________________________________________________________
+===================================================================================
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
 def inspectMuTools():
