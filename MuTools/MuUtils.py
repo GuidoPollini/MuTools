@@ -1,4 +1,4 @@
-__version__ = '1.0.0' # 'MAJOR.MINOR.PATCH'
+__version__ = '1.0.1' # 'MAJOR.MINOR.PATCH'
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Version 'MAJOR.MINOR.PATCH'
@@ -23,12 +23,37 @@ Version 'MAJOR.MINOR.PATCH'
 
 
 
+"""
+import os 
+muToolsPath = r'C:\Users\Guido\Desktop\MuTools'
+if muToolsPath not in os.sys.path:
+    os.sys.path.append(muToolsPath)
+import MuTools.MuUtils
+reload(MuTools.MuUtils)
+from MuTools.MuUtils import *
+"""
+
+
 
 import inspect
 import os
 import sys
 import time
 
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(message)s')
+fh = logging.FileHandler('C:/Users/Guido/Desktop/mySuperLog.txt', mode='w')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+logger.debug('Just fuck you.')
+
+
+class Log(object):
+    pass
 
 
 def inspectMuTools():
