@@ -1,0 +1,57 @@
+---------------------------------------------------------------------------------------------------------
+RIG CHECKLIST
+
+ - No stray nodes (<groupIds>, UI nodes, 'uiConfigurationScriptNode', ...); 
+ - A clean 'defaultRenderLayer';
+ - Before saving the rig, <MentalRay> and <Turtle> must be UNPLUGGED! The ASCII will keep parasitic 
+   references which must be manually deleted! Of course, a naive 'delete unknownNodes' won't work! 
+   Check for 'createNode ilr*'. The ASCII must be pristine!
+---------------------------------------------------------------------------------------------------------
+
+
+
+                  _       _            
+                 | |     | |           
+  _   _ _ __   __| | __ _| |_ ___  ___ 
+ | | | | '_ \ / _` |/ _` | __/ _ \/ __|
+ | |_| | |_) | (_| | (_| | ||  __/\__ \
+  \__,_| .__/ \__,_|\__,_|\__\___||___/
+       | |                             
+       |_|                    
+
+
+
+---------------------------------------------------------------------------------------------------------
+[23/09/16 10:50] on '[00.01] bdg_camera.ma'
+    Started rig cleaning:
+
+     - Removed 'plus' scriptNode;
+     
+     - Removed 'plus'/'minus' curves;
+
+     - Indirectly removed 'uiConfigurationScriptNode' (64KB of useless rubbish on a rig of 190KB), but...
+     ! The node 'uiConfigurationScriptNode' CAN'T be deleted manually: otherwise, on the next scene 
+       loading the OutLiner is gonna be sooo magnificently fucked-up. Only working solution: 
+
+       Maya Preferences
+         UI Elements
+           Panel Configurations 
+             'When saving:'  -->  NO F-WAY!  
+
+       The node will disappear on next load!
+
+     - Removed Maya's UI crappy nodes: 
+        <hyperGraphInfo> 
+        <hyperLayout>
+        <hyperView>
+
+     - Brutally removed <Turtle> references from the .ma that raise 'Load error' popUp on loading:
+        ilrOptionsNode
+        ilrUIOptionsNode
+        ilrBakeLayerManager
+        ilrBakeLayer
+
+       
+
+---------------------------------------------------------------------------------------------------------
+[23/09/16 10:50] Let's clean hard&deep...
