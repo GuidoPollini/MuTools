@@ -38,32 +38,24 @@ from MuTools.MuUtils import *
 
 """
 #--------------------------------------------------------
-# HACK TO FORCE A RECURSIVE RELOAD, by simply calling
-# the reload on the first module; don't pollute each
-# module with hacks to force reload
+# Reload all Modules inside
 #--------------------------------------------------------
 
-import os
-import sys
-import types.ModuleType
-
-def recursiveModuleReload(module, paths=[''], mdict={}):
+def reloadMuTools():
+    MuToolsModules = [
+        'MuTools', 
+        'MuTools.module1', 
+        'MuTools.module2', 
+        'MuTools.MuCore', 
+        'MuTools.MuCore.MuNodes', 
+        'MuTools.MuCore.MuUtils'
+    ]
+    import sys
+    loadedModules = sys.modules
+    for modName in MuToolsModules:
+        if modName in loadedModules:
+            reload(loadedModules[modName])
     
-    if module not in mdict:
-        # Modules reloaded from this module
-        mdict[module] = [] 
-    
-    reload(module)
-
-    for attributeName in dir(module):
-        attribute = getattr(module, attributeName)
-        if type(attribute) is types.ModuleType:
-            if attribute not in mdict[module]:
-                if attribute.__name__ not in sys.builtin_module_names:
-                    if os.path.dirname(attribute.__file__) in paths:
-                        mdict[module].append(attribute)
-                        recursiveModuleReload(attribute, paths, mdict)
-    reload(module)
 """
 
 
