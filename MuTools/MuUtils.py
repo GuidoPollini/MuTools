@@ -37,25 +37,25 @@ from MuTools.MuUtils import *
 
 
 """
-#--------------------------------------------------------
-# Reload all Modules inside
-#--------------------------------------------------------
-
-def reloadMuTools():
-    MuToolsModules = [
-        'MuTools', 
-        'MuTools.module1', 
-        'MuTools.module2', 
-        'MuTools.MuCore', 
-        'MuTools.MuCore.MuNodes', 
-        'MuTools.MuCore.MuUtils'
-    ]
+#---------------------------------------------------------------
+# Reload all MuTools modules (by just applying it to 'MuTools')
+#---------------------------------------------------------------
+def reloadMuTools2():
     import sys
-    loadedModules = sys.modules
-    for modName in MuToolsModules:
-        if modName in loadedModules:
-            reload(loadedModules[modName])
-    
+    loadedMods = sys.modules
+    # All MuTools modules have "MuTools" as prefix (or namespace), no exception!
+    MuToolsModObjs = [loadedMods[x] for x in loadedMods if x.startswith('MuTools')]
+    for modObj in MuToolsModObjs:
+        try:
+            reload(modObj)
+        except ImportError:
+            # Module exists in memory but it was deleted: swallow the exception.
+            print '[WARNING] The module object "{}" exists in memory but the ' \
+                  'corresponding .py/.pyc is missing!'.format(modObj.__name__)
+        except:
+            # Module compile error: reraise!
+            raise  
+
 """
 
 
