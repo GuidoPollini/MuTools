@@ -9,6 +9,7 @@ import maya.OpenMaya     as OM
 import maya.api.OpenMaya as OM20
 
 import functools
+import os
 import types
 
 
@@ -168,8 +169,8 @@ class AttributeFatality(Fatality):
 
 class NameFatality(Fatality):
     def __init__(self, nodeName):
-        tag = "name error"
-        mess = "There's no DGNode named \"" + nodeName + "\" (or it's DAG-ambiguous)!"        
+        tag = 'name error'
+        mess = 'There\'s no DGNode named "' + str(nodeName) + '" (or it\'s DAG-ambiguous)!'        
         super(NameFatality, self).__init__(tag, mess)
         
 
@@ -577,12 +578,22 @@ class DGNode(object):
 
 class Reference(object):
     """ 
-    'Reference' is not necessarily a node wrap; if you open a scene withour loading 
-    references, there's NO node. The 'Reference' methods still work (probably hidden). 
-    Hence this is a fine example of a 'MuNode' which is not a wrap of a Maya node.
+    
+    --------------------------------------------------------------------------------
+    FALSE: even in a bare load, there's always a reference node...
+    hence, WRAP IT into a DGNode
+    --------------------------------------------------------------------------------
+
+
+    NO  'Reference' is not necessarily a node wrap; if you open a scene withour loading 
+    NO  references, there's NO node. The 'Reference' methods still work (probably hidden). 
+    NO  Hence this is a fine example of a 'MuNode' which is not a wrap of a Maya node.
 
     A 'Reference' object shgould never be directly instantiated. It's up to 
-    Scene.getReferences() or Scene.createReference() to do so
+    Scene.getReferences() or Scene.createReference() to do so.
+
+    NOTES:
+      - There's no real need to use the API for this, just use the commandEngine.
     """
 
     #-----------------------------
@@ -606,8 +617,7 @@ class Reference(object):
     #----------------------------- 
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""
     A bunch of method that works on 'abstract' references:
-    def isLoaded(self):
-        pass
+
     def load(self):
         pass
     def reload(self):
@@ -620,6 +630,21 @@ class Reference(object):
         pass
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
+    def isValid(self):
+        # Simply check if the reference exists as file
+        return os.path.isfile(self.cleanFilePath)
+
+
+    def isLoaded(self):
+        return MC.referenceQuery(self.filePath, isLoaded=True)
+
+
+    def load(self):
+        # Try to load a reference only if the file exists; if nod, don't do anything;
+        """ Probably it should return True if succeeded or False if it failed! """
+        if self.isValid():
+            MC.file(self.filePath, loadReference=self.getReferenceNode().name, loadReferenceDepth='asPrefs')
+    
 
     @property
     def cleanFilePath(self):
@@ -627,14 +652,17 @@ class Reference(object):
 
 
 
-    @property
-    def isBroken(self):
-        return os.path.isfile(self.cleanFilePath)
+    def setNamespace(self, newNamespace):
+        """
+        WHAT HAPPENS IF THE NAMESPACE IS INVALID (or already existing)?
+         - should this return True/False if it succeeded/failed???
+        """ 
+        try:
+            MC.file(self.filePath, edit=True, namespace=newNamespace)
+        except:
+            raise
 
-
-
-    @property
-    def namespace(self):
+    def getNamespace(self):
         """
         Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
         """
@@ -656,9 +684,8 @@ class Reference(object):
 
 
 
-    @property
-    def referenceNode(self):
-        return MC.file(self.filePath, query=True, referenceNode=True)
+    def getReferenceNode(self):
+        return MuNode(MC.file(self.filePath, query=True, referenceNode=True))
     
 
 
@@ -1234,11 +1261,11 @@ class Bundle(object):
         Bundle(<list of str>)
         Bundle(*strArgs)
         ex:
-          ... = Bundle(['node1', 'node2', ...])
+          ... = Bundle(<iterable>)
           ... = Bundle('node1, 'node2', ...)
         """
         if len(args) == 1:
-            # List/tuple
+            # Iterable
             self._objectList = [MuNode(x) for x in args[0]]
         else:
             # args

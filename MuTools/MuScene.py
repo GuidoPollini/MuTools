@@ -341,6 +341,10 @@ def getReferences():
     #   ...
     #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
     #----------------------------------------------------------------------------------
+    """
+    This can't be a <Bundle>: at the present time Bundle works only for DGNodes and
+    a <Reference> is NOT...
+    """
     referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
     return [Core.Reference(x) for x in referencedFiles]
 

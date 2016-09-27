@@ -34,6 +34,14 @@ def initialize(*args):
     mayaWindow = UI.getMayaWindow()
     mayaWindow.setWindowTitle(' REMOTE MAYA')
     mayaWindow.setWindowIcon(QG.QIcon('C:/Users/guido.pollini/Desktop/muIcon.png'))
+
+    references = Scene.getReferences()
+    for ref in references:
+    	if not ref.isLoaded() and ref.isValid():
+    		ref.load()
+    		ref.setNamespace(ref.getNamespace() + '_fuckYou')	
+
+
     
 
 
