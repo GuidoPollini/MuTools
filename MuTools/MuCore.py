@@ -1,31 +1,24 @@
-__version__ = '1.0.1' # 'MAJOR.MINOR.PATCH'
+__version__ = '1.0.0'
 
 
 
-
-
-
-import MuTools.MuUtils as _muUtils; reload(_muUtils)
+import MuTools.MuUtils   as Utils
 
 import maya.cmds         as MC
 import maya.OpenMaya     as OM
-# import maya.api.OpenMaya as OM2
+import maya.api.OpenMaya as OM20
 
 import functools
 import types
-# import inspect
-# import os
-# import time
-
-
-
 
 
 
 #------------------------------------------------------------------------------
 # Loading module...
-_muUtils.moduleLoadingMessage()
+Utils.moduleLoadingMessage()
 #------------------------------------------------------------------------------
+
+
 
 
 
@@ -1308,7 +1301,7 @@ class Bundle(object):
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Add the 'massive' methods to Bundle
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Bundle.registerMassiveMethods(DGNode)
+#Bundle.registerMassiveMethods(DGNode)
 
 
 
@@ -1499,7 +1492,7 @@ class MuObject(object):
 
 #------------------------------------------------------------------------------
 # Module loaded!
-_muUtils.moduleLoadedMessage()
+Utils.moduleLoadedMessage()
 #------------------------------------------------------------------------------
 
 

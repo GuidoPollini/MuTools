@@ -1,22 +1,19 @@
-__version__ = '1.0.1' # 'MAJOR.MINOR.PATCH'
+__version__ = '1.0.0'
 
 
 
+import MuTools.MuCore  as Core
+import MuTools.MuUtils as Utils
 
-
-import MuTools.MuUtils as _muUtils; reload(_muUtils)
-import MuTools.MuCore  as _muCore;  reload(_muCore)
-
-import maya.cmds         as MC
-import maya.OpenMaya     as OM
-
-
+import maya.cmds       as MC
+import maya.mel        as MM
+import maya.OpenMaya   as OM
 
 
 
 #------------------------------------------------------------------------------
 # Loading module...
-_muUtils.moduleLoadingMessage()
+Utils.moduleLoadingMessage()
 #------------------------------------------------------------------------------
 
 
@@ -153,6 +150,79 @@ ________________________________________________________________________________
 """
 
 
+
+
+
+
+
+
+
+
+
+
+#=======================================================================================================
+#-------------------------------------------------------------------------------------------------------
+#
+# DISABLING and REENABLING the viewport
+#
+#-------------------------------------------------------------------------------------------------------
+#=======================================================================================================
+def disableUI(*args):
+    # Disable all UI elements and disable also all the viewports; but reenable 
+    # the 'Help Line' because it offers a load progressBar and could give a hint 
+    # if remoteMaya has crashed!
+    # Disable also teh viewports' refresh.
+    MELCommand = """
+        HideUIElements;
+        toggleUIComponentVisibility("Help Line");        
+        paneLayout -edit -manage false $gMainPane;
+    """                
+    MM.eval(MELCommand)
+
+
+
+
+
+def enableUI(*args):
+    # Enable viewports
+    MELCommand = 'paneLayout -edit -manage true $gMainPane;'
+
+    # Enanble only what really matters...
+    UIElementNames = [
+        #'Attribute Editor',
+        #'Channel Box / Layer Editor',
+        #'Tool Settings',
+        #'Shelf',     
+        'Tool Box',  
+        'Time Slider',
+        'Range Slider',  
+        'Command Line',   
+        'Help Line',
+        'Status Line'                
+    ]    
+    
+    for name in UIElementNames:
+        print name
+        # If not visible, toggle it's visibility
+        MELCommand += """
+            if (!`isUIComponentVisible("{0}")`){{
+                toggleUIComponentVisibility("{0}");}}
+        """.format(name)
+    
+    MM.eval(MELCommand)
+
+
+
+
+def disableViewport20(*args):
+    # A 'viewport' is a panel of type 'modelPanel'
+    modelPanels = MC.getPanel(type="modelPanel")
+    for panel in modelPanels:
+        MC.modelEditor(panel, edit=True, rendererName='base_OpenGL_Renderer')
+
+
+
+
 def isModified():
     return MC.file(query=True, anyModified=True)
 
@@ -190,7 +260,7 @@ def getNodeSelection(filter=None):
     Filter the selectionList with 'type=DGNode' 
     """
     selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
-    return _muCore.Bundle(selectionNames)
+    return Core.Bundle(selectionNames)
 
 
 
@@ -202,7 +272,7 @@ def getSets():
     sets = MC.ls(type="objectSet") 
     # or MC.ls(sets=True), same thing
     
-    return _muCore.Bundle(sets)
+    return Core.Bundle(sets)
 
 
 
@@ -228,7 +298,7 @@ def getWorldChildren():
                     worldChildren.append(nodeName)
         else:
             break
-    return _muCore.Bundle(worldChildren)
+    return Core.Bundle(worldChildren)
 
 
 
@@ -253,7 +323,7 @@ def getIsolatedNodes(**kwargs):
 
 
 def getSceneNamespaces(*args):
-    with _muCore.RootNamespaceActive():
+    with Core.RootNamespaceActive():
         # 'UI' and 'shared' are internal namespaces
         sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
     return sceneNamespaces
@@ -272,7 +342,7 @@ def getReferences():
     #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
     #----------------------------------------------------------------------------------
     referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
-    return [_muCore.Reference(x) for x in referencedFiles]
+    return [Core.Reference(x) for x in referencedFiles]
 
 
 def createReference(*args, **kwargs):
@@ -311,6 +381,6 @@ def setCurrentUnits():
 
 #------------------------------------------------------------------------------
 # Module loaded!
-_muUtils.moduleLoadedMessage()
+Utils.moduleLoadedMessage()
 #------------------------------------------------------------------------------
 

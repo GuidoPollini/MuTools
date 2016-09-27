@@ -1,62 +1,4 @@
-__version__ = '1.0.1' # 'MAJOR.MINOR.PATCH'
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Version 'MAJOR.MINOR.PATCH'
-
-- 'PATCH' must be incremented if only backwards compatible bug fixes are 
-  introduced. A bug fix is defined as an internal change that fixes incorrect 
-  behavior.
-
-- 'MINOR' must be incremented if new, backwards compatible functionality is 
-  introduced to the public API. It MUST be incremented if any public API 
-  functionality is marked as deprecated. It may be incremented if substantial
-  new functionality or improvements are introduced within the private code. 
-  It MAY include patch level changes. Patch version MUST be reset to 0 when 
-  minor version is incremented.
-
-- 'MAJOR' must be incremented if any backwards incompatible changes are 
-  introduced to the public API. It MAY include minor and patch level changes.
-  Patch and minor version MUST be reset to 0 when major version is 
-  incremented.
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-
-
-"""
-import os 
-muToolsPath = r'C:\Users\Guido\Desktop\MuTools'
-if muToolsPath not in os.sys.path:
-    os.sys.path.append(muToolsPath)
-import MuTools.MuUtils
-reload(MuTools.MuUtils)
-from MuTools.MuUtils import *
-"""
-
-
-
-
-"""
-#---------------------------------------------------------------
-# Reload all MuTools modules (by just applying it to 'MuTools')
-#---------------------------------------------------------------
-def reloadMuTools2():
-    import sys
-    loadedMods = sys.modules
-    # All MuTools modules have "MuTools" as prefix (or namespace), no exception!
-    MuToolsModObjs = [loadedMods[x] for x in loadedMods if x.startswith('MuTools')]
-    for modObj in MuToolsModObjs:
-        try:
-            reload(modObj)
-        except ImportError:
-            # Module exists in memory but it was deleted: swallow the exception.
-            print '[WARNING] The module object "{}" exists in memory but the ' \
-                  'corresponding .py/.pyc is missing!'.format(modObj.__name__)
-        except:
-            # Module compile error: reraise!
-            raise  
-
-"""
+__version__ = '1.0.0' 
 
 
 
@@ -173,7 +115,8 @@ def inspectMuTools():
         'MuTools.MuUtils',
         'MuTools.MuCore',
         'MuTools.MuScene',
-        'MuTools.MuUI'
+        'MuTools.MuUI', 
+        'MuTools.MuMayaRemote'
     ]  
     
     muModulesDict = {}
@@ -201,6 +144,7 @@ class Module(object):
         pass
     def loadedLog():
         pass    
+
 
 
 def _getModuleCallerInfo():
