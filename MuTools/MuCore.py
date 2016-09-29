@@ -149,6 +149,8 @@ class MainPanelDisabled(object):
 # CUSTOM EXCEPTIONS
 #======================================================================================================
 class Fatality(Exception):
+
+                        
     def __init__(self, tag, mess):
         self.mess = mess       
         print "" 
