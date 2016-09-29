@@ -755,7 +755,6 @@ class DAGNode(DGNode):
     #-----------------------------
     def getParent(self):
         """ By returning a full-fledged node, there's no need for the 'longName' option! """
-
         if self.isInstanced():
             # Remember, it fails with instances...
             MC.error('INSTANCED!!!')
@@ -766,6 +765,29 @@ class DAGNode(DGNode):
         except:
             # Child of the world
             return None    
+
+
+    
+    def getRootParent(self):
+        """ 
+        Return None if the DAG is a worldChild, otherwise the worldChild that contains it
+        """
+        if self.isInstanced():
+            # Remember, it fails with instances...
+            MC.error('INSTANCED!!!')
+        
+        # Not worldChild ex: "|__CAMERA__|SH054_CAM:camera_rig|SH054_CAM:rig_extra|SH054_CAM:aimLine"
+        #     WorldChild ex: "|__SET__" 
+
+        longName = self.longName
+        tokens = longName.lstrip('|').split('|')
+        if len(tokens) == 1:
+            # World child
+            return None
+        else:
+            # The first token is the rootParent and being top root, there's no DAG ambiguity
+            rootParent = MuNode('|' + tokens[0])
+            return rootParent    
 
 
 

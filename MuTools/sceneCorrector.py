@@ -355,7 +355,7 @@ ANIMATION_PATH = 'Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/'
 
 def run(*args):
 
-    # Predefined asset folders; they must exist:
+    # Predefined asset folders; they must exist and be worldChildren:
     assetFolders = {'cam': '__CAMERA__', 
                     'ch':  '__CHARS__', 
                     'pr':  '__PROPS__', 
@@ -365,6 +365,10 @@ def run(*args):
     for folder in assetFolders.values():
         if not MC.objExists(folder):
             print 'MISSING FOLDER: {0} doesn\'t exist'.format(folder)
+        else:
+            if MC.listRelatives(folder, parent=True):
+                print 'MISPLACED FOLDER: {0} must be a worldChild!'.format(folder)
+  
 
 
 
@@ -541,8 +545,10 @@ def run(*args):
 
 
     # Create a suitable 'renderSet'
+    print 
+    print 'ROOT MESHTRANSFORMS:'
     for root in rootTransforms:
-        print root
+        print '  ', root
 
 
     prettyPrintList('PREFIXED', prefixedReferences)
