@@ -53,12 +53,12 @@ class CommandPort(object):
             return getattr(__main__, CommandPort._singletonName)
 
         else:
-            # Create a new object...
+            # Create a new virgin CommandPort object with object.__new__()...
             commandPortInstance = super(CommandPort, cls).__new__(cls)
             # ... and make it interprer-level global (__main__)
             setattr(__main__, CommandPort._singletonName, commandPortInstance)
 
-            # Open physically Maya port
+            # Open physically a Maya port and customize the object
             commandPortInstance._openPort(internalPortId)
 
             return commandPortInstance
@@ -103,8 +103,11 @@ class CommandPort(object):
             # 'commandPort' uses the eventLoop which is disabled during scripts: hence force a refresh!
             MC.refresh()
      
-        MC.commandPort(name=internalPortName, echoOutput=False, noreturn=False,
-                       prefix='_commandPort_melCallback', returnNumCommands=True)
+        MC.commandPort(name=internalPortName, 
+                       prefix='_commandPort_melCallback',
+                       echoOutput=False, 
+                       noreturn=False,
+                       returnNumCommands=True)
 
         self.internalPortId = internalPortId
 
