@@ -1,11 +1,11 @@
 __version__ = '1.0.1'
-
+print "--- Using Maya API2.0 ---"
 
 import MuTools.MuUtils   as Utils
 
 import maya.cmds         as MC
-import maya.OpenMaya     as OM
-import maya.api.OpenMaya as OM20
+#import maya.OpenMaya     as OM
+import maya.api.OpenMaya as OM
 
 import functools
 import os
@@ -473,7 +473,8 @@ class DGNode(object):
         <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>        
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
 
-        _type = mObject.apiTypeStr()
+        """_type = mObject.apiTypeStr()"""
+        _type = mObject.apiTypeStr
 
         if _type == 'kTransform':
             self._pointer = OM.MFnTransform(mObject)
@@ -489,7 +490,9 @@ class DGNode(object):
         
 
 
-        self.type = self._pointer.typeName()
+
+        """self.type = self._pointer.typeName()"""
+        self.type = self._pointer.typeName
 
         """
         Here you should check for MObjectHandle... apparently 
@@ -514,9 +517,12 @@ class DGNode(object):
         # to the underlying DependNode
 
         #return MC.getAttr(self.name + '.' + attr)
-        if MC.attributeQuery(attr, node=self.name, exists=True):
-            return MuAttribute(self, attr)
-        else:
+        """if MC.attributeQuery(attr, node=self.name, exists=True):"""
+        """    return MuAttribute(self, attr)"""
+        try: 
+            return MuAttribute(self._pointer.findPlug(attr, True))
+        except Exception as exc:
+            print exc
             # Even the DependNode can't answer
             MC.error('[Attribute Error] The attribute "{0}" can\'t be found on node/MuNode "{1}"!'.format(attr, self.name))
 
@@ -1457,10 +1463,12 @@ class MuNode(object):
             # It could be an attribute??? No idea 
             raise NameFatality(nodeArgument)  
         
-        mObject = OM.MObject()
-        selList.getDependNode(0, mObject)
-        
-        nodeAPIType = mObject.apiTypeStr() 
+        """mObject = OM.MObject()"""
+        """selList.getDependNode(0, mObject)"""
+        mObject = selList.getDependNode(0)
+
+        """nodeAPIType = mObject.apiTypeStr()"""
+        nodeAPIType = mObject.apiTypeStr
         
         if nodeAPIType == 'kTransform':
             # A transform
@@ -1504,7 +1512,14 @@ class MuAttribute(object):
       fuck.tx.set(shit.ty)       # A specified plug
     
     """
-    def __init__(self, node, attrName):
+    def __init__(self, mPlug):
+        # GO FOR API 2.0
+        # I can't recover the minimalName necessary to use the commandENgine
+        #  _mPlug.name() AIN'T ENOUGH?
+        #  _mPlug.partialName()        
+        self._mPlug = mPlug
+    
+    """    
         self.node     = node      # Here, the node is referenced
         self.attrName = attrName  # This is shitty string...
     
@@ -1529,7 +1544,7 @@ class MuAttribute(object):
             MC.setAttr(plug, args[0], type='string')
         else:
             MC.setAttr(plug, args[0])     
-
+    """
 
 
 
