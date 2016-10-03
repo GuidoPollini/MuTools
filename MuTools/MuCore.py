@@ -1,16 +1,18 @@
-__version__ = '1.0.1'
+__version__ = '1.0.2'
+print '! [{}] Using Maya API 2.0'.format(__name__)
+
 
 
 import MuTools.MuUtils   as Utils
 
 import maya.cmds         as MC
-import maya.OpenMaya     as OM
-import maya.api.OpenMaya as OM20
+import maya.api.OpenMaya as OM # <-- API 2.0
 
 import functools
 import os
 import time
 import types
+import uuid
 
 
 
@@ -171,9 +173,22 @@ class AttributeFatality(Fatality):
 
 class NameFatality(Fatality):
     def __init__(self, nodeName):
-        tag = 'name error'
-        mess = 'There\'s no DGNode named "' + str(nodeName) + '" (or it\'s DAG-ambiguous)!'        
-        super(NameFatality, self).__init__(tag, mess)
+        # At this point the script is already dead, so don't worry about performances and find-out the reason:
+        candidates = MC.ls(nodeName)
+
+        if not candidates:
+            # No ambiguity, simply it's a shitty name
+            tag     = 'UNKNOWN NAME'
+            message = 'There\'s no DGNode named "{}"!'.format(nodeName)        
+        
+        else:
+            # The provided name is not enough to identify a node
+            tag     = 'AMBIGUOUS NAME'
+            message = 'The name "{}" is not long enough to determine an unique DAG-node!\nPossible alternatives:'.format(nodeName)
+            for candidate in candidates:
+                message += '\n - "{}"'.format(candidate)        
+
+        super(NameFatality, self).__init__(tag, message)
         
 
 
@@ -396,7 +411,7 @@ DGNode
       Joint
   ObjectSet  
   RenderLayer
-  ? Reference ?   [Probably not, when a reference is not loaded, there's no node]         
+  ? Reference ?   [Probably not, when a reference is not loaded, there's no node.. FALSE. IT'S ALWAYS THERE!!!]         
 Scene             [GLOBALS]    
 
 """""""""""""""""""""""""""""""""""
@@ -473,7 +488,8 @@ class DGNode(object):
         <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>        
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
 
-        _type = mObject.apiTypeStr()
+        """_type = mObject.apiTypeStr()"""
+        _type = mObject.apiTypeStr
 
         if _type == 'kTransform':
             self._pointer = OM.MFnTransform(mObject)
@@ -489,7 +505,9 @@ class DGNode(object):
         
 
 
-        self.type = self._pointer.typeName()
+
+        """self.type = self._pointer.typeName()"""
+        self.type = self._pointer.typeName
 
         """
         Here you should check for MObjectHandle... apparently 
@@ -505,20 +523,77 @@ class DGNode(object):
         """
 
 
+
+
+
+
+    ##########################################################################################################
     #-----------------------------
     # MAGIC METHODS
-    #-----------------------------    
+    #-----------------------------  
+    
+    # COMPARING WRAPPERS
+    #
+    #   x = MuNode('myNode')
+    #   y = MuNode('myNode')
+    #
+    #     id(x) == id(y)    --> False: they're 2 different wrappers
+    #         x == y        --> True:  they point to the same node
+    #   hash(x) == hash(y)  --> True:  same minimalName --> same node
+    #   
+    #   set([x, y])         --> MuNode('myNode'), it check for equality by using 'hash()'
+    #   
+    #   z = MuNode('myNode')
+    #   z in Bundle(x, y)   --> True: it checks __eq__
+
+
+    def __eq__(self, other):
+        """
+        Return True iff the DGNode wrappers wrap the same Maya node!
+
+        MFnBase.object() --> MObject 
+        The MObjects have an overloaded == which returns True iff they points to the same Maya object!
+        """
+        return self._pointer.object() == other._pointer.object()
+
+
+
+    def __hash__(self):
+        """
+        hash(node) == node.__hash__()
+
+        It is used when casting a Bundle in a set.
+        It doesn't use '__eq__'!
+        """
+        # The only warranty is that if the wrappers point to the same node, they have the same hash...
+        return hash(self.name)
+
+    ##########################################################################################################
+
+
+
+
+
+
     def __getattr__(self, attr):
         # '__getattr__' is called only when the Python object has not an 
         # attribute named 'attr'; hence we try to ask the same attribute 
         # to the underlying DependNode
 
         #return MC.getAttr(self.name + '.' + attr)
-        if MC.attributeQuery(attr, node=self.name, exists=True):
-            return MuAttribute(self, attr)
-        else:
+        """if MC.attributeQuery(attr, node=self.name, exists=True):"""
+        """    return MuAttribute(self, attr)"""
+        try: 
+            # Pass the MFn* and the MPlug
+            # (I cant' recover the minimal name of a node from one of its plugs without passing
+            #  for MObject-MFnDependencyNode) 
+            # Accessing the attribute via the commandEngine is necessary...
+            return MuAttribute(self, self._pointer.findPlug(attr, True))
+        except Exception as exc:
+            print exc
             # Even the DependNode can't answer
             MC.error('[Attribute Error] The attribute "{0}" can\'t be found on node/MuNode "{1}"!'.format(attr, self.name))
+
 
 
 
@@ -545,15 +620,24 @@ class DGNode(object):
         return self._pointer.name()
 
 
+
     @property
     def name(self): 
         # To allow loop on generic nodes and DAGs
         return self._pointer.name()
 
 
+
+    def rename(self, newName):
+        newName = MC.rename(self.name, newName)
+        return newName
+
+
+
     @property
     def shortName(self): 
         return self._pointer.name()
+
 
 
 
@@ -575,6 +659,63 @@ class DGNode(object):
     def isReferenced(self):
         return self._pointer.isFromReferencedFile()    
     #========================================================    
+
+
+
+
+
+
+
+
+
+
+    """ CHECK IF IT'S A TRANSFORM and IT'S 'TYPIZED' """
+
+
+    def _isTypedTransform(self, allowedType='mesh', noIntermediate=True, onlyOne=True):
+        """ Check if the transform has shapeChildren of an allowedType """
+        # The flag combination 'shapes + noIntermediate' is valid, 
+        # but not 'type + noIntermediate' (the latter is ignored)
+        if self.type != 'transform':
+            return False
+
+        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
+        allowedShapeChildren = [x for x in shapeChildren if MC.nodeType(x) == allowedType]
+        
+        if onlyOne:
+            return len(allowedShapeChildren) == 1
+        else:
+            return len(allowedShapeChildren) >= 1 
+
+
+
+    def isPureTransform(self):
+        """
+        Check if:
+         - it's a 'transform';
+         - it has no 'shape' children.
+        """
+        if self.type != 'transform':
+            return False
+
+        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=False) or []
+        return len(shapeChildren) == 0
+
+
+
+    def isMeshTransform(self, onlyOneAllowed=True):
+        """ Check if the transform has only one meshChild (or multiple, according to 'onlyOneAllowed') """
+        return self._isTypedTransform(allowedType='mesh', noIntermediate=True, onlyOne=onlyOneAllowed)
+    
+
+
+    def isLocatorTransform(self):
+        return self._isTypedTransform(allowedType='locator', noIntermediate=True, onlyOne=True)
+
+
+       
+    def isNurbsCurveTransform(self):
+        return self._isTypedTransform(allowedType='nurbsCurve', noIntermediate=True, onlyOne=False)  
 
 
 
@@ -611,7 +752,7 @@ class Reference(object):
     # MAGIC METHODS
     #-----------------------------
     def __repr__(self):
-        representation = '"{0}"({1})<Reference>'.format(self.namespace, self.filePath)
+        representation = '"{0}"({1})<Reference>'.format(self.getNamespace(), self.filePath)
         return representation
 
 
@@ -665,7 +806,12 @@ class Reference(object):
         except:
             raise
 
-    def getNamespace(self):
+
+
+
+    """ GET NAMESPACE AS A PROPERTY """
+    @property
+    def namespace(self):
         """
         Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
         """
@@ -675,6 +821,22 @@ class Reference(object):
         """ ... protect everything!!! """
         if MC.namespace(exists=potentialNamespace):
             return potentialNamespace
+        else:
+            return None   
+
+
+
+
+    def getNamespace(self):
+        """
+        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
+        """
+        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
+        # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
+        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
+        """ ... protect everything!!! """
+        if MC.namespace(exists=potentialNamespace):
+            return Namespace(potentialNamespace)
         else:
             return None  
 
@@ -919,43 +1081,6 @@ class Transform(DAGNode):
         return Bundle(meshChildren)
         
 
-
-    def _isTypedTransform(self, allowedType='mesh', noIntermediate=True, onlyOne=True):
-        """ Check if the transform has shapeChildren of an allowedType """
-        # The flag combination 'shapes + noIntermediate' is valid, 
-        # but not 'type + noIntermediate' (the latter is ignored)
-        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
-        allowedShapeChildren = [x for x in shapeChildren if MC.nodeType(x) == allowedType]
-        
-        if onlyOne:
-            return len(allowedShapeChildren) == 1
-        else:
-            return len(allowedShapeChildren) >= 1 
-
-
-
-    def isPureTransform(self):
-        """ A 'pure' transform has no shapeChildren """
-        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=False) or []
-        return len(shapeChildren) == 0
-
-
-
-    def isMeshTransform(self, onlyOneAllowed=True):
-        """ Check if the transform has only one meshChild (or multiple, according to 'onlyOneAllowed') """
-        return self._isTypedTransform(allowedType='mesh', noIntermediate=True, onlyOne=onlyOneAllowed)
-    
-
-
-    """
-    def isLocatorTransform(self):
-        return self.isTypedTransform(allowedType='locator', noIntermediate=True, onlyOne=True)
-
-
-       
-    def isNurbsCurveTransform(self):
-        return self.isTypedTransform(allowedType='nurbsCurve', noIntermediate=True, onlyOne=False)
-    """  
 
 
 
@@ -1457,10 +1582,12 @@ class MuNode(object):
             # It could be an attribute??? No idea 
             raise NameFatality(nodeArgument)  
         
-        mObject = OM.MObject()
-        selList.getDependNode(0, mObject)
-        
-        nodeAPIType = mObject.apiTypeStr() 
+        """mObject = OM.MObject()"""
+        """selList.getDependNode(0, mObject)"""
+        mObject = selList.getDependNode(0)
+
+        """nodeAPIType = mObject.apiTypeStr()"""
+        nodeAPIType = mObject.apiTypeStr
         
         if nodeAPIType == 'kTransform':
             # A transform
@@ -1503,15 +1630,65 @@ class MuAttribute(object):
       fuck.tx.set(shit)          # Has 'shit' a 'tx'?
       fuck.tx.set(shit.ty)       # A specified plug
     
+    Connectors (force=True):
+      fuck.tx >> fuck.ty >> fuck.sx
+      fuck.tx << fuck.ty << fuck.sx
+
     """
-    def __init__(self, node, attrName):
-        self.node     = node      # Here, the node is referenced
-        self.attrName = attrName  # This is shitty string...
-    
+
+
+    def __init__(self, node, mPlug):
+        # GO FOR API 2.0
+        # I can't recover the minimalName necessary to use the commandEngine
+        #  _mPlug.name() AIN'T ENOUGH?
+        #  _mPlug.partialName()        
+        self._mPlug   = mPlug
+        self.attrName = mPlug.partialName()
+        self.node     = node
+
+
+
+    def __rshift__(self, other):
+        # self ==> other
+
+
+        """ 
+        VORREI ANCHE LA FORMA:
+          xxx.tx >> 'pippo.fck'
+        Oppure fai un __init__ che accetta anche stringhe (MuAttribute('pippo.tx')...  
+        """
+
+        plug      = self.node.name  + '.' + self.attrName
+        otherPlug = other.node.name + '.' + other.attrName
+
+
+        try:
+            MC.connectAttr(plug, otherPlug, force=True)
+        
+        except RuntimeError:
+            # Exception to swallow: "Warning: 'xxx.aaa' is already connected to 'xxx.yyy'."
+            # Unluckily, it raises the same exception than 'locked attribute' 
+            if MC.isConnected(plug, otherPlug, ignoreUnitConversion=True):
+                # It will nonetheless show the 'warning', but swallow the exception
+                pass
+            else:
+                # A genuine error: reraise!
+                raise    
+        
+        return other
+
+
+
+    def __lshift__(self, other):
+        # self <== other
+        MuAttribute.__rshift__(other, self)
+        return other
+
+
 
 
     def get(self):
-        return MC.getAttr(self.node.name + '.' +self.attrName)
+        return MC.getAttr(self.node.name + '.' + self.attrName)
 
 
 
@@ -1529,7 +1706,47 @@ class MuAttribute(object):
             MC.setAttr(plug, args[0], type='string')
         else:
             MC.setAttr(plug, args[0])     
+        
+        # What should return? 'self' of course:
+        # myShit.rx.set(360)\
+        #          .lock()\
+        #          .hide()
 
+        return self
+
+
+
+    def isLocked(self):
+        """ Nouveaute' API2.0 """
+        # In the API2.0 the 'MPlug.isLocked' is an getter/setter attribute!
+        # ex:
+        #   shit.tx.isLocked = True
+        #   xxx = shit.tx.isLocked
+        return self._mPlug.isLocked
+
+
+
+    def lock(self):
+        self._mPlug.isLocked = True
+        return self   
+
+    
+
+    def unlock(self):
+        self._mPlug.isLocked = False
+        return self
+
+
+    def setLocked(self, lockStatus=True):
+        self._mPlug.isLocked = lockStatus
+        return self
+
+
+
+    def __call__(self, *args, **kwargs):
+        """ NOT REALLY NECESSARY """
+        # myShit.sx(999, ws=True)  -->  myShit.sx.set(999, ws=True)
+        pass
 
 
 
@@ -1542,7 +1759,13 @@ class MuObject(object):
 
 
 
+class Namespace(object):
+    def __init__(self, namespaceName):
+        self.name = namespaceName 
 
+    def getNodes(self):
+        nodes = MC.namespaceInfo(self.name, listOnlyDependencyNodes=True)
+        return Bundle(nodes)
 
 
 

@@ -1,45 +1,12 @@
-
-__version__ = '1.0.0'
-
-
-import MuTools.MuUtils   as Utils
-import MuTools.MuCore    as Core
-import MuTools.MuScene   as Scene
-
-
 import maya.cmds     as MC
 import maya.mel      as MM
 import maya.OpenMaya as OM
-
 import time
 import os
 from pprint import pprint
 
 
-
-
-#------------------------------------------------------------------------------
-# Loading module...
-Utils.moduleLoadingMessage()
-#------------------------------------------------------------------------------
-
-
-
-log = Utils.Log()
-log('--------------------------\n', 
-    '    SCENE CORRECTOR\n', 
-    '--------------------------')
-
-
-
-
-
-
-
-
-
-
-
+print '[{0}.py] Loading module from "{1}"...'.format(__name__, __file__)
 
 
 class RootNamespaceActive(object):
@@ -386,55 +353,22 @@ ASSETS_PATH    = 'Y:/01_SAISON_4/08_ASSETS/3D/'
 ANIMATION_PATH = 'Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/'
 
 
-
-
-
-#==============================================================================
-#------------------------------------------------------------------------------
-# Customizing 'Core.Reference'
-#------------------------------------------------------------------------------
-#==============================================================================
-def _getYakariTag(self):
-    yakariTags = ['ch', 'pr', 'st', 'ss']
-    
-    # Recover the 'asset type'
-    assetTag = None
-
-    for tag in yakariTags:
-        if self.originalName.startswith(tag + '_'):
-            assetTag = tag
-
-    # The camera is not a Shotgun asset        
-    if self.originalName == 'yak_camera':
-        assetTag = 'cam'    
-        
-    return assetTag  
-
-Core.Reference.getYakariTag = _getYakariTag
-#------------------------------------------------------------------------------
-
-
-
-
-
-
-
 def run(*args):
 
     # Predefined asset folders; they must exist and be worldChildren:
-    assetFolderNames = {'cam': '__CAMERA__', 
-                        'ch':  '__CHARS__', 
-                        'pr':  '__PROPS__', 
-                        'st':  '__SET__', 
-                        'ss':  '__SUBSET__'
+    assetFolders = {'cam': '__CAMERA__', 
+                    'ch':  '__CHARS__', 
+                    'pr':  '__PROPS__', 
+                    'st':  '__SET__', 
+                    'ss':  '__SUBSET__'
     }
-
-    for folderName in assetFolderNames.values():
-        if not Scene.exists(folderName):
-            log.fatality('MISSING FOLDER: {} doesn\'t exist'.format(folderName))
-        
-        if Scene.getParent(folderName):
-            log.fatality('MISPLACED FOLDER: {} must be a worldChild!'.format(folderName))
+    for folder in assetFolders.values():
+        if not MC.objExists(folder):
+            print 'MISSING FOLDER: {0} doesn\'t exist'.format(folder)
+        else:
+            if MC.listRelatives(folder, parent=True):
+                print 'MISPLACED FOLDER: {0} must be a worldChild!'.format(folder)
+  
 
 
 
@@ -459,9 +393,7 @@ def run(*args):
     #===========================================================================================================
 
     # File references
-    references = Scene.getReferences()
-    log('References:', references)
-
+    references = Reference.getReferences()
 
     for ref in references:
 
@@ -469,7 +401,6 @@ def run(*args):
             # Skip reference with prefixes... It's a FATALITY
             prefixedReferences.append(ref.filePath)
             continue
-        
 
         #print
         #print 
@@ -508,19 +439,14 @@ def run(*args):
         #-------------------------------------------------------------------------------------------------------------- 
         # All 'ch', 'pr'(published) and 'ss', 'cam' setups have a transform root 
         # and every other transform is inside it.
-        
-        yakariTag = ref.getYakariTag()
 
-        if yakariTag in ['ch', 'pr', 'ss', 'cam']:
-            try:
-                rootTransform = Core.MuNode(ref.namespace + (':camera_rig' if yakariTag == 'cam' else ':rig_group')) 
-            except NameFatality:
+        if ref.category in ['ch', 'pr', 'ss', 'cam']:
+            rootTransform = ref.namespace + (':camera_rig' if ref.category == 'cam' else ':rig_group') 
+            if not MC.objExists(rootTransform):
                 MC.error('NO IDEA!!!')
 
-
-            parent = rootTransform.getParent()
-            
-            if parent.name == assetFolderNames[yakariTag]:
+            parent = getParent(rootTransform)
+            if parent == assetFolders[ref.category]:
                 properTransforms.append(rootTransform)
                 #print '[OK] It\'s inside "{}"!'.format(parent)        
             else:                
@@ -536,24 +462,17 @@ def run(*args):
         #--------------------------------------------------------------------------------------------------------------                
         # 'st' assets have not necessarily a rootTransform, but a list of <locators> holding meshes.
 
-        elif yakariTag == 'st':
+        elif ref.category == 'st':
             """ DEVO RECUPERARE ANCHE LE PLACCHE NON REFERENCED? le ..._COPY? sono nel renderset"""
-
-            nodes = ref.getNamespace().getNodes()
-
-            # Filter 'locatorTransforms' only:
-            locators = [x for x in nodes if x.isLocatorTransform()]
-
+            nodes = MC.namespaceInfo(ref.namespace, listOnlyDependencyNodes=True)
+            #nodes = MC.referenceQuery(ref.filePath, nodes=True, dagPath=True)
+            locators = [x for x in nodes if isLocatorTransform(x)]
             for locator in locators:
-                parent = locator.getParent()
-
-                if parent and parent.name == '__SET__':
-                    # Ok, it's inside '__SET__'
+                parent = getParent(locator)
+                if parent == '__SET__':
                     properTransforms.append(locator)
-                    #print '[OK] It\'s inside "{}"!'.format(parent)  
-
+                    #print '[OK] It\'s inside "{}"!'.format(parent)        
                 else:
-                    # Bad: worldChild or badly parented
                     badTransforms.append(locator)
                     #print '[BAD] It\'s inside "{}"!'.format(parent if parent is not None else '__world__')
 
@@ -566,7 +485,7 @@ def run(*args):
         #--------------------------------------------------------------------------------------------------------------                
         # Referenced files without a proper tag; can't do anything!
         else:
-            toDoReferences.append(ref)
+            toDoReferences.append(ref.filePath)
 
 
 
@@ -582,14 +501,10 @@ def run(*args):
     #   (i.e. by going back until one finds the world or the common assetFolders)
     #-----------------------------------------------------------------------------------------------------------    
     #===========================================================================================================   
-    
-    irrelevantTransforms = set(Core.Bundle('persp', 'top', 'front', 'side', 'front', 'platesHolder'))
-    # irrelevantTransforms = Core.MuSet('persp', 'top', 'front', 'side', 'front', 'platesHolder')
-    # transformsToSkip = Core.MuSet(properTransforms) | Core.MuSet(badTransforms) | Core.MuSet(irrelevantTransforms)
+    irrelevantTransforms = set(['persp', 'top', 'front', 'side', 'front', 'platesHolder'])
     transformsToSkip = set(properTransforms) | set(badTransforms) | irrelevantTransforms
 
-    worldTransformsToAnalyze = set(Scene.getWorldChildren()) - transformsToSkip
-    
+    worldTransformsToAnalyze = set(getWorldTransforms()) - transformsToSkip
 
 
     # Transforms potentially holding an SS: 
@@ -599,27 +514,28 @@ def run(*args):
 
 
     def analyzeChildren(actualTrans, depth=0):
-        if actualTrans.isMeshTransform():
-            #longName = actualTrans.longName
+        if isMeshTransform(actualTrans):
+            longName = MC.ls(actualTrans, long=True)[0]
             #print 'MT ' + ' '*depth, longName
 
             #    |fakeParent|pascal:G2|pascal:G1|pascal:GUIDO
             # fakeParent   pascal:G2   pascal:G1   pascal:GUIDO
-            parentTags = actualTrans.longName.lstrip('|').split('|')
+            parentTags = longName.lstrip('|').split('|')
 
             if len(parentTags) == 1:
                 # It's a world meshTransform
-                rootTransforms.add(Core.MuNode('|' + actualTrans))
+                rootTransforms.add('|' + actualTrans)
 
             else:    
                 rootParent = parentTags[0]
-                if rootParent not in assetFolderNames.values():
-                    rootTransforms.add(Core.MuNode('|' + rootParent))
+                if rootParent not in assetFolders.values():
+                    rootTransforms.add('|' + rootParent)
                 else:
-                    nextRootParent = Core.MuNode('|' + rootParent + '|' + parentTags[1])
+                    nextRootParent = '|' + rootParent + '|' + parentTags[1]
                     rootTransforms.add(nextRootParent)    
 
-        children = actualTrans.getChildren(type='transform')
+
+        children = MC.listRelatives(actualTrans, children=True, path=True) or []
         for child in children:
             if child not in transformsToSkip:
                 analyzeChildren(child, depth=depth + 1)
@@ -651,22 +567,6 @@ def run(*args):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#------------------------------------------------------------------------------
-# Module loaded!
-Utils.moduleLoadedMessage()
-#------------------------------------------------------------------------------
+t = os.path.getmtime(__file__) # Seconds passed between Epoch and last modification 
+formattedTime = time.strftime("%d/%m/%y, %H:%M:%S", time.localtime(t))
+print '[{0}.py] SUCCESS: module loaded! Last update {1}.'.format(__name__, formattedTime)

@@ -1,6 +1,8 @@
-__version__ = '1.0.0' 
+__version__ = '1.0.2' 
 
 
+
+import maya.cmds as MC
 
 import inspect
 import os
@@ -13,94 +15,127 @@ import time
 
 
 
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-                  POSITIONAL                KEYWORDED              EXTRA_POSITIONAL      EXTRA KEYWORDED
-def FUNCTION(  a0, a1, ..., am,      k0=d0, k1=d1, ..., kn=dn,          *args,               **kwargs     ):...
-
-When called with FUNCTION(PASSED_POSITIONAL, PASSED_KEYWORDED):
- - POSITIONAL is filled with the first items in PASSED_POSITIONAL, and what's left is put in EXTRA_POSITIONAL
- - each item of PASSED_KEYWORDED which is not in KEYWORDED is put in EXTRA_KEYWORDED
-
-Put it simply: POSITIONAL and KEYWORDED rule; what's left goes into *args (list) or **kwargs (dict).
-Note that the order here IS fundamental: *args and **kwargs must be the latter ones!
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
 
 
 
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-STRING OUTPUT (print, debug, fileLog)
 
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 class Log(object):
-    pass
+    """
+    LEADING CHARACTERS
+    -  Nothing to say
+    !  Something important or warning
+    >  Success
+    ?  Error/fatality
+    @  Debug
+     
+    Ex:
+    ! [MuTools.MuCore] Trying to reload from "C:/Users/guido.pollini/Desktop/MuTools/MuTools\MuCore.pyc"...
+    """
+
+    """
+    WISHLIST
+
+      from MuTools.MuUtils import Log
+      log = Log('globalLogId')
+      ...
+      log.fileOutput = 'C:/blahblahblah.log'
+      log.verbosity = Log.DEBUG
+      ...
+      log('Working on asset XXX...')
+      log.debug('Data', data, lista, dico)
+      log.('Completed')
+   
+    Probably a singleton for each logName (ex: MuCoreLog, MuSceneLog, MuToolsGlobalLog,...)
+    """
 
 
 
-"""
-import logging
+    STANDARD   = 0
+    DEBUG      = 1
+    HARD_DEBUG = 2
+    
 
-logPath = 'C:/Users/guido.pollini/Desktop/MuTools/muLog.log'
-logger = logging.getLogger('spamApplication')
-
-consoleHandler = logging.StreamHandler()
-consoleHandler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s  %(levelname)s - %(message)s')
-consoleHandler.setFormatter(formatter)
-#logger.addHandler(consoleHandler)
-logger.info('FUCK YOU')
-for x in logger.handlers:
-    print x.get_name()
-    #logger.removeHandler(x)
+    def __init__(self, globalLogId=None):
+        self.verbosity = Log.STANDARD
 
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(message)s')
-fh = logging.FileHandler('C:/Users/guido.pollini/Desktop/MuTools/mySuperLog.txt', mode='w')
-fh.setLevel(logging.DEBUG)
-fh.setFormatter(formatter)
-logger.addHandler(fh)
-logger.debug('Just fuck you.')    
-"""    
+    def __call__(self, *args):
+        message = '- ' + ' '.join([str(x) for x in args])
+        print message
 
 
+    def info(self, *args):    
+        print args
 
 
+    def warning(self, *args):
+        pass
 
 
+    def debug(self, *args):
+        if self.verbosity != Log.STANDARD:
+            message = '@ [WHERE?]' + ' '.join([str(x) for x in args])
+            print message
+
+
+    def fatality(self, *args):
+        message = '? [FATALITY] ' + ' '.join([str(x) for x in args])
+        MC.error(message)
 
 
 
 
+    """
+    import logging
+
+    logPath = 'C:/Users/guido.pollini/Desktop/MuTools/muLog.log'
+    logger = logging.getLogger('spamApplication')
+
+    consoleHandler = logging.StreamHandler()
+    consoleHandler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s  %(levelname)s - %(message)s')
+    consoleHandler.setFormatter(formatter)
+    #logger.addHandler(consoleHandler)
+    logger.info('FUCK YOU')
+    for x in logger.handlers:
+        print x.get_name()
+        #logger.removeHandler(x)
+
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter('%(message)s')
+    fh = logging.FileHandler('C:/Users/guido.pollini/Desktop/MuTools/mySuperLog.txt', mode='w')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.debug('Just fuck you.')    
+    """  
 
 
 
 
 
+def reloadMuTools():
+    loadedModules = sys.modules
+    MuToolsModules = [x for x in loadedModules if x.startswith('MuTools')]
+    for mod in MuToolsModules:
+        modObj = loadedModules[mod]
+        # Some modules 'MuTools.' have None as moduleObject (why???)
+        if modObj is not None:
+            print '- [{0}] Trying to reload from "{1}"...'.format(mod, modObj.__file__)
+            try:
+                reload(modObj)
+                print '> [{}] Module reloaded!'.format(mod)            
+            except ImportError:    
+                # The module name was changed or doesn't exist anymore: swallow it!
+                print '? [{0}] Module reload failed! The file "{1}" can\'t be found.'.format(mod, modObj.__file__)
 
 
 
-
-
-
-
-
-
-
-
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-===================================================================================
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-NO IDEA
-
-___________________________________________________________________________________
-===================================================================================
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
 def inspectMuTools():
@@ -139,11 +174,15 @@ def inspectMuTools():
 
 
 
+
+
 class Module(object):
     def loadingLog():
         pass
     def loadedLog():
         pass    
+
+
 
 
 
@@ -183,11 +222,15 @@ def _getModuleCallerInfo():
 
 
 
+
+
 def moduleLoadingMessage():
     # sys.__stdout__ is the original outputHandler, in this case the 'outputWindow' of Maya.
     # When the UI is available, 'print' outputs to sys.stdout!
     moduleName, moduleFile = _getModuleCallerInfo()
-    sys.__stdout__.write('\n#[{0}.py] Loading module from "{1}"...'.format(moduleName, moduleFile))
+    sys.__stdout__.write('\n- [{0}.py] Loading module from "{1}"...'.format(moduleName, moduleFile))
+
+
 
 
 
@@ -195,13 +238,25 @@ def moduleLoadedMessage():
     moduleName, moduleFile = _getModuleCallerInfo()
     lastModification = os.path.getmtime(moduleFile) # Seconds passed between Epoch and last modification 
     formattedLastModification = time.strftime('%d/%m/%y, %H:%M:%S', time.localtime(lastModification))
-    sys.__stdout__.write('\n#[{0}.py] Module loaded! Last update {1}.'.format(moduleName, formattedLastModification))
+    sys.__stdout__.write('\n> [{0}.py] Module loaded! Last update {1}.'.format(moduleName, formattedLastModification))
+
+
 
 
 
 def genericMessage(message):
     moduleName, moduleFile = _getModuleCallerInfo()
-    sys.__stdout__.write('\n#[{0}.py] {1}'.format(moduleName, message))
+    sys.__stdout__.write('\n- [{0}.py] {1}'.format(moduleName, message))
+
+
+
+
+
+
+
+
+
+
 
 
 

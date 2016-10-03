@@ -1,4 +1,4 @@
-__version__ = '1.0.0'
+__version__ = '1.0.2'
 
 
 
@@ -171,7 +171,7 @@ def disableUI(*args):
     # Disable all UI elements and disable also all the viewports; but reenable 
     # the 'Help Line' because it offers a load progressBar and could give a hint 
     # if remoteMaya has crashed!
-    # Disable also teh viewports' refresh.
+    # Disable also the viewports' refresh.
     MELCommand = """
         HideUIElements;
         toggleUIComponentVisibility("Help Line");        
@@ -238,14 +238,20 @@ def isModified():
 #
 # ... The second one:)
 
+
+
 def getName(long=False):
     """ 'expandName' ??? To resolve things like $PROJECT/fuckMe/now ? """
     sceneName = MC.file(query=True, sceneName=True, shortName=not long)
     return sceneName if sceneName != '' else None
 
 
+
+
 def getLongName():
     return getName(long=True)
+
+
 
 
 def getType():
@@ -255,12 +261,15 @@ def getType():
     return compatibleTypes[0]
 
 
+
+
 def getNodeSelection(filter=None):
     """
     Filter the selectionList with 'type=DGNode' 
     """
     selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
     return Core.Bundle(selectionNames)
+
 
 
 
@@ -273,6 +282,7 @@ def getSets():
     # or MC.ls(sets=True), same thing
     
     return Core.Bundle(sets)
+
 
 
 
@@ -298,7 +308,9 @@ def getWorldChildren():
                     worldChildren.append(nodeName)
         else:
             break
+
     return Core.Bundle(worldChildren)
+
 
 
 
@@ -322,12 +334,16 @@ def getIsolatedNodes(**kwargs):
 
 
 
+
 def getSceneNamespaces(*args):
     with Core.RootNamespaceActive():
         # 'UI' and 'shared' are internal namespaces
         sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
     return sceneNamespaces
 
+
+
+     
 
 
 def getReferences():
@@ -349,11 +365,15 @@ def getReferences():
     return [Core.Reference(x) for x in referencedFiles]
 
 
+
+
 def createReference(*args, **kwargs):
     """
     Add a reference to the scene and return the 'Reference' object
     """
     pass
+
+
 
 
 def getAnimationInfo():
@@ -366,6 +386,8 @@ def getAnimationInfo():
     return animationInfoDict
 
 
+
+
 def getCurrentUnits():
     # ex: {'angle': 'degree', 'linear': 'centimeter', 'time': 'pal'}
     currentUnitsDict = {
@@ -374,6 +396,32 @@ def getCurrentUnits():
         'time':   MC.currentUnit(query=True, time=True)
     }
     return currentUnitsDict
+
+
+
+
+
+
+
+
+def exists(nodeName):
+    """
+    To add:
+     - 'smart' exists;
+     - regExp exists;
+     - namespace confination 
+    """
+    return MC.objExists(nodeName)
+
+
+def getParent(nodeName):
+    node = Core.MuNode(nodeName)
+    return node.getParent()
+
+
+
+
+
 
 
 def setCurrentUnits():

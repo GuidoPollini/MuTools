@@ -1,8 +1,5 @@
 import sys
-sys.__stdout__.write('#[__init__.py] MuTools (nothing to do)')
-
-
-
+sys.__stdout__.write('\n- [MuTools] __init__.py (nothing to do)')
 
 
 
@@ -32,51 +29,35 @@ Version 'MAJOR.MINOR.PATCH'
 
 
 
+
+
+
+
+
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Developer's tools 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 """
-
-=========================================
-LITTLE MINOR DETAIL:)
-
-        try:
-            reload(modObj)
-        except ImportError:
-            # Module exists in memory but it was deleted: swallow the exception.
-            print '[WARNING] The module object "{}" exists in memory but the ' \
-                  'corresponding .py/.pyc is missing!'.format(modObj.__name__)
-        except:
-            # Module compile error: reraise!
-            raise  
-=========================================
-
-
-
 import os 
 MuToolsPath = "C:/Users/guido.pollini/Desktop/MuTools/"
 if MuToolsPath not in os.sys.path:
     os.sys.path.append(MuToolsPath)
-
-
-def reloadMuTools():
-    import sys
-    loadedModules = sys.modules
-    MuToolsModules = [x for x in loadedModules if x.startswith('MuTools')]
-    for mod in MuToolsModules:
-        modObj = loadedModules[mod]
-         
-        # Some modules 'MuTools.' have None as moduleObject (why???)
-        if modObj is not None:
-            print '[{0}] Reloading from "{1}"...'.format(mod, modObj.__file__)
-            reload(modObj)
-            print '[{0}] Reloaded!'.format(mod)
-
-
-
-import MuTools.XXXXXX
-reloadMuTools()
-
 """
+
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+                  POSITIONAL                KEYWORDED              EXTRA_POSITIONAL      EXTRA KEYWORDED
+def FUNCTION(  a0, a1, ..., am,      k0=d0, k1=d1, ..., kn=dn,          *args,               **kwargs     ):...
+
+When called with FUNCTION(PASSED_POSITIONAL, PASSED_KEYWORDED):
+ - POSITIONAL is filled with the first items in PASSED_POSITIONAL, and what's left is put in EXTRA_POSITIONAL
+ - each item of PASSED_KEYWORDED which is not in KEYWORDED is put in EXTRA_KEYWORDED
+
+Put it simply: POSITIONAL and KEYWORDED rule; what's left goes into *args (list) or **kwargs (dict).
+Note that the order here IS fundamental: *args and **kwargs must be the latter ones!
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
