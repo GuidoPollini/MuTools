@@ -20,31 +20,11 @@ Utils.moduleLoadingMessage()
 
 
 
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-===============================================================================================================================================
-'''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-SCENE METHODS
-
-
-Why do I need this shit?
-Simple, just compare:
-
-  name = MC.file(query=True, sceneName=True, shortName=True)
-  name = MC.file(q=True, sn=True, shn=True)
-  name = Scene.getName()
-
-  save = MC.file(query=True, anyModified=True)
-  save = MC.file(q=True, am=True)
-  save = Scene.isModified()
-
-_______________________________________________________________________________________________________________________________________________
-===============================================================================================================================================
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
 """
-'MC.file' shitty flags:
+-----------------------
+'MC.file' flags
 -----------------------
   activate
   activeProxy
@@ -151,8 +131,37 @@ ________________________________________________________________________________
 
 
 
+class FileError(Exception):
+    """
+    Generic exception to catch file errors
+    """
+    def __init__(self, message):
+        MC.error('[FILE ERROR] ' + message)
 
 
+def load(filePath, noReferenceLoad=True):
+    if not MC.file(filePath, query=True, exists=True):
+        raise FileError('The path "{}" is wrong!'.format(filePath))
+    
+    # type --> [knownTypeStr], an list (!) with a type known by Maya;
+    #      --> None, a type of file Maya can't handle.    
+    fileType = MC.file(filePath, query=True, type=True)
+    if not fileType or fileType[0] not in ('mayaAscii', 'mayaBinary'):
+        raise FileError('The file "{}" is not a Maya ASCII or binary!'.format(filePath))
+            
+    loadReferenceDepth = 'none' if noReferenceLoad else 'all'
+    
+    MC.file(filePath, 
+            open=True,    
+            force=True, 
+            loadReferenceDepth=loadReferenceDepth,             
+            ignoreVersion=True, 
+            options="v=0;")  
+            
+    # Add the filePath to the 'Recent Files' ('optionVars' stuff...)            
+    melCommand = 'addRecentFile("{0}", "{1}");'.format(filePath, fileType)
+    MM.eval(melCommand)
+    
 
 
 
