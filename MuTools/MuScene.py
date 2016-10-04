@@ -1,4 +1,4 @@
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 
@@ -171,7 +171,6 @@ def disableUI(*args):
     # Disable all UI elements and disable also all the viewports; but reenable 
     # the 'Help Line' because it offers a load progressBar and could give a hint 
     # if remoteMaya has crashed!
-    # Disable also the viewports' refresh.
     MELCommand = """
         HideUIElements;
         toggleUIComponentVisibility("Help Line");        
@@ -268,20 +267,20 @@ def getNodeSelection(filter=None):
     Filter the selectionList with 'type=DGNode' 
     """
     selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
-    return Core.Bundle(selectionNames)
+    return Core.List(selectionNames)
 
 
 
 
 def getSets():
     # listSets(allSets=True) is SEVERELY broken:
-    #  - 2 parasites (unselectionable fake sets) comes out
-    #  - the namespace info is LOST... seriously
+    #  - 2 parasites (unselectionable fake sets) come out;
+    #  - the namespace info is LOST... seriously, FUCK YOU Autodesk!
     
     sets = MC.ls(type="objectSet") 
     # or MC.ls(sets=True), same thing
     
-    return Core.Bundle(sets)
+    return Core.List(sets)
 
 
 
@@ -309,7 +308,7 @@ def getWorldChildren():
         else:
             break
 
-    return Core.Bundle(worldChildren)
+    return Core.List(worldChildren)
 
 
 
@@ -335,13 +334,20 @@ def getIsolatedNodes(**kwargs):
 
 
 
-def getSceneNamespaces(*args):
+def getNamespaces(*args):
     with Core.RootNamespaceActive():
         # 'UI' and 'shared' are internal namespaces
         sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
     return sceneNamespaces
 
-
+    # MC.namespace(rename=['oldNamespace', 'newNamespace'])
+    # MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
+    # MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes
+    #
+    # HERE CHECK IF THE NEW NAMESPACE EXISTS (the '__TEMP__' is to get idempotency)
+    # MC.file(fileName, edit=True, namespace='__TEMP__')
+    # MC.file(fileName, edit=True, namespace='newNamespace')
+    # MC.file(file???, edit=True, namespace='newNamespace'  --> to modify a referenced file namespace (the new one must not exist)
 
      
 
@@ -358,7 +364,7 @@ def getReferences():
     #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
     #----------------------------------------------------------------------------------
     """
-    This can't be a <Bundle>: at the present time Bundle works only for DGNodes and
+    This can't be a <List>: at the present time List works only for DGNodes and
     a <Reference> is NOT...
     """
     referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
@@ -400,11 +406,7 @@ def getCurrentUnits():
 
 
 
-
-
-
-
-def exists(nodeName):
+def nodeExists(nodeName):
     """
     To add:
      - 'smart' exists;
@@ -414,12 +416,11 @@ def exists(nodeName):
     return MC.objExists(nodeName)
 
 
+
+
 def getParent(nodeName):
     node = Core.MuNode(nodeName)
     return node.getParent()
-
-
-
 
 
 

@@ -1,5 +1,5 @@
-__version__ = '1.0.2'
-print '! [{}] Using Maya API 2.0'.format(__name__)
+__version__ = '1.0.4'
+print 'WARNING [{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
 
 
 
@@ -23,22 +23,16 @@ Utils.moduleLoadingMessage()
 
 
 
+# Instantiating the 'MuCoreLog'
+log       = Utils.Log('MuCoreLog', Utils.Log.STANDARD)
+debug     = log.debug
+hardDebug = log.hardDebug
 
 
 
-
-DEBUG = False
-def printDebug(*args):
-    if DEBUG:
-        print '#[DEBUG]',
-        for arg in args:
-            print arg,
-        print    
-
-
-
-
-
+def printDebug(*args, **kwargs):
+    # RELIC
+    pass
 
 
 
@@ -379,17 +373,23 @@ e evitare quel troiaio immondo di doppio controllo... ORRENDo
 """""""""""""""""""""""""""""""""""
 CLASS STRUCTURE
 -----------------------------------
-STATIC METHODS (@SORTED)
-CLASS METHODS  (@SORTED)
-CONSTRUCTOR/INITIALIZER
+
+  STATIC METHODS (sorted)
+
+  CLASS METHODS  (sorted)
+
+  CONSTRUCTOR/
+  INITIALIZER
     __new__
     __init__
-MAGIC METHODS  (@SORTED)
+
+  MAGIC METHODS  (sorted)
     __magicA__
     __magicB__
     __magicC__
     ...
-METHODS        (@SORTED)
+
+  METHODS        (sorted)
     methodA()
     methodB()
     methodC()
@@ -400,10 +400,10 @@ METHODS        (@SORTED)
 
 """""""""""""""""""""""""""""""""""
 CLASS HIERARCHY
-
 -----------------------------------
-Bundle            [MASSIVES]
 MuNode            [FACTORY]
+MuAttribute       [MPLUG WRAP]
+
 DGNode          
   DAGNode         [ABSTRACT]
     Mesh
@@ -411,9 +411,11 @@ DGNode
       Joint
   ObjectSet  
   RenderLayer
-  ? Reference ?   [Probably not, when a reference is not loaded, there's no node.. FALSE. IT'S ALWAYS THERE!!!]         
-Scene             [GLOBALS]    
+  ? Reference ?   (yep, it's node-based!)  
 
+List              [MASSIVE]
+Set               [MASSIVE]
+Scene             [MODULE?] 
 """""""""""""""""""""""""""""""""""
 
 
@@ -458,7 +460,7 @@ class DGNode(object):
     # INITIALIZER
     #-----------------------------
     def __init__(self, mObject):
-        printDebug('DGNode.__init__')
+
         # Do you really need these wrappers?
         #   MU.DGNode('woah')
         #   MU.Transform('woah')
@@ -473,6 +475,7 @@ class DGNode(object):
         #        MU.Mesh.create(...)   --> with specific arguments
         
         # Hence, the initializer will accept only an MObject
+
 
 
 
@@ -504,8 +507,6 @@ class DGNode(object):
             self._pointer = OM.MFnDependencyNode(mObject)
         
 
-
-
         """self.type = self._pointer.typeName()"""
         self.type = self._pointer.typeName
 
@@ -526,12 +527,11 @@ class DGNode(object):
 
 
 
-
-    ##########################################################################################################
     #-----------------------------
     # MAGIC METHODS
     #-----------------------------  
     
+
     # COMPARING WRAPPERS
     #
     #   x = MuNode('myNode')
@@ -541,34 +541,66 @@ class DGNode(object):
     #         x == y        --> True:  they point to the same node
     #   hash(x) == hash(y)  --> True:  same minimalName --> same node
     #   
-    #   set([x, y])         --> MuNode('myNode'), it check for equality by using 'hash()'
+    #   set([x, y])         --> MuNode('myNode')... see below
     #   
     #   z = MuNode('myNode')
-    #   z in Bundle(x, y)   --> True: it checks __eq__
+    #   z in List(x, y)   --> True: it checks __eq__
 
 
     def __eq__(self, other):
         """
-        Return True iff the DGNode wrappers wrap the same Maya node!
+        ------------------------------------------------------------------------------
+        CUSTOM EQUALITY
+          Return True iff the DGNode wrappers wrap the same Maya node!
 
-        MFnBase.object() --> MObject 
-        The MObjects have an overloaded == which returns True iff they points to the same Maya object!
+          The MObjects have an overloaded == which returns True iff they points to 
+          the same Maya object (use MFnBase.object() --> <MObject>)
+        ------------------------------------------------------------------------------
+        x in [a, b, c, d, e]  -->  __eq__ is called to test membership
+        ------------------------------------------------------------------------------
         """
+
         return self._pointer.object() == other._pointer.object()
+
 
 
 
     def __hash__(self):
         """
-        hash(node) == node.__hash__()
+        ------------------------------------------------------------------------------
+        HASH
+          hash(node) == node.__hash__()
+          It is used when casting a List to a Set (or in a dict, but NOT in a list).
+          E.g. from [a, b] to set([a, b]):
 
-        It is used when casting a Bundle in a set.
-        It doesn't use '__eq__'!
+            hash(a) != hash(b)  -->  The object are (assumed to be) different and no 
+                                     __eq__ is performed; both will be added!
+            hash(a) == hash(b)  -->  Equality is judged via the __eq__!
+
+          Hence, the mandatory rule must be respected; nothing more!                         
+        ------------------------------------------------------------------------------
+        MANDATORY RULE:
+          a == b  >>>  hash(a) == hash(b)
+          The contrary is not needed (except for speed)! A 'good' hash allows Python to
+          skip expensive __eq__ tests; if __hash__ is not a weaker __eq__ everything 
+          can happen!
+
+          >>> __hash__ is a weaker __eq__ <<<
+        ------------------------------------------------------------------------------
+        WARNING:
+          An object with hash = h must be h-immutable (not necessarily deeply-immutable)
+          - with h = longName, a DGnode is NOT h-immutable;
+          - with h = MObjectHandle.hashCode() a DGNode is almost h-immutable; BUT check 
+            for the UNDO/REDO operation: the value could change!
+
+          The problem here is an object (!.isValid() and .isAlive()) (deleted + undoQueue)  
+        ------------------------------------------------------------------------------
         """
-        # The only warranty is that if the wrappers point to the same node, they have the same hash...
-        return hash(self.name)
 
-    ##########################################################################################################
+        # The only warranty is that if the wrappers point to the same node, they have the same hash...
+        return hash(self.name) # NO, a wrapper is not minimalName-immutable!
+
+    
 
 
 
@@ -580,20 +612,18 @@ class DGNode(object):
         # attribute named 'attr'; hence we try to ask the same attribute 
         # to the underlying DependNode
 
-        #return MC.getAttr(self.name + '.' + attr)
-        """if MC.attributeQuery(attr, node=self.name, exists=True):"""
-        """    return MuAttribute(self, attr)"""
         try: 
             # Pass the MFn* and the MPlug
             # (I cant' recover the minimal name of a node from one of its plugs without passing
             #  for MObject-MFnDependencyNode) 
             # Accessing the attribute via the commandEngine is necessary...
-            return MuAttribute(self, self._pointer.findPlug(attr, True))
-        except Exception as exc:
-            print exc
+            mPlug = self._pointer.findPlug(attr, True)
+
+        except: # It's a fucking generic <RuntimeError> (__doc__ == 'Unspecified...' WOW!)
             # Even the DependNode can't answer
             MC.error('[Attribute Error] The attribute "{0}" can\'t be found on node/MuNode "{1}"!'.format(attr, self.name))
 
+        return MuAttribute(self, mPlug)
 
 
 
@@ -720,9 +750,25 @@ class DGNode(object):
 
 
 
+
+
+
+
 class Reference(object):
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    Quando un filePath non viene trovato, on a lapossibilita di SKIP IGNORE RETRY, CHANGE
+    ... lo SKIP lascia la referenza not loaded ma dentro la sceneNamespaces
+    ... IGNORE getta via la referenza
+
+    KOSA SUCCEDE IN MAYAPY????
+    - da dei warnings, ma continua;
+    - getReferences() funziona
+    - abbiamo tutti i referenceNodes
+    - abbiamo anche i namespace...
+
+    QUINDI TUTTO OK anche in mayapy
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""
     """ 
-    
     --------------------------------------------------------------------------------
     FALSE: even in a bare load, there's always a reference node...
     hence, WRAP IT into a DGNode
@@ -752,7 +798,7 @@ class Reference(object):
     # MAGIC METHODS
     #-----------------------------
     def __repr__(self):
-        representation = '"{0}"({1})<Reference>'.format(self.getNamespace(), self.filePath)
+        representation = '"{0}"({1})<Reference>'.format(self.getNamespace().name, self.filePath)
         return representation
 
 
@@ -852,42 +898,6 @@ class Reference(object):
     def getReferenceNode(self):
         return MuNode(MC.file(self.filePath, query=True, referenceNode=True))
     
-
-
-    """
-    ==========================================================================
-    'Reference' will be subclasse to add specific methods!
-    MuTools MUST stay neutral...
-    ==========================================================================
-
-    @property
-    def category(self):
-        knownAssetTags = ['ch', 'pr', 'st', 'ss']
-        # Recover the 'asset type'
-        assetTag = 'unknown'
-        for tag in knownAssetTags:
-            if self.originalName.startswith(tag + '_'):
-                assetTag = tag
-        # The camera is not a Shotgun asset        
-        if self.originalName == 'yak_camera':
-            assetTag = 'cam'    
-        
-        return assetTag   
-
-
-    @property
-    def renderSet(self):
-        if self.namespace is None:
-            # A shitty prefix; fatal...
-            return None
-        potentialRenderSet = self.namespace + ':RenderSet'
-        if not (MC.objExists(potentialRenderSet) and MC.nodeType(potentialRenderSet) == 'objectSet'):
-            return None    
-        
-        return potentialRenderSet
-
-    """
-
 
 
 
@@ -1048,8 +1058,7 @@ class Transform(DAGNode):
         else:
             children = MC.listRelatives(self.name, children=True, type=type_flag, path=True) or []
 
-        #return [MuNode(x) for x in children]
-        return Bundle(children)
+        return List(children)
 
 
 
@@ -1077,8 +1086,7 @@ class Transform(DAGNode):
         if noIntermediate:
             meshChildren = [x for x in meshChildren if MC.getAttr(x + '.intermediateObject') == 0]
         
-        #return [MuNode(x) for x in meshChildren]
-        return Bundle(meshChildren)
+        return List(meshChildren)
         
 
 
@@ -1224,7 +1232,7 @@ class ObjectSet(DGNode):
     #-----------------------------
     @staticmethod
     def create(nodeName, initialMembers=[]):
-        # HERE IT'S BETTERO TO CALL .sets to build it
+        # HERE IT'S BETTER TO CALL .sets to build it
         tempName = MC.createNode("objectSet", name=nodeName, skipSelect=True)
         unionSet = ObjectSet(tempName)
         unionSet.add(initialMembers)
@@ -1325,160 +1333,142 @@ class ObjectSet(DGNode):
 
 
 
+#============================================================================== 
+#
+# MuIterables:
+#  - MuCore.List
+#  - MuCore.Set
+#
+# Wraps of <list> and <set> compatible with DGNodes ans 'massive methods'
+#------------------------------------------------------------------------------
+# Everything works seamlessly:
+#   s1 = Set(a, a, b, b, c, d, e)   
+#   s2 = Set([a, a, b, b, c, d, e])
+#   s3 = Set(List(a, a, b, b, c, d, e))
+#   l1 = List(s1)   
+#============================================================================== 
 
-
-
-class Bundle(object):
-    """
-    The class that allows "massive" methods, ex:
-    Bundle("xxx", "yyy", "zzz", "www").lockAttr("tx", "ty", tz")\
-                                      .visibility(False)\
-                                      .setParent("woah")
-
-    Note that by implementing '__len__' and '__getitem__', Bundle becomes an iterable!
-    """
-
-
-
-    #-----------------------------
-    # STATIC METHOD
-    #-----------------------------   
-    @staticmethod
-    def registerMassiveMethods(targetClass):
-        """
-        ??????????????????????????????????????????????????????????????????????????
-        After @property, we loose a method and get a 'property' object, hence:
-        CANT WRAP @property METHODS... there's non __name__ etc ect
-        https://docs.python.org/3/library/functools.html#functools.wraps
-
-        ??????????????????????????????????????????????????????????????????????????
-        """
-
-        """
-        Inspects a derived of <MuNode> and gathers all the methods with a "_isMassive" 
-        attribute; then adds a method of the same name to <Bundle>
-
-        <Bundle> must be the last defined class; then call for each derived of <MuNode>:
-        Bundle.registerMassiveMethods(derived)
-        """
-
-        print 'Scanning {} for massive methods:'.format(str(targetClass))
-
-
-        massiveMethods = []
-        for x in dir(targetClass):
-
-            # Avoid magic/private methods
-            if x.startswith('_'):
-                continue
-
-            element = getattr(targetClass, x)
-            # "_isMassive" is just a TAG... no need for a value!
-            if hasattr(element, '_isMassive'):
-                print " - '{}' is massive!".format(element.__name__)
-                massiveMethods.append(element) 
-        
-
-        def methodMassivizer(originalMethod, self, *args, **kwargs):
-            # A bundle is just a wrapped list of DGNodes; hence a massive method should
-            # try to return a classic list (probably a list of Nones)
-            result = []
-            for obj in self._objectList:
-                """ ??? use 'issubclass()' to inherit baseClasses methods"""
-
-                if isinstance(obj, targetClass):
-                    result.append(originalMethod(obj, *args, **kwargs)) 
-                else:
-                    # Raise a 'Bundle disomogeneity'
-                    MC.error('Bundle error!')
-            
-            return result    
-                    
-        for method in massiveMethods:
-            temp = types.MethodType(functools.partial(methodMassivizer, method), None, Bundle)
-            setattr(Bundle, method.__name__, temp) 
-            # Add an updated __doc__, ex:
-            # new.__doc__ = "Massive method\n" + old.__doc__       
- 
-
-
-
-    #-----------------------------
-    # INITIALIZER
-    #-----------------------------    
+class List(list):
     def __init__(self, *args):
         """
-        Bundle(<list of str>)
-        Bundle(*strArgs)
-        ex:
-          ... = Bundle(<iterable>)
-          ... = Bundle('node1, 'node2', ...)
+        List(name1, name2, ...)
+        List([name1, name2, ...])
         """
         if len(args) == 1:
-            # Iterable
-            self._objectList = [MuNode(x) for x in args[0]]
+            # nodeList = List(a, b, c, ...) (list() takes at most one arg!)
+            args = [MuNode(x) for x in args[0]]
         else:
-            # args
-            self._objectList = [MuNode(x) for x in args]
+            args = [MuNode(x) for x in args]    
+        super(List, self).__init__(args)
+
+
+    def append(self, newObj):
+        """
+        Only DGNode-able objects
+
+        myMuList.append('nodeName')
+        myMuList.append(node)
+        """
+        if isinstance(newObj, basestring) or issubclass(type(newObj), DGNode):
+            super(List, self).append(MuNode(newObj))
+        else:
+            raise Fatality('LIST APPEND ERROR', 
+                           '<List> accepts only <DGNodes>: the object "{0}" is of {1}!'.format(newObj, type(newObj)))
+
+    
+    def __setitem__(self, position, newObj):
+        """
+        Only DGNode-able objects
+        """
+        if isinstance(newObj, basestring) or issubclass(type(newObj), DGNode):
+            super(List, self).__setitem__(position, MuNode(newObj))
+        else:
+            raise Fatality('LIST SET ERROR', 
+                           '<List> accepts only <DGNodes>: the object "{0}" is of {1}!'.format(newObj, type(newObj)))
+
+
+
+
+class Set(set):
+    def __init__(self, *args):
+        if len(args) == 1:
+            # nodeSet = Set(a, b, c, ...) (set() takes at most one arg!)
+            args = [MuNode(x) for x in args[0]]
+        else:
+            args = [MuNode(x) for x in args]    
+
+        super(Set, self).__init__(args)        
     
 
 
 
-    #-----------------------------
-    # MAGIC METHODS
-    #-----------------------------    
-    def __getitem__(self, index): 
-        return self._objectList[index]
 
 
-    def __len__(self):
-        return len(self._objectList)
+def registerMassiveMethods(muIterableClass, classToScan):
+    """
+    ??????????????????????????????????????????????????????????????????????????
+    After @property, we loose a method and get a 'property' object, hence:
+    CANT WRAP @property METHODS... there's non __name__ etc ect
+    https://docs.python.org/3/library/functools.html#functools.wraps
+
+    ??????????????????????????????????????????????????????????????????????????
+    """
+
+    """
+    Inspects 'classToScan' (a derived of <MuNode>) and gathers all the methods 
+    marked with a "_isMassive" attribute; then adds a method of the same name 
+    to the 'muIterableClass' passed (List or Set)
+
+    The MuIterables must be the last defined; then call registerMassiveMethods(...)
+    """
+
+    print 'Scanning {} for massive methods:'.format(str(targetClass))
 
 
-    def __repr__(self):
-        if len(self) == 0:
-            result = '[]'
-        else:
-            result = '['
-            for i in range(len(self)):
-                result += repr(self._objectList[i]) + ('\n ' if i < len(self) - 1 else ']')
-              
-        return result
+    massiveMethods = []
+    for x in dir(targetClass):
+
+        # Avoid magic/private methods
+        if x.startswith('_'):
+            continue
+
+        element = getattr(targetClass, x)
+        # "_isMassive" is just a TAG... no need for a value!
+        if hasattr(element, '_isMassive'):
+            print " - '{}' is massive!".format(element.__name__)
+            massiveMethods.append(element) 
+    
+
+    def methodMassivizer(originalMethod, self, *args, **kwargs):
+        # A bundle is just a wrapped list of DGNodes; hence a massive method should
+        # try to return a classic list (probably a list of Nones)
+        result = []
+        for obj in self._objectList:
+            # ??? use 'issubclass()' to inherit baseClasses methods
+
+            if isinstance(obj, targetClass):
+                result.append(originalMethod(obj, *args, **kwargs)) 
+            else:
+                # Raise a 'Bundle disomogeneity'
+                MC.error('Bundle error!')
+        
+        return result    
+                
+    for method in massiveMethods:
+        temp = types.MethodType(functools.partial(methodMassivizer, method), None, Bundle)
+        setattr(Bundle, method.__name__, temp) 
+        # Add an updated __doc__, ex:
+        # new.__doc__ = "Massive method\n" + old.__doc__       
 
 
-    def __setitem__(self, index, node):
-        """
-        WARNING: no premature optimization; only DGNodes should be allowed!
-        """
-        if isinstance(node, basestring):
-            self._objectList[index] = MuNode(node)
-        elif issubclass(node, DGNode):
-            self._objectList[index] = node
-        else:
-            MC.error('<Bundle> accepts only <DGNodes>')    
 
-
-
-
-    #-----------------------------
-    # METHODS
-    #-----------------------------
-    def append(self, node):
-        """
-        WARNING: no premature optimization; only DGNodes should be allowed!
-        """        
-        if isinstance(node, basestring):
-            self._objectList.append(MuNode(node))
-        elif issubclass(node, DGNode):
-            self._objectList.append(node)
-        else:
-            MC.error('<Bundle> accepts only <DGNodes>')  
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Add the 'massive' methods to Bundle
+Add the 'massive' methods to MuIterable classes
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-#Bundle.registerMassiveMethods(DGNode)
+# registerMassiveMethods(List, DGNode)
+# registerMassiveMethods(Set,  DGNode)
 
 
 
@@ -1555,8 +1545,7 @@ class MuNode(object):
           MuNode('nodeName')  --> wrappedNode  (creates the wrapper)
           MuNode(wrappedNode) --> wrappedNode  (just another bound name)
         """
-
-        printDebug('MuNode.__new__', nodeArgument)
+        hardDebug('MuNode.__new__', nodeArgument)
 
 
 
@@ -1565,8 +1554,7 @@ class MuNode(object):
         #---------------------------------------------------------
         if issubclass(type(nodeArgument), DGNode):
             return nodeArgument
-
-
+        
 
         #---------------------------------------------------------
         # It's probably the name of a Maya node
@@ -1582,6 +1570,10 @@ class MuNode(object):
             # It could be an attribute??? No idea 
             raise NameFatality(nodeArgument)  
         
+
+
+
+
         """mObject = OM.MObject()"""
         """selList.getDependNode(0, mObject)"""
         mObject = selList.getDependNode(0)
@@ -1667,7 +1659,7 @@ class MuAttribute(object):
         
         except RuntimeError:
             # Exception to swallow: "Warning: 'xxx.aaa' is already connected to 'xxx.yyy'."
-            # Unluckily, it raises the same exception than 'locked attribute' 
+            # Unluckily, it raises the same exception 'RuntimeError' than 'locked attribute' 
             if MC.isConnected(plug, otherPlug, ignoreUnitConversion=True):
                 # It will nonetheless show the 'warning', but swallow the exception
                 pass
@@ -1675,6 +1667,7 @@ class MuAttribute(object):
                 # A genuine error: reraise!
                 raise    
         
+        # Allow fluency (a.tx >> b.sx >> c.rx >> ...)
         return other
 
 
@@ -1682,6 +1675,8 @@ class MuAttribute(object):
     def __lshift__(self, other):
         # self <== other
         MuAttribute.__rshift__(other, self)
+
+        # Allow fluency (a.tx << b.sx << c.rx << ...)
         return other
 
 
@@ -1750,6 +1745,7 @@ class MuAttribute(object):
 
 
 
+
 class MuObject(object):
     """
     For objects which don't have a nodal representative in Maya;
@@ -1759,13 +1755,22 @@ class MuObject(object):
 
 
 
+
 class Namespace(object):
     def __init__(self, namespaceName):
         self.name = namespaceName 
 
     def getNodes(self):
         nodes = MC.namespaceInfo(self.name, listOnlyDependencyNodes=True)
-        return Bundle(nodes)
+        return List(nodes)
+    # MC.namespace(rename=['oldNamespace', 'newNamespace'])
+    # MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
+    # MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes
+    #
+    # HERE CHECK IF THE NEW NAMESPACE EXISTS (the '__TEMP__' is to get idempotency)
+    # MC.file(fileName, edit=True, namespace='__TEMP__')
+    # MC.file(fileName, edit=True, namespace='newNamespace')
+    # MC.file(file???, edit=True, namespace='newNamespace'  --> to modify a referenced file namespace (the new one must not exist)
 
 
 

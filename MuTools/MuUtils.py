@@ -1,4 +1,4 @@
-__version__ = '1.0.2' 
+__version__ = '1.0.3' 
 
 
 
@@ -15,13 +15,14 @@ import time
 
 
 
-
-
-
-
-
-
 class Log(object):
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    'log.debug' and 'log.hardDebug' shouldn't pollute the 
+    scriptEditor. Save the info elsewhere and make it accessible
+    at ease!
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
     """
     LEADING CHARACTERS
     -  Nothing to say
@@ -51,38 +52,84 @@ class Log(object):
     """
 
 
-
+    SILENT     = None
     STANDARD   = 0
     DEBUG      = 1
     HARD_DEBUG = 2
     
 
-    def __init__(self, globalLogId=None):
-        self.verbosity = Log.STANDARD
+    def __init__(self, globalLogId=None, verbosity=Log.STANDARD):
+        self.verbosity = verbosity
+
+
 
 
     def __call__(self, *args):
-        message = '- ' + ' '.join([str(x) for x in args])
+        """
+        Easy to call:
+        log('Wonderful message incoming...')
+        """
+        if self.verbosity is None:
+            return
+
+        message = ' '.join([str(x) for x in args])
         print message
 
 
-    def info(self, *args):    
-        print args
-
-
-    def warning(self, *args):
-        pass
 
 
     def debug(self, *args):
-        if self.verbosity != Log.STANDARD:
-            message = '@ [WHERE?]' + ' '.join([str(x) for x in args])
+        """
+        Standard 'debugging' message (informative but not too much).
+        >>> It should output NOT on the scriptEditor, but elsewhere!!!
+        """
+
+        if self.verbosity in (Log.DEBUG, Log.HARD_DEBUG):
+            message = '[D] ' + ' '.join([str(x) for x in args])
             print message
 
 
-    def fatality(self, *args):
-        message = '? [FATALITY] ' + ' '.join([str(x) for x in args])
-        MC.error(message)
+
+
+    def hardDebug(self, *args):
+        """
+        HardDebug shows everything, function calls, internals...
+        >>> Again, DON'T pollute the scriptEditor with this shit!
+        """
+
+        if self.verbosity == Log.HARD_DEBUG:
+            message = '[H] ' + ' '.join([str(x) for x in args])
+            print message
+
+
+
+
+    def iterable(self, iterable, title=None):
+        """
+        A simple prettyPrint for a generic iterable:
+        TITLE 
+          item1
+          item2
+          item3
+          ...
+        """
+        print
+        if title:
+            print title
+        
+        if issubclass(type(iterable), list): 
+            # Don't sort a <List>
+            stringifiedIterable = [str(x) for x in iterable]            
+        else:    
+            # Sort a <Set>
+            stringifiedIterable = sorted([str(x) for x in iterable])
+        
+        if len(stringifiedIterable) > 0:
+            for s in stringifiedIterable:
+                print ' ', s
+        else:
+            print '  NONE'  
+
 
 
 
@@ -118,6 +165,59 @@ class Log(object):
 
 
 
+
+
+
+
+
+
+
+
+class Module(object):
+    def loadingLog():
+        pass
+    def loadedLog():
+        pass 
+
+
+
+
+
+def getFolders(dirName, fullName=False):
+    dirContent = os.listdir(dirName)
+    prefix = dirName + '/' if fullName else ''        
+    folders = [prefix + x for x in dirContent if os.path.isdir(dirName + '/' + x)]
+    return folders
+
+
+
+
+
+def getFiles(dirName, fullName=False):
+    dirContent = os.listdir(dirName)
+    prefix = dirName + '/' if fullName else ''        
+    files = [prefix + x for x in dirContent if os.path.isfile(dirName + '/' + x)]
+    return files
+
+
+
+"""
+import sceneCorrector
+def muReload(module):
+    reload(module)
+    muModules = ['Utils', 'Core', 'Scene', 'UI']
+    innerModules = dir(module)
+    for mod in muModules:
+        if mod in innerModules:
+            modObj = getattr(module, mod)
+            reload(modObj)
+            print '[{}] Reloaded!'.format(mod)
+            
+            muReload(mod)
+        
+
+muReload(sceneCorrector)
+"""
 
 def reloadMuTools():
     loadedModules = sys.modules
@@ -171,16 +271,6 @@ def inspectMuTools():
             }
                
     return muModulesDict
-
-
-
-
-
-class Module(object):
-    def loadingLog():
-        pass
-    def loadedLog():
-        pass    
 
 
 

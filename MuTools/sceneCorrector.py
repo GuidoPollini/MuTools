@@ -1,5 +1,5 @@
 
-__version__ = '1.0.0'
+__version__ = '1.0.3'
 
 
 import MuTools.MuUtils   as Utils
@@ -13,7 +13,6 @@ import maya.OpenMaya as OM
 
 import time
 import os
-from pprint import pprint
 
 
 
@@ -25,10 +24,13 @@ Utils.moduleLoadingMessage()
 
 
 
-log = Utils.Log()
-log('--------------------------\n', 
-    '    SCENE CORRECTOR\n', 
-    '--------------------------')
+log       = Utils.Log('sceneCorrectorLog', Utils.Log.STANDARD)
+debug     = log.debug
+hardDebug = log.hardDebug
+
+log('--------------------------', 
+    '\n    SCENE CORRECTOR', 
+    '\n--------------------------')
 
 
 
@@ -42,43 +44,9 @@ log('--------------------------\n',
 
 
 
-class RootNamespaceActive(object):
-    def __enter__(self):
-        self.originalNamespace = MC.namespaceInfo(currentNamespace=True)
-        MC.namespace(set=':')        
-    def __exit__(self, *args):
-        MC.namespace(set=self.originalNamespace)
 
 
-class MainPanelDisabled(object):
-    def __enter__(self):
-        MM.eval('paneLayout -e -manage false $gMainPane')
-    def __exit__(self, *args): 
-        MM.eval('paneLayout -e -manage true $gMainPane')
 
-
-class Timer(object):
-    def __enter__(self):
-        self.startTime = time.clock()
-    def __exit__(self, *args):
-        print "-"*80
-        print "Elapsed time:", time.clock() - self.startTime
-        print "-"*80
-        print  
-
-
-def getFolders(dirName, fullName=False):
-    dirContent = os.listdir(dirName)
-    prefix = dirName + '/' if fullName else ''        
-    folders = [prefix + x for x in dirContent if os.path.isdir(dirName + '/' + x)]
-    return folders
-
-
-def getFiles(dirName, fullName=False):
-    dirContent = os.listdir(dirName)
-    prefix = dirName + '/' if fullName else ''        
-    files = [prefix + x for x in dirContent if os.path.isfile(dirName + '/' + x)]
-    return files
 
 
 def exocortexAlembicExport(nodeList, targetPath, purePointCache):
@@ -152,229 +120,9 @@ NAMESPACE SHIT
  NON RIESCO A MODIFICARLO..; per il momentoignoralo perche forse e infattibile (senza complicarsi la vita)
  (anche un cambio di prefix non funziona e non puoi attribuirgli un nuovo namespace)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-# MC.namespace(rename=['oldNamespace', 'newNamespace'])
-# MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
-# MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes
-#
-# HERE CHECK IF THE NEW NAMESPACE EXISTS (the '__TEMP__' is to get idempotency)
-# MC.file(fileName, edit=True, namespace='__TEMP__')
-# MC.file(fileName, edit=True, namespace='newNamespace')
-# MC.file(file???, edit=True, namespace='newNamespace'  --> to modify a referenced file namespace (the new one must not exist)
-
-def getSceneNamespaces(*args):
-    with RootNamespaceActive():
-        # 'UI' and 'shared' are internal namespaces
-        sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
-    return sceneNamespaces
-    
-def getWorldTransforms():
-    worldTransforms = []
-
-    # Initialized to a fake "world" (not a kTransform)
-    DAGIter = OM.MItDag(OM.MItDag.kBreadthFirst) 
-
-    selList = OM.MSelectionList()
-    fn = OM.MFnTransform()
-    
-    while True:
-        DAGIter.next() # Skip the first one (a "fakeWorld")
-        nodePtr = DAGIter.currentItem()
-        if DAGIter.depth() == 1:
-            if nodePtr.apiType() == OM.MFn.kTransform:
-                fn.setObject(nodePtr)
-                nodeName = fn.partialPathName()
-                if MC.objExists(nodeName):
-                    # To avoid "weird" transforms like "|groundPlane_transform"
-                    # which exist, but invisible to MEL
-                    worldTransforms.append(nodeName)
-        else:
-            break
-
-    return worldTransforms        
 
 
 
-
-"""
-with MainPanelDisabled():
-  with Timer():
-    filePath = 'Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/ORIGINAL__YKR426_051_ani.ma'
-    MC.file(filePath, open=True, type='mayaAscii', loadReferenceDepth='none', force=True, options='v=0;', ignoreVersion=True)
-  
-    referenceData = getReferenceData()    
-
-    #MC.file(filePath, open=True, type='mayaAscii', loadReferenceDepth='all', force=True, options='v=0;', ignoreVersion=True)
-    # loadReferenceDepth = 'all', 'none' ('none' -> only path validation)
-    for asset in referenceData:
-        referencePath = referenceData[asset][0]
-        print 'Loading reference "' + referencePath + '"...'
-        MC.file(referencePath, loadReference=referenceData[asset][2], loadReferenceDepth='asPrefs')
-        print 'Reference "' + referencePath + '" loaded!'
-"""
-
-def prettyPrintList(title, content):
-    print
-    #print '-'*80
-    print title
-    #print '-'*80
-    if len(content) > 0:
-        for c in sorted(content):
-            print ' ', c
-    else:
-        print '  NONE'     
-
-
-#==============================================================================================================
-#==============================================================================================================
-def getParent(transform):
-    try:
-        parent = MC.listRelatives(transform, parent=True, path=True)[0]
-    except:
-        # If child of the world
-        parent = None
-    return parent
-
-
-"""
-Forse il metodo classico e' migliore:
-   if node.getMesh(): ...
-   if node.getMeshes(): ...
-   if node.getLocator(): ...
-   if node.getNurbsCurves(): ...
-"""
-def isTypedTransform(node, allowedType='mesh', noIntermediate=True, onlyOne=True):
-    """
-    Check if it's a <transform> and filter according to its shapes
-    """
-    
-    if MC.nodeType(node) != 'transform':
-        return False
-
-    # The flag combination 'shapes + noIntermediate' is valid, 
-    # but not 'type + noIntermediate' (the latter is ignored)
-    shapeChildren = MC.listRelatives(node, children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
-    allowedShapeChildren = [x for x in shapeChildren if MC.nodeType(x) == allowedType]
-    
-    if onlyOne:
-        return len(allowedShapeChildren) == 1
-    else:
-        return len(allowedShapeChildren) >= 1 
-
-
-def isLocatorTransform(node):
-    return isTypedTransform(node, allowedType='locator', noIntermediate=True, onlyOne=True)
-
-    
-def isMeshTransform(node):
-    return isTypedTransform(node, allowedType='mesh', noIntermediate=True, onlyOne=True)
-
-        
-def isNurbsCurveTransform(node):
-    return isTypedTransform(node, allowedType='nurbsCurve', noIntermediate=True, onlyOne=False)
-    
-
-
-#==============================================================================================================
-#==============================================================================================================
-
-
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-Quando un filePath non viene trovato, on a lapossibilita di SKIP IGNORE RETRY, CHANGE
-... lo SKIP lascia la referenza not loaded ma dentro la sceneNamespaces
-... IGNORE getta via la referenza
-
-KOSA SUCCEDE IN MAYAPY????
-- da dei warnings, ma continua;
-- getReferences() funziona
-- abbiamo tutti i referenceNodes
-- abbiamo anche i namespace...
-
-QUINDI TUTTO OK anche in mayapy
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-class Reference(object):
-    def __init__(self, filePath):
-        self.filePath = filePath
-
-
-    @staticmethod
-    def getReferences():
-        #----------------------------------------------------------------------------------
-        # File referenced once:
-        #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_fucky_rig.ma"
-        #
-        # File referenced multiple times:
-        #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma"      (NOT {0})
-        #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{1}"
-        #   ...
-        #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
-        #----------------------------------------------------------------------------------
-        referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
-        return [Reference(x) for x in referencedFiles]
-
-
-    @property
-    def cleanFilePath(self):
-        return self.filePath.split('{')[0]
-
-
-    @property
-    def category(self):
-        knownAssetTags = ['ch', 'pr', 'st', 'ss']
-        # Recover the 'asset type'
-        assetTag = 'unknown'
-        for tag in knownAssetTags:
-            if self.originalName.startswith(tag + '_'):
-                assetTag = tag
-        # The camera is not a Shotgun asset        
-        if self.originalName == 'yak_camera':
-            assetTag = 'cam'    
-        
-        return assetTag   
-
-
-    @property
-    def originalName(self):
-        originalName = self.filePath.split('/')[-1].split('{')[0].replace('.ma', '')
-        return originalName
-
-
-    @property
-    def referenceNode(self):
-        return MC.file(self.filePath, query=True, referenceNode=True)
-    
-
-    @property
-    def namespace(self):
-        """
-        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
-        """
-        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
-        # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
-        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
-        """ ... protect everything!!! """
-        if MC.namespace(exists=potentialNamespace):
-            return potentialNamespace
-        else:
-            return None    
-
-
-    @property
-    def renderSet(self):
-        if self.namespace is None:
-            # A shitty prefix; fatal...
-            return None
-        potentialRenderSet = self.namespace + ':RenderSet'
-        if not (MC.objExists(potentialRenderSet) and MC.nodeType(potentialRenderSet) == 'objectSet'):
-            return None    
-        
-        return potentialRenderSet
-
-
-    @property
-    def isBroken(self):
-        return os.path.isfile(self.cleanFilePath)
 
 
 
@@ -391,7 +139,13 @@ ANIMATION_PATH = 'Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/'
 
 #==============================================================================
 #------------------------------------------------------------------------------
-# Customizing 'Core.Reference'
+# 'Core.Reference' monkey patching
+#
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" 
+The module with the monkey patching MUST be the last oneto be reloaded; otherwise
+a reload of 'MuCore' will rebuild the class 'Reference' and the patch will be lost!
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+#
 #------------------------------------------------------------------------------
 #==============================================================================
 def _getYakariTag(self):
@@ -411,6 +165,19 @@ def _getYakariTag(self):
     return assetTag  
 
 Core.Reference.getYakariTag = _getYakariTag
+
+"""
+@property
+def renderSet(self):
+    if self.namespace is None:
+        # A shitty prefix; fatal...
+        return None
+    potentialRenderSet = self.namespace + ':RenderSet'
+    if not (MC.objExists(potentialRenderSet) and MC.nodeType(potentialRenderSet) == 'objectSet'):
+        return None    
+    
+    return potentialRenderSet
+"""
 #------------------------------------------------------------------------------
 
 
@@ -430,7 +197,7 @@ def run(*args):
     }
 
     for folderName in assetFolderNames.values():
-        if not Scene.exists(folderName):
+        if not Scene.nodeExists(folderName):
             log.fatality('MISSING FOLDER: {} doesn\'t exist'.format(folderName))
         
         if Scene.getParent(folderName):
@@ -513,7 +280,8 @@ def run(*args):
 
         if yakariTag in ['ch', 'pr', 'ss', 'cam']:
             try:
-                rootTransform = Core.MuNode(ref.namespace + (':camera_rig' if yakariTag == 'cam' else ':rig_group')) 
+                rootTransformName = ref.namespace + (':camera_rig' if yakariTag == 'cam' else ':rig_group')
+                rootTransform = Core.MuNode(rootTransformName) 
             except NameFatality:
                 MC.error('NO IDEA!!!')
 
@@ -583,38 +351,32 @@ def run(*args):
     #-----------------------------------------------------------------------------------------------------------    
     #===========================================================================================================   
     
-    irrelevantTransforms = set(Core.Bundle('persp', 'top', 'front', 'side', 'front', 'platesHolder'))
-    # irrelevantTransforms = Core.MuSet('persp', 'top', 'front', 'side', 'front', 'platesHolder')
-    # transformsToSkip = Core.MuSet(properTransforms) | Core.MuSet(badTransforms) | Core.MuSet(irrelevantTransforms)
-    transformsToSkip = set(properTransforms) | set(badTransforms) | irrelevantTransforms
-
-    worldTransformsToAnalyze = set(Scene.getWorldChildren()) - transformsToSkip
+    irrelevantTransforms     = Core.Set('persp', 'top', 'front', 'side', 'front', 'platesHolder')
+    transformsToSkip         = Core.Set(properTransforms) | Core.Set(badTransforms) | irrelevantTransforms
+    worldTransformsToAnalyze = Core.Set(Scene.getWorldChildren()) - transformsToSkip
     
 
 
     # Transforms potentially holding an SS: 
     # - put them into a proper namespace ("ss_XXXX", only the "ss_" tag matters);
     # - reparent them to the folder "__SET__". 
-    rootTransforms = set()
+    rootTransforms = Core.Set()
 
 
     def analyzeChildren(actualTrans, depth=0):
         if actualTrans.isMeshTransform():
-            #longName = actualTrans.longName
-            #print 'MT ' + ' '*depth, longName
-
             #    |fakeParent|pascal:G2|pascal:G1|pascal:GUIDO
             # fakeParent   pascal:G2   pascal:G1   pascal:GUIDO
             parentTags = actualTrans.longName.lstrip('|').split('|')
 
             if len(parentTags) == 1:
                 # It's a world meshTransform
-                rootTransforms.add(Core.MuNode('|' + actualTrans))
+                rootTransforms.add(actualTrans)
 
             else:    
                 rootParent = parentTags[0]
                 if rootParent not in assetFolderNames.values():
-                    rootTransforms.add(Core.MuNode('|' + rootParent))
+                    rootTransforms.add(Core.MuNode(rootParent))
                 else:
                     nextRootParent = Core.MuNode('|' + rootParent + '|' + parentTags[1])
                     rootTransforms.add(nextRootParent)    
@@ -629,17 +391,12 @@ def run(*args):
 
 
     # Create a suitable 'renderSet'
-    print 
-    print 'ROOT MESHTRANSFORMS:'
-    for root in rootTransforms:
-        print '  ', root
-
-
-    prettyPrintList('PREFIXED', prefixedReferences)
-    prettyPrintList('PROPER', properTransforms)
-    prettyPrintList('UNKNOWN', toDoReferences)
-    prettyPrintList('BAD', badTransforms)
-    prettyPrintList('SCENE NAMESPACES', getSceneNamespaces())
+    log.iterable(rootTransforms, 'ROOT TRANS')
+    log.iterable(prefixedReferences, 'PREFIXED')
+    log.iterable(properTransforms, 'PROPER')
+    log.iterable(toDoReferences, 'UNKNOWN')
+    log.iterable(badTransforms, 'BAD')
+    log.iterable(Scene.getNamespaces(), 'SCENE NAMESPACES')
 
     """
     nodeList = ['ch_yakar:face']
