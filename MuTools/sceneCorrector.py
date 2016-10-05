@@ -288,7 +288,7 @@ def run(*args):
 
             parent = rootTransform.parent()
             
-            if parent.name == assetFolderNames[yakariTag]:
+            if parent.name() == assetFolderNames[yakariTag]:
                 properTransforms.append(rootTransform)
                 #print '[OK] It\'s inside "{}"!'.format(parent)        
             else:                
@@ -315,7 +315,7 @@ def run(*args):
             for locator in locators:
                 parent = locator.parent()
 
-                if parent and parent.name == '__SET__':
+                if parent and parent.name() == '__SET__':
                     # Ok, it's inside '__SET__'
                     properTransforms.append(locator)
                     #print '[OK] It\'s inside "{}"!'.format(parent)  

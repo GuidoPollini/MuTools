@@ -1,7 +1,6 @@
 __version__ = '1.0.4'
 
 
-"""
 print '>>>[{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
 print '>>>[{}] Interface:'.format(__name__)
 print
@@ -16,14 +15,13 @@ print '                    (you\'d have 2 styles for getters, sometimes a bare "
 print '                    A priory, "object.myProp" MUST be treated as "object._myProp": INTERNAL and PRIVATE!!!'
 print 
 print '                    --> BE CONSISTENT, NOT "PYTHONIC" <--'
-"""
 
 
 
 import MuTools.MuUtils   as Utils
 
 import maya.cmds         as MC
-import maya.api.OpenMaya as OM # <-- API 2.0
+import maya.api.OpenMaya as OM # >>> NO, REVERT TO THE API 1.0; the 2.0 is better but incomplete! <<<
 
 import functools
 import os
@@ -444,11 +442,15 @@ Scene             [MODULE?]
 
 class DGNode(object):
     """
-     .name      =  the minimal unique name
-     .longName  =  the full DAGPath
-
-    ... And something you won't really need: 
-    .shortName  =  the bare nodeName
+    ------------------------------------------
+    NEW BASIC GETTERS
+     .type()       -->  Maya type
+     .name()       -->  minimal unique name
+     .longName()   -->  full DAGPath
+     .shortName()  -->  bare nodeName
+     
+    Forget @property and bare attributes
+    ------------------------------------------
     """ 
 
 
@@ -524,8 +526,8 @@ class DGNode(object):
             self._pointer = OM.MFnDependencyNode(mObject)
         
 
-        """self.type = self._pointer.typeName()"""
-        self.type = self._pointer.typeName
+        """self.type()  = self._pointer.typeName()"""
+        self._type = self._pointer.typeName
 
         """
         Here you should check for MObjectHandle... apparently 
@@ -564,6 +566,8 @@ class DGNode(object):
     #   z in List(x, y)   --> True: it checks __eq__
 
 
+
+
     def __eq__(self, other):
         """
         ------------------------------------------------------------------------------
@@ -578,7 +582,6 @@ class DGNode(object):
         """
 
         return self._pointer.object() == other._pointer.object()
-
 
 
 
@@ -615,14 +618,9 @@ class DGNode(object):
         """
 
         # The only warranty is that if the wrappers point to the same node, they have the same hash...
-        return hash(self.name) # NO, a wrapper is not minimalName-immutable!
+        return hash(self.name()) # NO, a wrapper is not minimalName-immutable!
 
     
-
-
-
-
-
 
     def __getattr__(self, attr):
         # '__getattr__' is called only when the Python object has not an 
@@ -646,8 +644,13 @@ class DGNode(object):
 
     def __repr__(self):
         # Format: "name"<Type>
-        return '"{0}"<{1}>'.format(self.name, self.type)      
+        return '"{0}"<{1}>'.format(self.name(), self.type())      
 
+
+
+    def __str__(self):
+        # The 'minimal' name
+        return self.name()
 
 
 
@@ -662,13 +665,11 @@ class DGNode(object):
 
 
 
-    @property
     def longName(self): 
         return self._pointer.name()
 
 
 
-    @property
     def name(self): 
         # To allow loop on generic nodes and DAGs
         return self._pointer.name()
@@ -676,15 +677,22 @@ class DGNode(object):
 
 
     def rename(self, newName):
-        newName = MC.rename(self.name, newName)
+        newName = MC.rename(self.name(), newName)
         return newName
 
 
 
-    @property
     def shortName(self): 
         return self._pointer.name()
 
+
+
+    def type(self):
+        # Not really necessary, but it's a matter of coherence: 
+        # - xxx.parent()
+        # - xxx.name()
+        # - xxx.type()
+        return self._type
 
 
 
@@ -723,10 +731,10 @@ class DGNode(object):
         """ Check if the transform has shapeChildren of an allowedType """
         # The flag combination 'shapes + noIntermediate' is valid, 
         # but not 'type + noIntermediate' (the latter is ignored)
-        if self.type != 'transform':
+        if self.type()  != 'transform':
             return False
 
-        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
+        shapeChildren = MC.listRelatives(self.name(), children=True, path=True, shapes=True, noIntermediate=noIntermediate) or []
         allowedShapeChildren = [x for x in shapeChildren if MC.nodeType(x) == allowedType]
         
         if onlyOne:
@@ -742,10 +750,10 @@ class DGNode(object):
          - it's a 'transform';
          - it has no 'shape' children.
         """
-        if self.type != 'transform':
+        if self.type()  != 'transform':
             return False
 
-        shapeChildren = MC.listRelatives(self.name, children=True, path=True, shapes=True, noIntermediate=False) or []
+        shapeChildren = MC.listRelatives(self.name(), children=True, path=True, shapes=True, noIntermediate=False) or []
         return len(shapeChildren) == 0
 
 
@@ -853,11 +861,12 @@ class Reference(object):
         return MC.referenceQuery(self._filePath, isLoaded=True)
 
 
+
     def load(self):
         # Try to load a reference only if the file exists; if nod, don't do anything;
         """ Probably it should return True if succeeded or False if it failed! """
         if self.isValid():
-            MC.file(self._filePath, loadReference=self.getReferenceNode().name, loadReferenceDepth='asPrefs')
+            MC.file(self._filePath, loadReference=self.getReferenceNode().name(), loadReferenceDepth='asPrefs')
             return True
         else:
             return False
@@ -878,15 +887,6 @@ class Reference(object):
             MC.file(self._filePath, edit=True, namespace=newNamespace)
         except:
             raise
-
-
-
-    
-
-
-
-
-
 
 
 
@@ -966,7 +966,7 @@ class DAGNode(DGNode):
             # Remember, it fails with instances...
             MC.error('INSTANCED!!!')
 
-        parentList = MC.listRelatives(self.name, parent=True, path=True) or [] 
+        parentList = MC.listRelatives(self.name(), parent=True, path=True) or [] 
         try:
             return MuNode(parentList[0])
         except:
@@ -1013,19 +1013,16 @@ class DAGNode(DGNode):
 
 
 
-    @property
-    def longName(self):     
+    def longName(self):
         return self._pointer.fullPathName()
 
         
 
-    @property
     def name(self): 
         return self._pointer.partialPathName()
 
 
 
-    @property
     def shortName(self): 
         return self._pointer.name()
 
@@ -1088,9 +1085,9 @@ class Transform(DAGNode):
         type_flag = kwargs.get("type", kwargs.get("t", None))
 
         if not type_flag:
-            children = MC.listRelatives(self.name, children=True, path=True) or []
+            children = MC.listRelatives(self.name(), children=True, path=True) or []
         else:
-            children = MC.listRelatives(self.name, children=True, type=type_flag, path=True) or []
+            children = MC.listRelatives(self.name(), children=True, type=type_flag, path=True) or []
 
         return List(children)
 
@@ -1115,7 +1112,7 @@ class Transform(DAGNode):
         (to allow void loops, e.g. for x in node.meshes():...)
         """        
         # Probably useless... we return a list of Wrappers
-        meshChildren = MC.listRelatives(self.name, children=True, type='mesh', path=True) or []
+        meshChildren = MC.listRelatives(self.name(), children=True, type='mesh', path=True) or []
                                                                                
         if noIntermediate:
             meshChildren = [x for x in meshChildren if MC.getAttr(x + '.intermediateObject') == 0]
@@ -1159,10 +1156,10 @@ class Mesh(DAGNode):
     }
     
 
-    def getSmoothMeshDict(self):
+    def smoothMeshDict(self):
         smoothDict = {}
         for attr in Mesh._smoothMeshAttributes:
-            smoothDict[attr] = MC.getAttr(self.name + '.' + attr)
+            smoothDict[attr] = MC.getAttr(self.name() + '.' + attr)
         return smoothDict    
 
 
@@ -1213,7 +1210,7 @@ class Mesh(DAGNode):
 
 
 
-    def getShader(self, **kwargs):  
+    def shader(self, **kwargs):  
         pass
         """  
         renderLayer_flag = kwargs.get("renderLayer", kwargs.get("rl", "defaultRenderLayer"))
@@ -1223,7 +1220,7 @@ class Mesh(DAGNode):
         """
 
 
-    def getShadingEngine(self, **kwargs):
+    def shadingEngine(self, **kwargs):
         pass
         """
         renderLayer_flag = kwargs.get("renderLayer", kwargs.get("rl", "defaultRenderLayer"))
@@ -1341,15 +1338,15 @@ class ObjectSet(DGNode):
         return self
 
 
-    def getMembers(self):
+    def members(self):
         setName = self._pointer.name()
         # Another wonderful syntactic abomination
         # But luckily, it returns shortNames and namespaces
         memberNames = MC.sets(setName, query=True) or [] 
-        return [Wrapper(x) for x in memberNames]
+        return List(memberNames)
     
 
-    def _getMemberNames(self):
+    def _memberNames(self):
         setName = self._pointer.name()
         return MC.sets(setName, query=True) or [] 
        
@@ -1675,7 +1672,7 @@ class MuAttribute(object):
 
 
     def __rshift__(self, other):
-        # self ==> other
+        # self >> other
 
 
         """ 
@@ -1684,8 +1681,8 @@ class MuAttribute(object):
         Oppure fai un __init__ che accetta anche stringhe (MuAttribute('pippo.tx')...  
         """
 
-        plug      = self.node.name  + '.' + self.attrName
-        otherPlug = other.node.name + '.' + other.attrName
+        plug      = self.node.name()  + '.' + self.attrName
+        otherPlug = other.node.name() + '.' + other.attrName
 
 
         try:
@@ -1707,7 +1704,7 @@ class MuAttribute(object):
 
 
     def __lshift__(self, other):
-        # self <== other
+        # self << other
         MuAttribute.__rshift__(other, self)
 
         # Allow fluency (a.tx << b.sx << c.rx << ...)
@@ -1717,18 +1714,18 @@ class MuAttribute(object):
 
 
     def get(self):
-        return MC.getAttr(self.node.name + '.' + self.attrName)
+        return MC.getAttr(self.node.name() + '.' + self.attrName)
 
 
 
     def set(self, *args, **kwargs):
         #print 'MuAttribute.__set__() ARGS', args, kwargs
-        plug = self.node.name + '.' + self.attrName
+        plug = self.node.name() + '.' + self.attrName
         typology = MC.getAttr(plug, type=True)
 
         if len(args) == 1 and issubclass(type(args[0]), DGNode):
             # Only one positional argument which is a DGNode
-            args = [MC.getAttr(args[0].name + '.' + self.attrName)]
+            args = [MC.getAttr(args[0].name() + '.' + self.attrName)]
 
         if typology == 'string':
             # 'string' attributes need a special syntax
@@ -1965,13 +1962,13 @@ class Metadata(object):
     """
 
     """
-    attrs = MC.listAttr(obj.name, userDefined=True, string="*")
+    attrs = MC.listAttr(obj.name(), userDefined=True, string="*")
     attrDict = {}
     for attr in attrs:
         try:
-            tipo = MC.getAttr(obj.name + "." + attr, type=True)
-            num = MC.attributeQuery(attr, n=obj.name, numberOfChildren=True)
-            multi = MC.attributeQuery(attr, n=obj.name, multi=True)
+            tipo = MC.getAttr(obj.name() + "." + attr, type=True)
+            num = MC.attributeQuery(attr, n=obj.name(), numberOfChildren=True)
+            multi = MC.attributeQuery(attr, n=obj.name(), multi=True)
         except:
             tipo = "FAILED"
             num = "X"
@@ -2126,7 +2123,7 @@ class Metadata(object):
             isMulti = MC.attributeQuery(attr, node=nodeName, multi=True)
             
             # Is it <compound>? ("TdataCompound" is NOT...)
-            #isCompound = MC.attributeQuery(attr, node=self.name, numberOfChildren=True)
+            #isCompound = MC.attributeQuery(attr, node=self.name(), numberOfChildren=True)
             
             if not isMulti:
                 if attrType == "enum":
@@ -2171,13 +2168,13 @@ class Metadata(object):
     """
 
     """
-    attrs = MC.listAttr(obj.name, userDefined=True, string="*")
+    attrs = MC.listAttr(obj.name(), userDefined=True, string="*")
     attrDict = {}
     for attr in attrs:
         try:
-            tipo = MC.getAttr(obj.name + "." + attr, type=True)
-            num = MC.attributeQuery(attr, n=obj.name, numberOfChildren=True)
-            multi = MC.attributeQuery(attr, n=obj.name, multi=True)
+            tipo = MC.getAttr(obj.name() + "." + attr, type=True)
+            num = MC.attributeQuery(attr, n=obj.name(), numberOfChildren=True)
+            multi = MC.attributeQuery(attr, n=obj.name(), multi=True)
         except:
             tipo = "FAILED"
             num = "X"
