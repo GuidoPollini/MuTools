@@ -1,5 +1,22 @@
 __version__ = '1.0.4'
-print 'WARNING [{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
+
+
+"""
+print '>>>[{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
+print '>>>[{}] Interface:'.format(__name__)
+print
+print '                    GETTER    -->  object.myProp()        (or object.myProp(*args, **kwargs) if needed)'
+print '                    SETTER    -->  object.setMyProp(...)'
+print                    
+print '                    STRINGIFY -->  object.myPropAsStr()'
+print '                              -->  str(object.myProp)     (and using __repr__ to get more informations)'
+print 
+print '                    DON\'T use a shitty "object.myProp" as a getter/@property... (it\'s sooo \'Pythonic\')'
+print '                    (you\'d have 2 styles for getters, sometimes a bare "xxx.pippo", sometimes "xxx.pippo(params)"... ugly!)'
+print '                    A priory, "object.myProp" MUST be treated as "object._myProp": INTERNAL and PRIVATE!!!'
+print 
+print '                    --> BE CONSISTENT, NOT "PYTHONIC" <--'
+"""
 
 
 
@@ -790,7 +807,7 @@ class Reference(object):
     # INITIALIZER
     #-----------------------------       
     def __init__(self, filePath):
-        self.filePath = filePath
+        self._filePath = filePath
 
 
 
@@ -798,9 +815,10 @@ class Reference(object):
     # MAGIC METHODS
     #-----------------------------
     def __repr__(self):
-        representation = '"{0}"({1})<Reference>'.format(self.getNamespace().name, self.filePath)
+        representation = '"{0}"({1})<Reference>'.format(str(self.namespace()), self._filePath)
         return representation
 
+    
 
     #-----------------------------
     # METHODS
@@ -808,8 +826,7 @@ class Reference(object):
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""
     A bunch of method that works on 'abstract' references:
 
-    def load(self):
-        pass
+
     def reload(self):
         pass
     def unload(self):
@@ -820,25 +837,35 @@ class Reference(object):
         pass
     """""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
+
+    def filePath(self):
+        return self._filePath
+
+
     def isValid(self):
         # Simply check if the reference exists as file
-        return os.path.isfile(self.cleanFilePath)
+        #return os.path.isfile(self.cleanFilePath)
+        return MC.file(self.cleanFilePath(), query=True, exists=True)
+
 
 
     def isLoaded(self):
-        return MC.referenceQuery(self.filePath, isLoaded=True)
+        return MC.referenceQuery(self._filePath, isLoaded=True)
 
 
     def load(self):
         # Try to load a reference only if the file exists; if nod, don't do anything;
         """ Probably it should return True if succeeded or False if it failed! """
         if self.isValid():
-            MC.file(self.filePath, loadReference=self.getReferenceNode().name, loadReferenceDepth='asPrefs')
-    
+            MC.file(self._filePath, loadReference=self.getReferenceNode().name, loadReferenceDepth='asPrefs')
+            return True
+        else:
+            return False
 
-    @property
+
+
     def cleanFilePath(self):
-        return self.filePath.split('{')[0]
+        return self._filePath.split('{')[0]
 
 
 
@@ -848,55 +875,62 @@ class Reference(object):
          - should this return True/False if it succeeded/failed???
         """ 
         try:
-            MC.file(self.filePath, edit=True, namespace=newNamespace)
+            MC.file(self._filePath, edit=True, namespace=newNamespace)
         except:
             raise
 
 
 
+    
 
-    """ GET NAMESPACE AS A PROPERTY """
-    @property
+
+
+
+
+
+
+
     def namespace(self):
-        """
-        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
-        """
-        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
+        # After a bare load scene (no reference load), each virtual reference has
+        # a 'potential' namespace, which is not yet a real namespace
+        potentialNamespace = MC.file(self._filePath, query=True, namespace=True)
+        return Namespace(potentialNamespace) 
+
+
+    """            
+    def namespaceAsStr(self):
+        # A shortcut for ref.namespace().name()
+        potentialNamespace = MC.file(self._filePath, query=True, namespace=True)
+        return potentialNamespace         
+    """
+    """ OBSOLETE """
+    #@property
+    #def namespace(self):
+        
+        #Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
+        
+        #potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
         # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
-        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
-        """ ... protect everything!!! """
-        if MC.namespace(exists=potentialNamespace):
-            return potentialNamespace
-        else:
-            return None   
+        # NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
+        # ... protect everything!!! """
+        #if MC.namespace(exists=potentialNamespace):
+        #    return potentialNamespace
+        #else:
+        #    return None   
 
 
 
 
-    def getNamespace(self):
-        """
-        Every referenced file MUST have either a namespace or a prefix (and the latter is FATAL)
-        """
-        potentialNamespace = MC.file(self.filePath, query=True, namespace=True)
-        # It could be a "prefix" (and it would be a serious problem because this can't be corrected via a command!!!)
-        """ NOT EXACTLY; if the namespace already existed because assigned to another asset, this check would fail """
-        """ ... protect everything!!! """
-        if MC.namespace(exists=potentialNamespace):
-            return Namespace(potentialNamespace)
-        else:
-            return None  
 
 
-
-    @property
     def originalName(self):
-        originalName = self.filePath.split('/')[-1].split('{')[0].replace('.ma', '')
+        originalName = self._filePath.split('/')[-1].split('{')[0].replace('.ma', '')
         return originalName
 
 
 
     def getReferenceNode(self):
-        return MuNode(MC.file(self.filePath, query=True, referenceNode=True))
+        return MuNode(MC.file(self._filePath, query=True, referenceNode=True))
     
 
 
@@ -926,7 +960,7 @@ class DAGNode(DGNode):
     #-----------------------------
     # METHODS
     #-----------------------------
-    def getParent(self):
+    def parent(self):
         """ By returning a full-fledged node, there's no need for the 'longName' option! """
         if self.isInstanced():
             # Remember, it fails with instances...
@@ -941,7 +975,7 @@ class DAGNode(DGNode):
 
 
     
-    def getRootParent(self):
+    def rootParent(self):
         """ 
         Return None if the DAG is a worldChild, otherwise the worldChild that contains it
         """
@@ -1045,7 +1079,7 @@ class Transform(DAGNode):
     #-----------------------------
     # METHODS
     #-----------------------------
-    def getChildren(self, **kwargs):
+    def children(self, **kwargs):
         """
         Recycle the syntax of 'listRelatives(children=True, ...)'
         and correct the type/noIntermediate bug!
@@ -1062,23 +1096,23 @@ class Transform(DAGNode):
 
 
 
-    def getMesh(self):
+    def mesh(self):
         """
         If nothing is found, returns None!
         If multiple meshes are present, it doesn't give a fuck: you get the first one!
         """
         try:
-            return self.getMeshes()[0]
+            return self.meshes()[0]
         except IndexError:
             return None
         
 
 
 
-    def getMeshes(self, noIntermediate=True):
+    def meshes(self, noIntermediate=True):
         """
         If nothing is found, returns []
-        (to allow void loops, e.g. for x in node.getMeshes():...)
+        (to allow void loops, e.g. for x in node.meshes():...)
         """        
         # Probably useless... we return a list of Wrappers
         meshChildren = MC.listRelatives(self.name, children=True, type='mesh', path=True) or []
@@ -1758,11 +1792,47 @@ class MuObject(object):
 
 class Namespace(object):
     def __init__(self, namespaceName):
-        self.name = namespaceName 
+        self._namespace = namespaceName 
 
-    def getNodes(self):
-        nodes = MC.namespaceInfo(self.name, listOnlyDependencyNodes=True)
+
+
+    def __repr__(self):
+        """
+        -------------------------------------        
+        repr(obj)  <-->  obj.__repr__()
+        -------------------------------------        
+        I don't care about 'eval'; I use __repr__ for easy console log!
+        """
+        # A more informative representation
+        return '"{}"<Namespace>'.format(self._namespace)    
+
+
+
+    def __str__(self):
+        """
+        -------------------------------------
+        str(obj)  <-->  obj.__str__()
+        -------------------------------------
+        This is used to avoid clumsy:
+         - ref.namespace().name()
+         - ref.namespaceAsStr()
+        
+        A simpler:
+         - str(ref.namespace())
+        """
+        return self._namespace
+
+
+
+    def nodes(self):
+        nodes = MC.namespaceInfo(self._namespace, listOnlyDependencyNodes=True)
         return List(nodes)
+
+
+
+    def name(self):
+        return self._namespace
+
     # MC.namespace(rename=['oldNamespace', 'newNamespace'])
     # MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
     # MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes

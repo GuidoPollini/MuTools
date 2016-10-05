@@ -1,4 +1,4 @@
-__version__ = '1.0.3' 
+__version__ = '1.0.4' 
 
 
 
@@ -58,9 +58,18 @@ class Log(object):
     HARD_DEBUG = 2
     
 
+
+    @staticmethod
+    def _stringifyArgs(args):
+        # For <str> use str(), for another type of object use repr()
+        #    str('soleil')  -->  soleil
+        #   repr('soleil')  -->  'soleil' (useless)
+        return ' '.join([str(x) if type(x) == str else repr(x) for x in args])
+
+
+
     def __init__(self, globalLogId=None, verbosity=Log.STANDARD):
         self.verbosity = verbosity
-
 
 
 
@@ -72,7 +81,27 @@ class Log(object):
         if self.verbosity is None:
             return
 
-        message = ' '.join([str(x) for x in args])
+        #-----------------------------------------------------------------------------------------
+        # NOTE
+        #
+        # I want something like this:
+        # - log('The object', obj, 'is broken')  -->  The object "fuck"<reference> is broken!  
+        # - namespace = str(ref.namespace())
+        #
+        # Hence:
+        # - repr(obj)  -->  the 'developer' informative string
+        # - str(obj)   -->  the replacement for 'objAsStr()', 'obj.stringify()', 'obj.name()', ...
+        #
+        #-----------------------------------------------------------------------------------------
+        # As usual, forget the 'PYTHONIC IDEOLOGICAL SHIT': except for trivial cases (ex <str>, 
+        # built-in containers of built-in types, ...) __repr__ NEVER even attempts to recover the 
+        # original object via an eval() as if it was a perfect serialization/pickling/json...
+        #
+        # __repr__ exists only for my log/debug as developer!!!
+        #  __str__ to avoid ugly 'xxx.object().asString()'  
+        #-----------------------------------------------------------------------------------------
+    
+        message = Log._stringifyArgs(args)
         print message
 
 
@@ -85,7 +114,7 @@ class Log(object):
         """
 
         if self.verbosity in (Log.DEBUG, Log.HARD_DEBUG):
-            message = '[D] ' + ' '.join([str(x) for x in args])
+            message = '[D] ' + Log._stringifyArgs(args)
             print message
 
 
@@ -98,10 +127,10 @@ class Log(object):
         """
 
         if self.verbosity == Log.HARD_DEBUG:
-            message = '[H] ' + ' '.join([str(x) for x in args])
+            message = '[H] ' + Log._stringifyArgs(args)
             print message
 
-
+    
 
 
     def iterable(self, iterable, title=None):
@@ -119,10 +148,10 @@ class Log(object):
         
         if issubclass(type(iterable), list): 
             # Don't sort a <List>
-            stringifiedIterable = [str(x) for x in iterable]            
+            stringifiedIterable = [repr(x) for x in iterable]            
         else:    
             # Sort a <Set>
-            stringifiedIterable = sorted([str(x) for x in iterable])
+            stringifiedIterable = sorted([repr(x) for x in iterable])
         
         if len(stringifiedIterable) > 0:
             for s in stringifiedIterable:
@@ -130,7 +159,46 @@ class Log(object):
         else:
             print '  NONE'  
 
+    
+    """
+    ---------------------------------------------------------------------------------------------------
+    WISHLIST
 
+    'MuTools.MuScene': {'path':             'C:/Users/guido.pollini/Desktop/MuTools/MuTools/MuScene.py'
+                        'version':          '1.0.4'
+                        'lastModification': '05/10/16, 13:35:15'}
+    'MuTools.MuCore':  {'path':             'C:/Users/guido.pollini/Desktop/MuTools/MuTools/MuCore.pyc'
+                        'version':          '1.0.4'
+                        'lastModification': '05/10/16, 14:56:19'}
+    'MuTools.MuUI':    ['item0'
+                        'item1'
+                        'item2']
+    ---------------------------------------------------------------------------------------------------
+    """
+    def dictionary(self, dico, title=None):
+        def _recurse(actualDico, actualIndent=0):
+            partialText = ''
+
+            longestKey = max([len(repr(x) + ': ') for x in actualDico.keys()])
+
+            for i, key in enumerate(actualDico.keys()):
+                if i == 0:
+                    newToAdd = (repr(key) + ': ').ljust(longestKey)
+                    partialText += newToAdd
+                    newIndent = actualIndent + len(newToAdd)
+                else:
+                    newToAdd = '\n' + ' ' * actualIndent + (repr(key) + ': ').ljust(longestKey)
+                    partialText += newToAdd
+                    newIndent = len(newToAdd)
+                            
+                if issubclass(type(actualDico[key]), dict):
+                    partialText = partialText + '{' + _recurse(actualDico[key], newIndent) + '}'
+                else:
+                    partialText += repr(actualDico[key])
+            
+            return partialText 
+            
+        print '\n' + (title + '\n' if title else '') + _recurse(dico)
 
 
 
@@ -166,23 +234,6 @@ class Log(object):
 
 
 
-
-
-
-
-
-
-
-class Module(object):
-    def loadingLog():
-        pass
-    def loadedLog():
-        pass 
-
-
-
-
-
 def getFolders(dirName, fullName=False):
     dirContent = os.listdir(dirName)
     prefix = dirName + '/' if fullName else ''        
@@ -201,40 +252,37 @@ def getFiles(dirName, fullName=False):
 
 
 
-"""
-import sceneCorrector
-def muReload(module):
-    reload(module)
-    muModules = ['Utils', 'Core', 'Scene', 'UI']
-    innerModules = dir(module)
-    for mod in muModules:
-        if mod in innerModules:
-            modObj = getattr(module, mod)
-            reload(modObj)
-            print '[{}] Reloaded!'.format(mod)
-            
-            muReload(mod)
-        
+""""""""""""""""""""""""""""" 
+'MuTools' recursive reloader
 
-muReload(sceneCorrector)
-"""
+  import MuUtils
+  reload(MuUtils)
 
-def reloadMuTools():
-    loadedModules = sys.modules
-    MuToolsModules = [x for x in loadedModules if x.startswith('MuTools')]
-    for mod in MuToolsModules:
-        modObj = loadedModules[mod]
-        # Some modules 'MuTools.' have None as moduleObject (why???)
-        if modObj is not None:
-            print '- [{0}] Trying to reload from "{1}"...'.format(mod, modObj.__file__)
-            try:
-                reload(modObj)
-                print '> [{}] Module reloaded!'.format(mod)            
-            except ImportError:    
-                # The module name was changed or doesn't exist anymore: swallow it!
-                print '? [{0}] Module reload failed! The file "{1}" can\'t be found.'.format(mod, modObj.__file__)
-
-
+  import myModule    
+  MuUtils.muReload(myModule)
+"""""""""""""""""""""""""""""
+def muReload(modObj): 
+    muModuleNames = ['Utils', 'Core', 'Scene', 'UI']
+    
+    def _recursiveMuReload(actualModObj, historyStr):
+        innerModuleNames = dir(actualModObj)
+        for modName in muModuleNames:
+           if modName in innerModuleNames:
+               modObj = getattr(actualModObj, modName)
+               reload(modObj)
+               
+               # [myMod.Scene.Core.Utils]
+               thisHistoryStr = historyStr + '.' + modName  
+               print '[{}] Reloaded!'.format(thisHistoryStr)
+               _recursiveMuReload(modObj, thisHistoryStr)
+               
+    _recursiveMuReload(modObj, modObj.__name__)
+    
+    # The monkey-patching module MUST be the last one, otherwise
+    # a monkey-patched class will be revert to the original after
+    # a reload (i.e. the classObj destroyed then rebuilt)
+    reload(modObj)
+    
 
 
 
@@ -339,6 +387,7 @@ def genericMessage(message):
     sys.__stdout__.write('\n- [{0}.py] {1}'.format(moduleName, message))
 
 
+ 
 
 
 

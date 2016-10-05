@@ -148,23 +148,23 @@ a reload of 'MuCore' will rebuild the class 'Reference' and the patch will be lo
 #
 #------------------------------------------------------------------------------
 #==============================================================================
-def _getYakariTag(self):
+def _yakariTag(self):
     yakariTags = ['ch', 'pr', 'st', 'ss']
     
     # Recover the 'asset type'
     assetTag = None
 
     for tag in yakariTags:
-        if self.originalName.startswith(tag + '_'):
+        if self.originalName().startswith(tag + '_'):
             assetTag = tag
 
     # The camera is not a Shotgun asset        
-    if self.originalName == 'yak_camera':
+    if self.originalName() == 'yak_camera':
         assetTag = 'cam'    
         
     return assetTag  
 
-Core.Reference.getYakariTag = _getYakariTag
+Core.Reference.yakariTag = _yakariTag
 
 """
 @property
@@ -200,7 +200,7 @@ def run(*args):
         if not Scene.nodeExists(folderName):
             log.fatality('MISSING FOLDER: {} doesn\'t exist'.format(folderName))
         
-        if Scene.getParent(folderName):
+        if Scene.parent(folderName):
             log.fatality('MISPLACED FOLDER: {} must be a worldChild!'.format(folderName))
 
 
@@ -226,15 +226,15 @@ def run(*args):
     #===========================================================================================================
 
     # File references
-    references = Scene.getReferences()
+    references = Scene.references()
     log('References:', references)
 
 
     for ref in references:
 
-        if ref.namespace is None:
+        if ref.namespace() is None:
             # Skip reference with prefixes... It's a FATALITY
-            prefixedReferences.append(ref.filePath)
+            prefixedReferences.append(ref.filePath())
             continue
         
 
@@ -276,17 +276,17 @@ def run(*args):
         # All 'ch', 'pr'(published) and 'ss', 'cam' setups have a transform root 
         # and every other transform is inside it.
         
-        yakariTag = ref.getYakariTag()
+        yakariTag = ref.yakariTag()
 
         if yakariTag in ['ch', 'pr', 'ss', 'cam']:
             try:
-                rootTransformName = ref.namespace + (':camera_rig' if yakariTag == 'cam' else ':rig_group')
+                rootTransformName = str(ref.namespace()) + (':camera_rig' if yakariTag == 'cam' else ':rig_group')
                 rootTransform = Core.MuNode(rootTransformName) 
-            except NameFatality:
-                MC.error('NO IDEA!!!')
+            except Core.NameFatality:
+                raise
 
 
-            parent = rootTransform.getParent()
+            parent = rootTransform.parent()
             
             if parent.name == assetFolderNames[yakariTag]:
                 properTransforms.append(rootTransform)
@@ -307,13 +307,13 @@ def run(*args):
         elif yakariTag == 'st':
             """ DEVO RECUPERARE ANCHE LE PLACCHE NON REFERENCED? le ..._COPY? sono nel renderset"""
 
-            nodes = ref.getNamespace().getNodes()
+            nodes = ref.namespace().nodes()
 
             # Filter 'locatorTransforms' only:
             locators = [x for x in nodes if x.isLocatorTransform()]
 
             for locator in locators:
-                parent = locator.getParent()
+                parent = locator.parent()
 
                 if parent and parent.name == '__SET__':
                     # Ok, it's inside '__SET__'
@@ -353,7 +353,7 @@ def run(*args):
     
     irrelevantTransforms     = Core.Set('persp', 'top', 'front', 'side', 'front', 'platesHolder')
     transformsToSkip         = Core.Set(properTransforms) | Core.Set(badTransforms) | irrelevantTransforms
-    worldTransformsToAnalyze = Core.Set(Scene.getWorldChildren()) - transformsToSkip
+    worldTransformsToAnalyze = Core.Set(Scene.worldChildren()) - transformsToSkip
     
 
 
@@ -381,7 +381,7 @@ def run(*args):
                     nextRootParent = Core.MuNode('|' + rootParent + '|' + parentTags[1])
                     rootTransforms.add(nextRootParent)    
 
-        children = actualTrans.getChildren(type='transform')
+        children = actualTrans.children(type='transform')
         for child in children:
             if child not in transformsToSkip:
                 analyzeChildren(child, depth=depth + 1)
@@ -396,7 +396,7 @@ def run(*args):
     log.iterable(properTransforms, 'PROPER')
     log.iterable(toDoReferences, 'UNKNOWN')
     log.iterable(badTransforms, 'BAD')
-    log.iterable(Scene.getNamespaces(), 'SCENE NAMESPACES')
+    log.iterable(Scene.namespaces(), 'SCENE NAMESPACES')
 
     """
     nodeList = ['ch_yakar:face']

@@ -1,4 +1,4 @@
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 
 
@@ -139,7 +139,21 @@ class FileError(Exception):
         MC.error('[FILE ERROR] ' + message)
 
 
-def load(filePath, noReferenceLoad=True):
+
+
+
+
+"""
+NOTE
+  156.917671932s:  full scene load
+  382.712135774s:  load bare scene, then load all references
+  --> In a huge scene (20 heavy references) more than TWICE slower!!!
+
+  With the second system I could get kinda progress bar, but it's hyper slow;
+  Try to recover the QWidget of the progressBar (active during loading) and 
+  connect it to a Qt-signal...
+"""
+def load(filePath, loadReferences=False):
     if not MC.file(filePath, query=True, exists=True):
         raise FileError('The path "{}" is wrong!'.format(filePath))
     
@@ -149,7 +163,7 @@ def load(filePath, noReferenceLoad=True):
     if not fileType or fileType[0] not in ('mayaAscii', 'mayaBinary'):
         raise FileError('The file "{}" is not a Maya ASCII or binary!'.format(filePath))
             
-    loadReferenceDepth = 'none' if noReferenceLoad else 'all'
+    loadReferenceDepth = 'all' if loadReferences else 'none'
     
     MC.file(filePath, 
             open=True,    
@@ -248,7 +262,7 @@ def isModified():
 
 
 
-def getName(long=False):
+def name(long=False):
     """ 'expandName' ??? To resolve things like $PROJECT/fuckMe/now ? """
     sceneName = MC.file(query=True, sceneName=True, shortName=not long)
     return sceneName if sceneName != '' else None
@@ -256,13 +270,13 @@ def getName(long=False):
 
 
 
-def getLongName():
+def longName():
     return getName(long=True)
 
 
 
 
-def getType():
+def type():
     # - "mayaAscii"
     # - "mayaBinary"
     compatibleTypes = MC.file(query=True, type=True) # This is a list of compatible types
@@ -271,7 +285,7 @@ def getType():
 
 
 
-def getNodeSelection(filter=None):
+def nodeSelection(filter=None):
     """
     Filter the selectionList with 'type=DGNode' 
     """
@@ -281,7 +295,7 @@ def getNodeSelection(filter=None):
 
 
 
-def getSets():
+def sets():
     # listSets(allSets=True) is SEVERELY broken:
     #  - 2 parasites (unselectionable fake sets) come out;
     #  - the namespace info is LOST... seriously, FUCK YOU Autodesk!
@@ -294,7 +308,7 @@ def getSets():
 
 
 
-def getWorldChildren():
+def worldChildren():
     worldChildren = []
 
     # Initialized to a fake "world" (not a kTransform)
@@ -322,7 +336,7 @@ def getWorldChildren():
 
 
 
-def getIsolatedNodes(**kwargs):
+def isolatedNodes(**kwargs):
     type_value = kwargs.get("type", kwargs.get("t", None))
     # Check for "isolated" (nodes without connections) of a spefic type
     if type:
@@ -343,7 +357,7 @@ def getIsolatedNodes(**kwargs):
 
 
 
-def getNamespaces(*args):
+def namespaces(*args):
     with Core.RootNamespaceActive():
         # 'UI' and 'shared' are internal namespaces
         sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
@@ -361,7 +375,7 @@ def getNamespaces(*args):
      
 
 
-def getReferences():
+def references():
     #----------------------------------------------------------------------------------
     # File referenced once:
     #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_fucky_rig.ma"
@@ -391,7 +405,7 @@ def createReference(*args, **kwargs):
 
 
 
-def getAnimationInfo():
+def animationInfo():
     animationInfoDict = {
         'minTime':   MC.playbackOptions(query=True, minTime=True),
         'maxTime':   MC.playbackOptions(query=True, maxTime=True),
@@ -403,7 +417,7 @@ def getAnimationInfo():
 
 
 
-def getCurrentUnits():
+def currentUnits():
     # ex: {'angle': 'degree', 'linear': 'centimeter', 'time': 'pal'}
     currentUnitsDict = {
         'linear': MC.currentUnit(query=True, linear=True, fullName=True),
@@ -427,9 +441,9 @@ def nodeExists(nodeName):
 
 
 
-def getParent(nodeName):
+def parent(nodeName):
     node = Core.MuNode(nodeName)
-    return node.getParent()
+    return node.parent()
 
 
 
