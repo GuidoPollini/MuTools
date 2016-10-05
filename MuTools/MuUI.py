@@ -1,4 +1,4 @@
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 
@@ -25,9 +25,9 @@ Utils.moduleLoadingMessage()
 
 
 
-def getMayaWindow():
-    pointer = OMUI.MQtUtil.mainWindow()
-    return shiboken.wrapInstance(long(pointer), QG.QWidget)
+def mayaWindow():
+    pointer = OMUI.MQtUtil.mainWindow() # It's a QMainWindow!
+    return shiboken.wrapInstance(long(pointer), QG.QMainWindow) 
     
 
 
