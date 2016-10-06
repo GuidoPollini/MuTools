@@ -10,11 +10,9 @@ import socket
 
 """
 __main__
-
 This module represents the (otherwise anonymous) scope in which the interpreter's
 main program executes - commands read either from standard input, from a script 
-file, or from an interactive prompt. It is this environment in which the idiomatic 
-'conditional script' stanza causes a script to run:
+file, or from an interactive prompt.
 """
 
 class LostConnection(Exception):
@@ -47,36 +45,73 @@ class CommandPort(object):
 
     _singletonName = 'commandPortSingleton'
 
-    def __new__(cls, internalPortId=1000):        
+
+    def __new__(cls, internalPortId=1000, pythonCallback=None):        
         if hasattr(__main__, CommandPort._singletonName):
-            # print 'Singleton already existing'
+            print 'SINGLETON EXISTS!'
             return getattr(__main__, CommandPort._singletonName)
 
         else:
             # Create a new virgin CommandPort object with object.__new__()...
             commandPortInstance = super(CommandPort, cls).__new__(cls)
+            print 'SINGLETON CREATED!'
             # ... and make it interprer-level global (__main__)
             setattr(__main__, CommandPort._singletonName, commandPortInstance)
 
             # Open physically a Maya port and customize the object
-            commandPortInstance._openPort(internalPortId)
+            commandPortInstance._openPort(internalPortId, pythonCallback)
 
             return commandPortInstance
 
 
 
-    def __init__(self, internalPortId=1000):
-        pass
+    @staticmethod
+    def deleteSingleton():
+        if hasattr(__main__, CommandPort._singletonName):
+            print 'SINGLETON DELETED!'
+            commandPortObj = getattr(__main__, CommandPort._singletonName)
+            MC.commandPort(name=':' + str(commandPortObj.ID), close=True)
+            MC.refresh()
+
+            delattr(__main__, CommandPort._singletonName)
+
+
+
+    def __init__(self, internalPortId=1000, pythonCallback=None):
+        print '__init__'
+        self.ID = internalPortId
+        self.pythonCallback = pythonCallback
 
 
 
     def __repr__(self):
-        repres = "'Port:{0}'<CommandPort>".format(self.getId())
+        repres = "'ID:{0}'<CommandPort>".format(self.getId())
         return repres
 
 
 
-    def _openPort(self, internalPortId=1000):
+    #------------------------------------------------------------------
+    # DYNAMIC CALLBACKS
+    # no need to close and reeopen the commandPort
+    #------------------------------------------------------------------
+    """
+
+    def setCallback(self, pythonCallback):
+        # It works:)
+        self._pythonCallback = pythonCallback 
+    
+    def disableCallback(self):
+        pass
+
+    def enableCallback(self):
+        pass    
+
+    """
+    #------------------------------------------------------------------
+    #------------------------------------------------------------------
+
+
+    def _openPort(self, internalPortId=1000, pythonCallback=None):
         singleton = getattr(__main__, CommandPort._singletonName)
 
         # The string in _singletonName is a __main__-name and Python called by MEL lives
@@ -100,6 +135,7 @@ class CommandPort(object):
 
         if MC.commandPort(internalPortName, query=True):
             MC.commandPort(name=internalPortName, close=True)
+            print 'commandPort ' + str(internalPortName) + 'closed!'
             # 'commandPort' uses the eventLoop which is disabled during scripts: hence force a refresh!
             MC.refresh()
      
@@ -108,7 +144,7 @@ class CommandPort(object):
                        echoOutput=False, 
                        noreturn=False,
                        returnNumCommands=True)
-
+        print 'PORT OPEN!'
         self.internalPortId = internalPortId
 
 
@@ -120,7 +156,13 @@ class CommandPort(object):
 
     def _messageReceived(self, message):
         # Indirectly called when this commandPort receive a message
-        print '-->', message, '(Actual namespace: {})'.format(__name__)
+        # With this you can change, enable, disable in dynamically!
+        if self.pythonCallback:
+            self.pythonCallback(message)
+        else:
+            print 'NO CALLBACK SET'    
+        
+        #print '-->', message, '(Actual namespace: {})'.format(__name__)
 
 
 

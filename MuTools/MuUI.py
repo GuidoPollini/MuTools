@@ -26,7 +26,8 @@ class MayaWindow(object):
     
     def __getattr__(self, attr):
         return getattr(self._mayaWindow, attr)
-          
+
+"""          
 mw = MayaWindow()
 # toolBar1 = menuSelection, load save icons, tabs selectors
 # toolBar2 = shelf
@@ -49,7 +50,7 @@ class MayaWindow(object):
     def __new__(cls):
         pointer = OMUI.MQtUtil.mainWindow() # It's a QMainWindow, not simply a QWidget!
         return shiboken.wrapInstance(long(pointer), QG.QMainWindow)	    
-
+"""
 
 
 def mayaWindow():

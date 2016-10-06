@@ -58,7 +58,6 @@ class Log(object):
     HARD_DEBUG = 2
     
 
-
     @staticmethod
     def _stringifyArgs(args):
         # For <str> use str(), for another type of object use repr()
@@ -68,8 +67,8 @@ class Log(object):
 
 
 
-    def __init__(self, globalLogId=None, verbosity=Log.STANDARD):
-        self.verbosity = verbosity
+    def __init__(self, globalLogId=None, verbosity=None):
+        self.verbosity = verbosity or Log.STANDARD
 
 
 

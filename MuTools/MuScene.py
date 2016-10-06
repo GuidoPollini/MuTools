@@ -1,9 +1,8 @@
 __version__ = '1.0.4'
 
 
-
-import MuTools.MuCore  as Core
 import MuTools.MuUtils as Utils
+import MuTools.MuCore  as Core
 
 import maya.cmds       as MC
 import maya.mel        as MM
@@ -15,6 +14,47 @@ import maya.OpenMaya   as OM
 # Loading module...
 Utils.moduleLoadingMessage()
 #------------------------------------------------------------------------------
+log = Utils.Log('MuSceneLog', Utils.Log.STANDARD)
+
+
+
+
+
+
+
+
+
+#------------------------------------------------------------------------------
+# PLUG-INS
+#------------------------------------------------------------------------------
+
+def loadPlugin(*args):
+    """
+    loadPlugin(<str>|<list>|<set>|<tuple>)
+    """
+
+    # MayaExocortexAlembic Mayatomr ...
+    if isinstance(args[0], (list, set, tuple)):
+        pluginNames = args[0]
+    else: 
+        pluginNames = args
+    
+    with Core.WaitCursorActive():
+        for pluginName in pluginNames:
+            log('Plugin "{}" loading...'.format(pluginName))
+        
+            #MC.pluginInfo(pluginName, edit=True, autoload=True)
+            MC.loadPlugin(pluginName)
+        
+            log('Plugin "{}" loaded!'.format(pluginName))
+
+
+
+
+
+
+
+
 
 
 
@@ -248,17 +288,6 @@ def disableViewport20(*args):
 def isModified():
     return MC.file(query=True, anyModified=True)
 
-
-
-# Which one is better?
-#
-#   short = Scene.getName()
-#   long  = Scene.getName(long=True)
-#
-#   short = Scene.getName()
-#   long  = Scene.getLongName()
-#
-# ... The second one:)
 
 
 
