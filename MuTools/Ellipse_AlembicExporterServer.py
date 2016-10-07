@@ -11,15 +11,17 @@ NOTE
 
 
 
-import MuTools.MuUtils as Utils
-import MuTools.MuCore  as Core
-import MuTools.MuScene as Scene
-import MuTools.MuUI    as UI
+import MuTools.MuUtils     as Utils
+import MuTools.MuCore      as Core
+import MuTools.MuScene     as Scene
+import MuTools.MuMessaging as Messaging
+import MuTools.MuUI        as UI
 
-import maya.cmds       as MM
-import maya.mel        as MM
-import PySide.QtGui    as QG
-import PySide.QtCore   as QC
+import maya.cmds           as MM
+import maya.mel            as MM
+
+import PySide.QtCore       as QC
+import PySide.QtGui        as QG
 import shiboken
 
 
@@ -39,8 +41,8 @@ Utils.moduleLoadingMessage()
 
 
 
-def initialize(clientCommandPortID):
-    print 'MASTER MAYA IP', clientCommandPortID
+def initialize(clientPortId):
+    print '>>> clientPortId', clientPortId
 
     Scene.disableViewport20()
     Scene.disableUI()
@@ -67,12 +69,15 @@ def initialize(clientCommandPortID):
 
     for pluginName in pluginsToLoad:
         Scene.loadPlugin(pluginName)
+        Messaging.sendMessage(clientPortId, 'Plugin [' + pluginName + '] loaded!')
 
+    Messaging.sendMessage(clientPortId, 'LOADED')
     
 
-
-
-
+    import time
+    for i in range(10):
+        Messaging.sendMessage(clientPortId, '<fuck you>')
+        time.sleep(1)
 
 
 

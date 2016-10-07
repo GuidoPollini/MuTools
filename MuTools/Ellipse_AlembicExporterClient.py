@@ -6,9 +6,9 @@ import MuTools.MuCore      as Core
 import MuTools.MuScene     as Scene
 import MuTools.MuMessaging as Messaging
 
-import maya.cmds     as MC
-import maya.mel      as MM
-import maya.OpenMaya as OM
+import maya.cmds           as MC
+import maya.mel            as MM
+import maya.OpenMaya       as OM
 
 import time
 import os
@@ -198,7 +198,7 @@ def renderSet(self):
 
 
 
-def run(*args):
+def _run(*args):
 
     # Predefined asset folders; they must exist and be worldChildren:
     assetFolderNames = {'cam': '__CAMERA__', 
@@ -420,20 +420,31 @@ def run(*args):
 
 
 
+def messagingCallback(message):
+    print '>>>', message
+    if message == 'LOADED':   
+        MC.confirmDialog(title='MAYA SERVER', message='Maya server is active!', button=['OK'])
+
+
+def run():
+    cp = Messaging.CommandPort(8765, messagingCallback)
+    print 'clientPortId', cp.portId()
+    spawnMayaServer(cp.portId())
+
+
 
 
 import subprocess
 import getpass
 import os
 
-def spawnRemoteMaya():
+def spawnMayaServer(clientPortId=None):
     actualEnv = os.environ.copy() # .copy() is a <dict> method for shallow copy
     
-
     #-----------------------------------------
-    # Nullify custom vars ('delete' them?)
+    # Delete custom vars
     #-----------------------------------------
-    varToNullify = [
+    varsToDelete = [
         "MAYADEV_APP_PATH", 
         "LOCAL_PATH", 
         "SERVER_PATH", 
@@ -441,52 +452,31 @@ def spawnRemoteMaya():
         "MAYA_APP_PATH", 
         "MAYA_CUSTOM_TEMPLATE_PATH"
     ]
-    for var in varToNullify:
-        actualEnv[var] = ""
- 
-
+    for var in varsToDelete:
+        try:
+            del actualEnv[var]
+        except KeyError:
+            pass
 
   
     #-----------------------------------------
     # Clean Maya vars
     #-----------------------------------------
-    """    
+    # No reference to the 'user'
     modifiedVars = {
-        "MAYA_MODULE_PATH":           "C:/Program Files/Autodesk/Maya2015/modules;C:/Users/guido.pollini/Documents/maya/2015-x64/modules;C:/Users/guido.pollini/Documents/maya/modules;C:/Program Files/Common Files/Autodesk Shared/Modules/maya/2015",
-        "PYTHONPATH":                 "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
-        "MAYA_PRESET_PATH":           "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/presets;C:/ExocortexAlembic/Maya2015/Module/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/presets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/maya_bifrost_liquid;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x_passes;C:/Program Files/Autodesk/mentalrayForMaya2015/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/presets",
-        "XBMLANGPATH":                "C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/icons;C:/Users/guido.pollini/Documents/maya/prefs/icons;C:/ProgramData/Autodesk/maya/2015;C:/Program Files/Autodesk/Maya2015/icons;C:/Program Files/Autodesk/Maya2015/app-defaults;C:/Program Files/Autodesk/Maya2015/icons/paintEffects;C:/Program Files/Autodesk/Maya2015/icons/fluidEffects;C:/Program Files/Autodesk/Maya2015/icons/hair;C:/Program Files/Autodesk/Maya2015/icons/cloth;C:/Program Files/Autodesk/Maya2015/icons/live;C:/Program Files/Autodesk/Maya2015/icons/fur;C:/Program Files/Autodesk/Maya2015/icons/muscle;C:/Program Files/Autodesk/Maya2015/icons/turtle;C:/Program Files/Autodesk/Maya2015/icons/FBX;C:/Program Files/Autodesk/Maya2015/icons/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/icons;C:/ExocortexAlembic/Maya2015/Module/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/icons;C:/Program Files/Autodesk/mentalrayForMaya2015/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/icons",
-        "MAYA_PLUG_IN_PATH":          "C:/Users/guido.pollini/Documents/maya/2015-x64/plug-ins;C:/Users/guido.pollini/Documents/maya/plug-ins;C:/Program Files/Autodesk/Maya2015/bin/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/plug-ins;C:/ExocortexAlembic/Maya2015/Module/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/plug-ins;C:/Program Files/Autodesk/mentalrayForMaya2015/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/plug-ins",
-        "PATH":                       "C:/Program Files/Autodesk/Maya2015/bin/Cg;C:/Program Files/Autodesk/Maya2015/bin;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/Program Files/TortoiseGit/bin;C:/Program Files (x86)/Skype/Phone/;C:/windows/system32/config/systemprofile/.dnx/bin;C:/Program Files/Microsoft DNX/Dnvm/;C:/Program Files/Microsoft SQL Server/130/Tools/Binn/;C:/Program Files/Microsoft SQL Server/120/Tools/Binn/;C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/;C:/Program Files/Microsoft SQL Server/110/Tools/Binn/;C:/Program Files (x86)/Microsoft SDKs/TypeScript/1.0/;C:/Users/guido.pollini/AppData/Local/Google/Chrome/Application;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/wamp/bin/php/php5.6.15;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/bin;C:/Program Files/Autodesk/mentalrayForMaya2015/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/bin",
-        "MAYA_SCRIPT_PATH":           "C:/Users/guido.pollini/Documents/maya/2015-x64/scripts;C:/Users/guido.pollini/Documents/maya/scripts;C:/Users/guido.pollini/Documents/maya/2015-x64/presets;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/shelves;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/markingMenus;C:/Users/guido.pollini/Documents/maya/2015-x64/prefs/scripts;C:/Program Files/Autodesk/Maya2015/scripts;C:/Program Files/Autodesk/Maya2015/scripts/startup;C:/Program Files/Autodesk/Maya2015/scripts/others;C:/Program Files/Autodesk/Maya2015/scripts/AETemplates;C:/Program Files/Autodesk/Maya2015/scripts/unsupported;C:/Program Files/Autodesk/Maya2015/scripts/paintEffects;C:/Program Files/Autodesk/Maya2015/scripts/fluidEffects;C:/Program Files/Autodesk/Maya2015/scripts/hair;C:/Program Files/Autodesk/Maya2015/scripts/cloth;C:/Program Files/Autodesk/Maya2015/scripts/live;C:/Program Files/Autodesk/Maya2015/scripts/fur;C:/Program Files/Autodesk/Maya2015/scripts/muscle;C:/Program Files/Autodesk/Maya2015/scripts/turtle;C:/Program Files/Autodesk/Maya2015/scripts/FBX;C:/Program Files/Autodesk/Maya2015/scripts/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
-        "MAYA_PLUG_IN_RESOURCE_PATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/resources;C:/ExocortexAlembic/Maya2015/Module/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/resources;C:/Program Files/Autodesk/mentalrayForMaya2015/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/resources"
-    }
-    """
-
-    # I removed every reference to 'user'
-    modifiedVars = {
-        "MAYA_MODULE_PATH":           "C:/Program Files/Autodesk/Maya2015/modules;C:/Users/guido.pollini/Documents/maya/2015-x64/modules;C:/Users/guido.pollini/Documents/maya/modules;C:/Program Files/Common Files/Autodesk Shared/Modules/maya/2015",
+        "MAYA_MODULE_PATH":           "C:/Program Files/Autodesk/Maya2015/modules;C:/Program Files/Common Files/Autodesk Shared/Modules/maya/2015",
         "PYTHONPATH":                 "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
         "MAYA_PRESET_PATH":           "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/presets;C:/ExocortexAlembic/Maya2015/Module/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/presets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/maya_bifrost_liquid;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x;C:/Program Files/Autodesk/mentalrayForMaya2015/presets/attrPresets/mia_material_x_passes;C:/Program Files/Autodesk/mentalrayForMaya2015/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/presets",
         "XBMLANGPATH":                "C:/ProgramData/Autodesk/maya/2015;C:/Program Files/Autodesk/Maya2015/icons;C:/Program Files/Autodesk/Maya2015/app-defaults;C:/Program Files/Autodesk/Maya2015/icons/paintEffects;C:/Program Files/Autodesk/Maya2015/icons/fluidEffects;C:/Program Files/Autodesk/Maya2015/icons/hair;C:/Program Files/Autodesk/Maya2015/icons/cloth;C:/Program Files/Autodesk/Maya2015/icons/live;C:/Program Files/Autodesk/Maya2015/icons/fur;C:/Program Files/Autodesk/Maya2015/icons/muscle;C:/Program Files/Autodesk/Maya2015/icons/turtle;C:/Program Files/Autodesk/Maya2015/icons/FBX;C:/Program Files/Autodesk/Maya2015/icons/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/icons;C:/ExocortexAlembic/Maya2015/Module/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/icons;C:/Program Files/Autodesk/mentalrayForMaya2015/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/icons;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/icons",
         "MAYA_PLUG_IN_PATH":          "C:/Program Files/Autodesk/Maya2015/bin/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/plug-ins;C:/ExocortexAlembic/Maya2015/Module/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/plug-ins;C:/Program Files/Autodesk/mentalrayForMaya2015/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/plug-ins;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/plug-ins",
         "PATH":                       "C:/Program Files/Autodesk/Maya2015/bin/Cg;C:/Program Files/Autodesk/Maya2015/bin;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/Program Files/TortoiseGit/bin;C:/Program Files (x86)/Skype/Phone/;C:/windows/system32/config/systemprofile/.dnx/bin;C:/Program Files/Microsoft DNX/Dnvm/;C:/Program Files/Microsoft SQL Server/130/Tools/Binn/;C:/Program Files/Microsoft SQL Server/120/Tools/Binn/;C:/Program Files (x86)/Windows Kits/10/Windows Performance Toolkit/;C:/Program Files/Microsoft SQL Server/110/Tools/Binn/;C:/Program Files (x86)/Microsoft SDKs/TypeScript/1.0/;C:/windows/system32;C:/windows;C:/windows/System32/Wbem;C:/windows/System32/WindowsPowerShell/v1.0/;C:/Program Files/Puppet Labs/Puppet/bin;C:/Program Files/Common Files/Autodesk Shared/;C:/Program Files (x86)/Autodesk/Backburner/;C:/Program Files (x86)/QuickTime/QTSystem/;C:/wamp/bin/php/php5.6.15;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/bin;C:/Program Files/Autodesk/mentalrayForMaya2015/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/bin;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/bin",
         "MAYA_SCRIPT_PATH":           "C:/Program Files/Autodesk/Maya2015/scripts;C:/Program Files/Autodesk/Maya2015/scripts/startup;C:/Program Files/Autodesk/Maya2015/scripts/others;C:/Program Files/Autodesk/Maya2015/scripts/AETemplates;C:/Program Files/Autodesk/Maya2015/scripts/unsupported;C:/Program Files/Autodesk/Maya2015/scripts/paintEffects;C:/Program Files/Autodesk/Maya2015/scripts/fluidEffects;C:/Program Files/Autodesk/Maya2015/scripts/hair;C:/Program Files/Autodesk/Maya2015/scripts/cloth;C:/Program Files/Autodesk/Maya2015/scripts/live;C:/Program Files/Autodesk/Maya2015/scripts/fur;C:/Program Files/Autodesk/Maya2015/scripts/muscle;C:/Program Files/Autodesk/Maya2015/scripts/turtle;C:/Program Files/Autodesk/Maya2015/scripts/FBX;C:/Program Files/Autodesk/Maya2015/scripts/mayaHIK;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts/presets;C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/scripts;C:/ExocortexAlembic/Maya2015/Module/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/scripts;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/AETemplates;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/mentalray;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts/unsupported;C:/Program Files/Autodesk/mentalrayForMaya2015/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/scripts;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/cafm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/xmaya;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/brushes;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/dialogs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/fxmodules;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/tabs;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/util;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts/xgenm/ui/widgets;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/scripts",
-        "MAYA_PLUG_IN_RESOURCE_PATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/resources;C:/ExocortexAlembic/Maya2015/Module/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/resources;C:/Program Files/Autodesk/mentalrayForMaya2015/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/resources"
+        "MAYA_PLUG_IN_RESOURCE_PATH": "C:/Program Files/Autodesk/Maya2015/plug-ins/bifrost/resources;C:/ExocortexAlembic/Maya2015/Module/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/fbx/resources;C:/Program Files/Autodesk/mentalrayForMaya2015/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/substance/resources;C:/Program Files/Autodesk/Maya2015/plug-ins/xgen/resources",
+        "PROD_SERVER":                "Y:" # To resolve reference relative paths          
     }
     
-    # Replace "guido.pollini" with the local userName
-    """
-    userName = getpass.getuser()    
-    for var in modifiedVars:
-        modifiedVars[var] = modifiedVars[var].replace("guido.pollini", userName)
-    """
-
     # Add the path of 'MuTools'
     modifiedVars['PYTHONPATH'] += ';C:/Users/guido.pollini/Desktop/MuTools'
-
-    # To resolve reference relative paths
-    modifiedVars["PROD_SERVER"] = "Y:"    
 
     # Now clean all
     for var in modifiedVars:
@@ -494,35 +484,22 @@ def spawnRemoteMaya():
 
 
 
-
-
-
-
-
     #------------------------------------
-    # READY TO SPAWN...
+    # Spawn a brand new Maya
     #------------------------------------
-
     # Maya's commandLine flags:
     #   -command -->  MEL code block
     #   -script  -->  MEL script
     # Apparently, you can't directly pass a Python script (whatever, use the MEL command 'python"...";') 
 
-    thisCommandPortIP = 123456
     mayaCommandLine = 'maya.exe -noAutoloadPlugins -command "python \\\"'\
                       'import MuTools.Ellipse_AlembicExporterServer;'\
-                      'MuTools.Ellipse_AlembicExporterServer.initialize(' + str(thisCommandPortIP) + ')'\
+                      'MuTools.Ellipse_AlembicExporterServer.initialize(' + str(clientPortId) + ')'\
                       '\\\""'
     
-    #SW_MINIMIZE = 6
-    #info = subprocess.STARTUPINFO()
-    #info.dwFlags = subprocess.STARTF_USESHOWWINDOW
-    #info.wShowWindow = SW_MINIMIZE
+    mayaServerSubProcess = subprocess.Popen(mayaCommandLine, env=actualEnv)
 
-    remoteMayaProcess = subprocess.Popen(mayaCommandLine, env=actualEnv) #, startupinfo=info) 
-
-    print 'SPAWNED >>>', remoteMayaProcess
-    return remoteMayaProcess
+    print 'SPAWNED >>>', mayaServerSubProcess
 
 
 

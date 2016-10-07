@@ -1,6 +1,44 @@
 __version__ = '1.0.4'
 
 
+""" SINGULARITY SKINCLUSTER FIX                                        """
+""" Note the transform=None (in MEL THE ORDER OF ARGS MATTERS, here no)"""
+"""
+
+import maya.cmds as MC
+
+def correctWeights(skinClusterName, singType):
+    vertices = MC.ls(sl=True, flatten=True)
+    if len(vertices) != singType:
+        MC.error('EXACTLY {} VERTICES!!!'.format(singType))
+        
+    joints = set()
+    for vtx in vertices:
+        vtxJoints = MC.skinPercent(skinClusterName, vtx, query=True, transform=None)
+        vtxActiveJoints = [x for x in vtxJoints if MC.skinPercent(skinClusterName, vtx, query=True, transform=x) > 0.0]
+        joints = joints | set(vtxActiveJoints)
+    
+    for joint in joints:
+        # take the first weight and copy to the others
+        valueToSet = MC.skinPercent(skinClusterName, vertices[0], query=True, transform=joint)
+        
+        for i in range(1, singIndex)
+            MC.skinPercent(skinClusterName, vertices[i], transformValue=[(joint, valueToSet)])
+        
+        # Lock joint to prevent interactive update
+        MC.setAttr(joint + '.liw', 1) 
+    
+    # Unlock joints    
+    for joint in joints:
+        MC.setAttr(joint + '.liw', 0) 
+
+correctWeights('skinCluster12', 3)    
+"""
+
+
+
+
+
 print '>>>[{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
 print '>>>[{}] Interface:'.format(__name__)
 print

@@ -1,3 +1,6 @@
+__version__ = '1.0.3'
+
+
 import maya.cmds as MC
 import maya.mel  as MM
 
@@ -6,9 +9,22 @@ import socket
 import time
 
 
+"""
+===========================================================================================
+===========================================================================================
+Apparently, when Maya is busy there's a limit of 6 (SIX) messages that the open 
+commandPort can queue; one more and the connection is lost...
+
+There's a  way to continue using the commandPort system, but increase the 
+'busyMaya's commandPort queue size?????
+===========================================================================================
+===========================================================================================
+"""
 
 
-def sendMessage(externalPortId=2000, message=''):
+
+
+def sendMessage(externalPortId, message):
     """
     Send a string message to an external port
     """
@@ -34,6 +50,7 @@ class LostConnection(Exception):
     def __init__(self, sourceException=None):
         # Save the original exception, for possible inspection
         self.sourceException = sourceException
+
 
 
 
