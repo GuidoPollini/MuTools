@@ -7,6 +7,25 @@ import time
 
 
 
+
+def sendMessage(externalPortId=2000, message=''):
+    """
+    Send a string message to an external port
+    """
+    mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    try:
+        mySocket.connect(('127.0.0.1', externalPortId))
+
+    except Exception as exc:
+        raise LostConnection(exc)
+
+    mySocket.send(message)
+    mySocket.close()
+
+
+
+
 class LostConnection(Exception):
     """
     Apparently, 'commandPort' can't detect when the connection was really lost or
@@ -173,15 +192,5 @@ class CommandPort(object):
         
 
 
-    def sendMessage(self, externalPortId=2000, message=''):
-        """
-        This has nothing to do with the 'commandPort'; it's just here for convenience
-        """
-        mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            mySocket.connect(('127.0.0.1', externalPortId))
-        except Exception as exc:
-            raise LostConnection(exc)
-        mySocket.send(message)
-        mySocket.close()
+ 
 

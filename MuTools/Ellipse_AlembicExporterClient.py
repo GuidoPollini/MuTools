@@ -1,10 +1,10 @@
 __version__ = '1.0.3'
 
 
-import MuTools.MuUtils   as Utils
-import MuTools.MuCore    as Core
-import MuTools.MuScene   as Scene
-
+import MuTools.MuUtils     as Utils
+import MuTools.MuCore      as Core
+import MuTools.MuScene     as Scene
+import MuTools.MuMessaging as Messaging
 
 import maya.cmds     as MC
 import maya.mel      as MM
@@ -45,18 +45,6 @@ Utils.moduleLoadingMessage()
 log       = Utils.Log('sceneCorrectorLog', Utils.Log.STANDARD)
 debug     = log.debug
 hardDebug = log.hardDebug
-
-
-
-
-
-
-
-log('--------------------------', 
-    '\n    SCENE CORRECTOR', 
-    '\n--------------------------')
-
-
 
 
 
