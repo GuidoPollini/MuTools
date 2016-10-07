@@ -1,19 +1,11 @@
 import maya.cmds as MC
 import maya.mel  as MM
 
-import __main__ # To access the 'singletons' (it's the interpreter module/namespace)
+import __main__ # To access the 'singletons'
 import socket
+import time
 
 
-
-
-
-"""
-__main__
-This module represents the (otherwise anonymous) scope in which the interpreter's
-main program executes - commands read either from standard input, from a script 
-file, or from an interactive prompt.
-"""
 
 class LostConnection(Exception):
     """
@@ -43,25 +35,37 @@ class CommandPort(object):
     """
     
 
-    _singletonName = 'commandPortSingleton'
+    _singletonName      = 'commandPortSingleton'
 
 
-    def __new__(cls, internalPortId=1000, pythonCallback=None):        
+
+    def __new__(cls, portId=None, callback=None):        
         if hasattr(__main__, CommandPort._singletonName):
             print 'SINGLETON EXISTS!'
             return getattr(__main__, CommandPort._singletonName)
 
         else:
-            # Create a new virgin CommandPort object with object.__new__()...
+            # Create a new virgin CommandPort object
             commandPortInstance = super(CommandPort, cls).__new__(cls)
             print 'SINGLETON CREATED!'
+
             # ... and make it interprer-level global (__main__)
             setattr(__main__, CommandPort._singletonName, commandPortInstance)
 
             # Open physically a Maya port and customize the object
-            commandPortInstance._openPort(internalPortId, pythonCallback)
+            commandPortInstance._openPort(portId, callback)
 
             return commandPortInstance
+
+
+
+    @staticmethod
+    def microSleep(duration=0.01):
+        # 'commandPort' works with the main eventLoop; when closing and opening
+        # it needs a micro pause to refresh its internals!
+        # - 0.01 works even when close/open are fired rapidly;
+        # - 0.0001 fails
+        time.sleep(duration)
 
 
 
@@ -70,48 +74,28 @@ class CommandPort(object):
         if hasattr(__main__, CommandPort._singletonName):
             print 'SINGLETON DELETED!'
             commandPortObj = getattr(__main__, CommandPort._singletonName)
-            MC.commandPort(name=':' + str(commandPortObj.ID), close=True)
-            MC.refresh()
+
+            MC.commandPort(name=':' + str(commandPortObj.portId()), close=True)
+            CommandPort.microSleep()
 
             delattr(__main__, CommandPort._singletonName)
 
 
 
-    def __init__(self, internalPortId=1000, pythonCallback=None):
+    def __init__(self, portId=1000, callback=None):
         print '__init__'
-        self.ID = internalPortId
-        self.pythonCallback = pythonCallback
+        self._portId          = portId
+        self._callback        = callback
+        self._callbackEnabled = True if callback else False
 
 
 
     def __repr__(self):
-        repres = "'ID:{0}'<CommandPort>".format(self.getId())
-        return repres
+        return '"portId:{0}"<CommandPort>'.format(self.portId())
 
 
 
-    #------------------------------------------------------------------
-    # DYNAMIC CALLBACKS
-    # no need to close and reeopen the commandPort
-    #------------------------------------------------------------------
-    """
-
-    def setCallback(self, pythonCallback):
-        # It works:)
-        self._pythonCallback = pythonCallback 
-    
-    def disableCallback(self):
-        pass
-
-    def enableCallback(self):
-        pass    
-
-    """
-    #------------------------------------------------------------------
-    #------------------------------------------------------------------
-
-
-    def _openPort(self, internalPortId=1000, pythonCallback=None):
+    def _openPort(self, portId=None, callback=None):
         singleton = getattr(__main__, CommandPort._singletonName)
 
         # The string in _singletonName is a __main__-name and Python called by MEL lives
@@ -130,40 +114,63 @@ class CommandPort(object):
         MM.eval(melCallbackWrapper)
         
 
+        """ NO, THE CALLBACK IS NOW DYNAMIC """
         # If the port is already present, close it and rebuild; otherwise the callback won't change!
-        internalPortName = ':' + str(internalPortId)
+        portIdString = ':' + str(portId)
 
-        if MC.commandPort(internalPortName, query=True):
-            MC.commandPort(name=internalPortName, close=True)
-            print 'commandPort ' + str(internalPortName) + 'closed!'
-            # 'commandPort' uses the eventLoop which is disabled during scripts: hence force a refresh!
-            MC.refresh()
-     
-        MC.commandPort(name=internalPortName, 
+        if MC.commandPort(portIdString, query=True):
+            MC.commandPort(name=portIdString, close=True)
+            CommandPort.microSleep()
+
+            print 'commandPort ' + str(portIdString) + 'closed!'
+
+
+        MC.commandPort(name=portIdString, 
                        prefix='_commandPort_melCallback',
                        echoOutput=False, 
                        noreturn=False,
-                       returnNumCommands=True)
+                       returnNumCommands=False)
+        CommandPort.microSleep()
+
+
         print 'PORT OPEN!'
-        self.internalPortId = internalPortId
+        self._portId = portId
 
 
 
-    def getId(self):
-        return self.internalPortId
+    def portId(self):
+        return self._portId
     
 
 
     def _messageReceived(self, message):
-        # Indirectly called when this commandPort receive a message
-        # With this you can change, enable, disable in dynamically!
-        if self.pythonCallback:
-            self.pythonCallback(message)
-        else:
-            print 'NO CALLBACK SET'    
+        # The official Python callback, hard-coded in the MEL callback
+        # when the commandPort was open!
+        #
+        # The actual callback is the functionObject stored in self._callback
+        # And can be dynamically changed/enabled/disabled!
         
-        #print '-->', message, '(Actual namespace: {})'.format(__name__)
+        if self._callback and self._callbackEnabled:
+            self._callback(message) 
+        
 
+
+    def setCallback(self, callback):
+        # Dynamic callback (chosen at runTime)
+        self._callback = callback 
+    
+
+
+    def enable(self):
+        # Enable the commandPort by enabling its only callback
+        self._callbackEnabled = True
+
+
+
+    def disable(self):
+        # Disable the commandPort by disabling its only callback
+        self._callbackEnabled = False
+        
 
 
     def sendMessage(self, externalPortId=2000, message=''):
