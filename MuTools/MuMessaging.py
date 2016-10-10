@@ -1,4 +1,6 @@
 __version__ = '1.0.3'
+print '--> Executing MuMessaging...'
+
 
 
 import maya.cmds as MC
@@ -70,7 +72,7 @@ class CommandPort(object):
     allows to forget its global name!
     """
     
-
+    print '==> EXEC <CommandPort> class code...'
     _singletonName      = 'commandPortSingleton'
 
 

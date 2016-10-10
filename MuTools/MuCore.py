@@ -1,5 +1,5 @@
 __version__ = '1.0.4'
-
+print '--> Executing MuCore...'
 
 """ SINGULARITY SKINCLUSTER FIX                                        """
 """ Note the transform=None (in MEL THE ORDER OF ARGS MATTERS, here no)"""

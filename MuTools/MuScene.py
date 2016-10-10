@@ -1,4 +1,5 @@
 __version__ = '1.0.4'
+print '--> Executing MuScene...'
 
 
 import MuTools.MuUtils as Utils
