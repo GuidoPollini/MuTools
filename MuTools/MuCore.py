@@ -429,32 +429,54 @@ e evitare quel troiaio immondo di doppio controllo... ORRENDo
 --------------------------------------------------------------------------"""
 
 
-"""""""""""""""""""""""""""""""""""
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 CLASS STRUCTURE
------------------------------------
+---------------------------------------------------------------------------------
+--> All methods inside a category MUST be sorted!
 
-  STATIC METHODS (sorted)
+  STATIC METHODS 
+      staticA()
+      staticB()
+      ...
 
-  CLASS METHODS  (sorted)
+  CLASS METHODS  
+      cMathodA()
+      cMethodB()
+      ...
 
-  CONSTRUCTOR/
-  INITIALIZER
-    __new__
-    __init__
+  -------------------------
+  CONSTRUCTOR/INITIALIZER
+      __new__
+      __init__
+  -------------------------
 
-  MAGIC METHODS  (sorted)
-    __magicA__
-    __magicB__
-    __magicC__
-    ...
+  MAGIC METHODS  
+      __magicA__
+      __magicB__
+      ...
+  
+  QT-SLOTS       
+      slotA()
+      slotB()
+      ...
 
-  METHODS        (sorted)
-    methodA()
-    methodB()
-    methodC()
-    ...
+  QT-VIRTUALS    
+      virtualA()
+      virtualB()
+      ...
 
-"""""""""""""""""""""""""""""""""""
+  METHODS        
+      methodA()
+      methodB()
+      ...
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
+
 
 
 """""""""""""""""""""""""""""""""""
@@ -479,7 +501,7 @@ Scene             [MODULE?]
 
 
 
-    
+
 
 
 

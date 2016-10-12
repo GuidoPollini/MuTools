@@ -38,6 +38,11 @@ Utils.moduleLoadingMessage()
 
 
 
+def serverMessagingCallback(message):
+    """
+    The almighty callback that receives the client orders (string)
+    """
+    print 'Received from <mayaClient>:', message
 
 
 
@@ -48,7 +53,7 @@ def initialize(clientPortId):
     Scene.disableUI()
     MM.eval('renderThumbnailUpdate false;')
 
-    mayaWindow = UI.mayaWindow()
+    mayaWindow = UI.MayaWindow.mainWindow()
     mayaWindow.setWindowTitle(' REMOTE MAYA')
     mayaWindow.setWindowIcon(QG.QIcon('C:/Users/guido.pollini/Desktop/muIcon.png'))
 
@@ -69,15 +74,21 @@ def initialize(clientPortId):
 
     for pluginName in pluginsToLoad:
         Scene.loadPlugin(pluginName)
-        Messaging.sendMessage(clientPortId, 'Plugin [' + pluginName + '] loaded!')
+        #Messaging.sendMessage(clientPortId, 'Plugin [' + pluginName + '] loaded!')
 
-    Messaging.sendMessage(clientPortId, 'LOADED')
+
+    # Open a commandPort to receive orders
+    serverCommandPort = Messaging.CommandPort(8888, serverMessagingCallback)
+
+
+    #--------------------------------------------
+    # Ready to serve
+    #--------------------------------------------
+    # Tell the client you're ready...
+    Messaging.sendMessage(clientPortId, 'LOADED ' + str(serverCommandPort.portId()))
     
 
-    import time
-    for i in range(10):
-        Messaging.sendMessage(clientPortId, '<fuck you>')
-        time.sleep(1)
+
 
 
 

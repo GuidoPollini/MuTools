@@ -36,6 +36,8 @@ def sendMessage(externalPortId, message):
         mySocket.connect(('127.0.0.1', externalPortId))
 
     except Exception as exc:
+        # There's a way to detect if the connection was lost for a Maya crash or
+        # Maya just chose to close the port (the 6 queue limit?), but it's still alive?
         raise LostConnection(exc)
 
     mySocket.send(message)

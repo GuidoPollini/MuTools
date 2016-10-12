@@ -5,6 +5,7 @@ import MuTools.MuUtils     as Utils
 import MuTools.MuCore      as Core
 import MuTools.MuScene     as Scene
 import MuTools.MuMessaging as Messaging
+import MuTools.MuUI        as UI
 
 import maya.cmds           as MC
 import maya.mel            as MM
@@ -418,18 +419,33 @@ def _run(*args):
     """
 
 
+# Create the 'remoteMaya' icon
+REMOTE_ICON = UI.RemoteMayaIcon('C:/Users/guido.pollini/Desktop/connectionIcon.png')
 
 
-def messagingCallback(message):
-    print '>>>', message
-    if message == 'LOADED':   
-        MC.confirmDialog(title='MAYA SERVER', message='Maya server is active!', button=['OK'])
+def clientMessagingCallback(message):
+    """
+    The almighty callback that receives the client orders (string)
+    """
+    print 'Received from <mayaServer>:', message
+    if 'LOADED' in message:   
+        REMOTE_ICON.setFatalityStatus()
+
+
+
 
 
 def run():
-    cp = Messaging.CommandPort(8765, messagingCallback)
-    print 'clientPortId', cp.portId()
-    spawnMayaServer(cp.portId())
+    # Open a client commandPort
+    Messaging.CommandPort.deleteSingleton()
+    clientCommandPort = Messaging.CommandPort(9999, clientMessagingCallback)
+
+
+    REMOTE_ICON.setWaitingStatus()
+
+    # Spawn a brand new Maya session
+    spawnMayaServer(clientCommandPort.portId())
+
 
 
 
