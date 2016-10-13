@@ -427,9 +427,9 @@ def clientMessagingCallback(message):
     """
     The almighty callback that receives the client orders (string)
     """
-    print 'Received from <mayaServer>:', message
+    print '>>> Received from <mayaServer>:', message
     if 'LOADED' in message:   
-        REMOTE_ICON.setFatalityStatus()
+        REMOTE_ICON.setSuccessStatus()
 
 
 

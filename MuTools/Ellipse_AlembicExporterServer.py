@@ -51,6 +51,7 @@ def initialize(clientPortId):
 
     Scene.disableViewport20()
     Scene.disableUI()
+    Scene.refresh()
     MM.eval('renderThumbnailUpdate false;')
 
     mayaWindow = UI.MayaWindow.mainWindow()
