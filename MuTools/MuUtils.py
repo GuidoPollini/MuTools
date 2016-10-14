@@ -12,6 +12,59 @@ import time
 
 
 
+"""
+#=====================================================================================
+              _        _____             
+             | |      |  __ \            
+   __ _ _   _| |_ ___ | |  | | ___   ___ 
+  / _` | | | | __/ _ \| |  | |/ _ \ / __|
+ | (_| | |_| | || (_) | |__| | (_) | (__ 
+  \__,_|\__,_|\__\___/|_____/ \___/ \___|
+                                         
+#=====================================================================================                                         
+
+#--------------------------------------------------------------------------------
+# Notes:
+# - 'open' is a built-in function that returns a <file> object;
+# - a <file> object has __enter__ and __exit__: hence it's a contextManager;
+# - a <file> object is an iterable+iterator that iterates on lines.
+#--------------------------------------------------------------------------------
+
+
+
+
+filePath = 'C:\Users\guido.pollini\Desktop\MuTools\MuTools\MuScene.py'
+
+def getProperName(name):
+    # REGEXP here please
+    temp = name.lstrip()
+    temp = temp.split(' ')[1]
+    temp = temp.split('(')[0]
+    return temp
+    
+with open(filePath, 'r') as fileObj:
+    # <file> is an iterable+iterator: the iterator returns a line...
+    
+    isInsideClass = False
+    
+    for line in fileObj:
+        if line.startswith('def '):
+            isInsideClass = False
+            print '\ndef {}()'.format(getProperName(line))
+        
+        if isInsideClass and line.startswith('    def '):
+            print '  {}'.format(getProperName(line))
+                
+        if line.startswith('class '):
+            print '\n<{}>'.format(getProperName(line))
+            isInsideClass = True    
+                  
+#=====================================================================================
+"""
+
+
+
+
 
 
 

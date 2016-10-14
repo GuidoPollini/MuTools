@@ -1220,13 +1220,23 @@ class Mesh(DAGNode):
         'useSmoothPreviewForRender': True,
         'renderSmoothLevel':         2
     }
-    
+
+
+
+
+
+    def mesh(self):
+        # To simplify loops
+        return self
+
+
 
     def smoothMeshDict(self):
         smoothDict = {}
         for attr in Mesh._smoothMeshAttributes:
             smoothDict[attr] = MC.getAttr(self.name() + '.' + attr)
         return smoothDict    
+
 
 
     def setSmoothMesh(self, *args, **kwargs):
@@ -1284,6 +1294,7 @@ class Mesh(DAGNode):
         if self.isInstanced():
            MC.error("[FATAL] Instanced, not implemented!")
         """
+
 
 
     def shadingEngine(self, **kwargs):
@@ -1795,9 +1806,9 @@ class MuAttribute(object):
 
         if typology == 'string':
             # 'string' attributes need a special syntax
-            MC.setAttr(plug, args[0], type='string')
+            MC.setAttr(plug, *args, type='string')
         else:
-            MC.setAttr(plug, args[0])     
+            MC.setAttr(plug, *args)     
         
         # What should return? 'self' of course:
         # myShit.rx.set(360)\

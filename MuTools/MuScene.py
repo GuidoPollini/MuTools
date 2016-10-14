@@ -25,9 +25,136 @@ log = Utils.Log('MuSceneLog', Utils.Log.STANDARD)
 
 
 
-#------------------------------------------------------------------------------
-# PLUG-INS
-#------------------------------------------------------------------------------
+
+
+
+
+
+
+class FileError(Exception):
+    """
+    Generic exception to catch file errors
+    """
+    def __init__(self, message):
+        MC.error('[FILE ERROR] ' + message)
+
+
+
+
+
+
+def animationInfo():
+    animationInfoDict = {
+        'minTime':   MC.playbackOptions(query=True, minTime=True),
+        'maxTime':   MC.playbackOptions(query=True, maxTime=True),
+        'startTime': MC.playbackOptions(query=True, animationStartTime=True),
+        'endTime':   MC.playbackOptions(query=True, animationEndTime=True),
+    }
+    return animationInfoDict
+
+def createReference(*args, **kwargs):
+    """
+    Add a reference to the scene and return the 'Reference' object
+    """
+    pass
+
+def currentUnits():
+    # ex: {'angle': 'degree', 'linear': 'centimeter', 'time': 'pal'}
+    currentUnitsDict = {
+        'linear': MC.currentUnit(query=True, linear=True, fullName=True),
+        'angle':  MC.currentUnit(query=True, angle=True, fullName=True),
+        'time':   MC.currentUnit(query=True, time=True)
+    }
+    return currentUnitsDict
+
+def disableUI(*args):
+    # Disable all UI elements and disable also all the viewports; but reenable 
+    # the 'Help Line' because it offers a load progressBar and could give a hint 
+    # if remoteMaya has crashed!
+    MELCommand = """
+        HideUIElements;
+        toggleUIComponentVisibility("Help Line");        
+        paneLayout -edit -manage false $gMainPane;
+    """                
+    MM.eval(MELCommand)
+
+def disableViewport20(*args):
+    # A 'viewport' is a panel of type 'modelPanel'
+    modelPanels = MC.getPanel(type="modelPanel")
+    for panel in modelPanels:
+        MC.modelEditor(panel, edit=True, rendererName='base_OpenGL_Renderer')
+
+def enableUI(*args):
+    # Enable viewports
+    MELCommand = 'paneLayout -edit -manage true $gMainPane;'
+
+    # Enanble only what really matters...
+    UIElementNames = [
+        #'Attribute Editor',
+        #'Channel Box / Layer Editor',
+        #'Tool Settings',
+        #'Shelf',     
+        'Tool Box',  
+        'Time Slider',
+        'Range Slider',  
+        'Command Line',   
+        'Help Line',
+        'Status Line'                
+    ]    
+    
+    for name in UIElementNames:
+        print name
+        # If not visible, toggle it's visibility
+        MELCommand += """
+            if (!`isUIComponentVisible("{0}")`){{
+                toggleUIComponentVisibility("{0}");}}
+        """.format(name)
+    
+    MM.eval(MELCommand)
+
+def isModified():
+    return MC.file(query=True, anyModified=True)
+
+def isolatedNodes(**kwargs):
+    type_value = kwargs.get("type", kwargs.get("t", None))
+    # Check for "isolated" (nodes without connections) of a spefic type
+    if type:
+        candidates = MC.ls(exactType=type_value) or []
+    else:
+        candidates = MC.ls() or []
+    
+    isolatedNodes = []
+
+    for nodeName in candidates:
+        connections = MC.listConnections(nodeName, source=True, destination=True) or []
+        if len(connections) == 0:
+            # Orphan found!
+            isolatedNodes.append(Wrapper(nodeName))
+    
+    return isolatedNodes                
+
+def load(filePath, loadReferences=False):
+    if not MC.file(filePath, query=True, exists=True):
+        raise FileError('The path "{}" is wrong!'.format(filePath))
+    
+    # type --> [knownTypeStr], an list (!) with a type known by Maya;
+    #      --> None, a type of file Maya can't handle.    
+    fileType = MC.file(filePath, query=True, type=True)
+    if not fileType or fileType[0] not in ('mayaAscii', 'mayaBinary'):
+        raise FileError('The file "{}" is not a Maya ASCII or binary!'.format(filePath))
+            
+    loadReferenceDepth = 'all' if loadReferences else 'none'
+    
+    MC.file(filePath, 
+            open=True,    
+            force=True, 
+            loadReferenceDepth=loadReferenceDepth,             
+            ignoreVersion=True, 
+            options="v=0;")  
+            
+    # Add the filePath to the 'Recent Files' ('optionVars' stuff...)            
+    melCommand = 'addRecentFile("{0}", "{1}");'.format(filePath, fileType)
+    MM.eval(melCommand)
 
 def loadPlugin(*args):
     """
@@ -48,6 +175,133 @@ def loadPlugin(*args):
             MC.loadPlugin(pluginName)
         
             log('Plugin "{}" loaded!'.format(pluginName))
+  
+def longName():
+    return getName(long=True)
+
+def name(long=False):
+    """ 'expandName' ??? To resolve things like $PROJECT/fuckMe/now ? """
+    sceneName = MC.file(query=True, sceneName=True, shortName=not long)
+    return sceneName if sceneName != '' else None
+
+def namespaces(*args):
+    with Core.RootNamespaceActive():
+        # 'UI' and 'shared' are internal namespaces
+        sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
+    return sceneNamespaces
+
+    # MC.namespace(rename=['oldNamespace', 'newNamespace'])
+    # MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
+    # MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes
+    #
+    # HERE CHECK IF THE NEW NAMESPACE EXISTS (the '__TEMP__' is to get idempotency)
+    # MC.file(fileName, edit=True, namespace='__TEMP__')
+    # MC.file(fileName, edit=True, namespace='newNamespace')
+    # MC.file(file???, edit=True, namespace='newNamespace'  --> to modify a referenced file namespace (the new one must not exist)
+
+def nodeExists(nodeName):
+    """
+    To add:
+     - 'smart' exists;
+     - regExp exists;
+     - namespace confination 
+    """
+    return MC.objExists(nodeName)
+
+def nodeSelection(filter=None):
+    """
+    Filter the selectionList with 'type=DGNode' 
+    """
+    selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
+    return Core.List(selectionNames)
+
+def parent(nodeName):
+    node = Core.MuNode(nodeName)
+    return node.parent()
+
+def references():
+    #----------------------------------------------------------------------------------
+    # File referenced once:
+    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_fucky_rig.ma"
+    #
+    # File referenced multiple times:
+    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma"      (NOT {0})
+    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{1}"
+    #   ...
+    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
+    #----------------------------------------------------------------------------------
+    """
+    This can't be a <List>: at the present time List works only for DGNodes and
+    a <Reference> is NOT...
+    """
+    referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
+    return [Core.Reference(x) for x in referencedFiles]
+
+def refresh(*args):
+    MC.refresh()
+
+def select(*args, **kwargs):
+    """
+    Scene.select() --> deselect everything
+    """
+    if not args and not kwargs:
+        MC.select(clear=True)
+    else:
+        MC.select(*args, **kwargs)    
+
+def setCurrentUnits():
+    pass
+
+def sets():
+    # listSets(allSets=True) is SEVERELY broken:
+    #  - 2 parasites (unselectionable fake sets) come out;
+    #  - the namespace info is LOST... seriously, FUCK YOU Autodesk!
+    
+    sets = MC.ls(type="objectSet") 
+    # or MC.ls(sets=True), same thing
+    
+    return Core.List(sets)
+
+def type():
+    # - "mayaAscii"
+    # - "mayaBinary"
+    compatibleTypes = MC.file(query=True, type=True) # This is a list of compatible types
+    return compatibleTypes[0]
+
+def worldChildren():
+    worldChildren = []
+
+    # Initialized to a fake "world" (not a kTransform)
+    DAGIter = OM.MItDag(OM.MItDag.kBreadthFirst) 
+
+    selList = OM.MSelectionList()
+    fn = OM.MFnTransform()
+    
+    while True:
+        DAGIter.next() # Skip the first one (a "fakeWorld")
+        nodePtr = DAGIter.currentItem()
+        if DAGIter.depth() == 1:
+            if nodePtr.apiType() == OM.MFn.kTransform:
+                fn.setObject(nodePtr)
+                nodeName = fn.fullPathName()
+                if MC.objExists(nodeName):
+                    # To avoid "weird" transforms like "|groundPlane_transform"
+                    # which exist, but invisible to MEL
+                    worldChildren.append(nodeName)
+        else:
+            break
+
+    return Core.List(worldChildren)
+
+
+
+
+
+
+#------------------------------------------------------------------------------
+# Module loaded!
+Utils.moduleLoadedMessage()
+#------------------------------------------------------------------------------
 
 
 
@@ -60,8 +314,17 @@ def loadPlugin(*args):
 
 
 
+"""
+NOTE
+  156.917671932s:  full scene load
+  382.712135774s:  load bare scene, then load all references
+  --> In a huge scene (20 heavy references) more than TWICE slower!!!
 
-
+  With the second system I could get kinda progress bar, but it's hyper slow;
+  Try to recover the QWidget of the progressBar (active during loading) and 
+  connect it to a Qt-signal...
+"""
+  
 
 """
 -----------------------
@@ -169,327 +432,3 @@ def loadPlugin(*args):
   withoutCopyNumber
   writable
 """
-
-
-
-class FileError(Exception):
-    """
-    Generic exception to catch file errors
-    """
-    def __init__(self, message):
-        MC.error('[FILE ERROR] ' + message)
-
-
-
-
-
-
-"""
-NOTE
-  156.917671932s:  full scene load
-  382.712135774s:  load bare scene, then load all references
-  --> In a huge scene (20 heavy references) more than TWICE slower!!!
-
-  With the second system I could get kinda progress bar, but it's hyper slow;
-  Try to recover the QWidget of the progressBar (active during loading) and 
-  connect it to a Qt-signal...
-"""
-def load(filePath, loadReferences=False):
-    if not MC.file(filePath, query=True, exists=True):
-        raise FileError('The path "{}" is wrong!'.format(filePath))
-    
-    # type --> [knownTypeStr], an list (!) with a type known by Maya;
-    #      --> None, a type of file Maya can't handle.    
-    fileType = MC.file(filePath, query=True, type=True)
-    if not fileType or fileType[0] not in ('mayaAscii', 'mayaBinary'):
-        raise FileError('The file "{}" is not a Maya ASCII or binary!'.format(filePath))
-            
-    loadReferenceDepth = 'all' if loadReferences else 'none'
-    
-    MC.file(filePath, 
-            open=True,    
-            force=True, 
-            loadReferenceDepth=loadReferenceDepth,             
-            ignoreVersion=True, 
-            options="v=0;")  
-            
-    # Add the filePath to the 'Recent Files' ('optionVars' stuff...)            
-    melCommand = 'addRecentFile("{0}", "{1}");'.format(filePath, fileType)
-    MM.eval(melCommand)
-    
-
-
-
-
-
-
-def refresh(*args):
-    MC.refresh()
-
-
-#=======================================================================================================
-#-------------------------------------------------------------------------------------------------------
-#
-# DISABLING and REENABLING the viewport
-#
-#-------------------------------------------------------------------------------------------------------
-#=======================================================================================================
-def disableUI(*args):
-    # Disable all UI elements and disable also all the viewports; but reenable 
-    # the 'Help Line' because it offers a load progressBar and could give a hint 
-    # if remoteMaya has crashed!
-    MELCommand = """
-        HideUIElements;
-        toggleUIComponentVisibility("Help Line");        
-        paneLayout -edit -manage false $gMainPane;
-    """                
-    MM.eval(MELCommand)
-
-
-
-
-
-def enableUI(*args):
-    # Enable viewports
-    MELCommand = 'paneLayout -edit -manage true $gMainPane;'
-
-    # Enanble only what really matters...
-    UIElementNames = [
-        #'Attribute Editor',
-        #'Channel Box / Layer Editor',
-        #'Tool Settings',
-        #'Shelf',     
-        'Tool Box',  
-        'Time Slider',
-        'Range Slider',  
-        'Command Line',   
-        'Help Line',
-        'Status Line'                
-    ]    
-    
-    for name in UIElementNames:
-        print name
-        # If not visible, toggle it's visibility
-        MELCommand += """
-            if (!`isUIComponentVisible("{0}")`){{
-                toggleUIComponentVisibility("{0}");}}
-        """.format(name)
-    
-    MM.eval(MELCommand)
-
-
-
-
-def disableViewport20(*args):
-    # A 'viewport' is a panel of type 'modelPanel'
-    modelPanels = MC.getPanel(type="modelPanel")
-    for panel in modelPanels:
-        MC.modelEditor(panel, edit=True, rendererName='base_OpenGL_Renderer')
-
-
-
-
-def isModified():
-    return MC.file(query=True, anyModified=True)
-
-
-
-
-def name(long=False):
-    """ 'expandName' ??? To resolve things like $PROJECT/fuckMe/now ? """
-    sceneName = MC.file(query=True, sceneName=True, shortName=not long)
-    return sceneName if sceneName != '' else None
-
-
-
-
-def longName():
-    return getName(long=True)
-
-
-
-
-def type():
-    # - "mayaAscii"
-    # - "mayaBinary"
-    compatibleTypes = MC.file(query=True, type=True) # This is a list of compatible types
-    return compatibleTypes[0]
-
-
-
-
-def nodeSelection(filter=None):
-    """
-    Filter the selectionList with 'type=DGNode' 
-    """
-    selectionNames = MC.ls(selection=True, dependencyNodes=True, long=True)
-    return Core.List(selectionNames)
-
-
-
-
-def sets():
-    # listSets(allSets=True) is SEVERELY broken:
-    #  - 2 parasites (unselectionable fake sets) come out;
-    #  - the namespace info is LOST... seriously, FUCK YOU Autodesk!
-    
-    sets = MC.ls(type="objectSet") 
-    # or MC.ls(sets=True), same thing
-    
-    return Core.List(sets)
-
-
-
-
-def worldChildren():
-    worldChildren = []
-
-    # Initialized to a fake "world" (not a kTransform)
-    DAGIter = OM.MItDag(OM.MItDag.kBreadthFirst) 
-
-    selList = OM.MSelectionList()
-    fn = OM.MFnTransform()
-    
-    while True:
-        DAGIter.next() # Skip the first one (a "fakeWorld")
-        nodePtr = DAGIter.currentItem()
-        if DAGIter.depth() == 1:
-            if nodePtr.apiType() == OM.MFn.kTransform:
-                fn.setObject(nodePtr)
-                nodeName = fn.fullPathName()
-                if MC.objExists(nodeName):
-                    # To avoid "weird" transforms like "|groundPlane_transform"
-                    # which exist, but invisible to MEL
-                    worldChildren.append(nodeName)
-        else:
-            break
-
-    return Core.List(worldChildren)
-
-
-
-
-def isolatedNodes(**kwargs):
-    type_value = kwargs.get("type", kwargs.get("t", None))
-    # Check for "isolated" (nodes without connections) of a spefic type
-    if type:
-        candidates = MC.ls(exactType=type_value) or []
-    else:
-        candidates = MC.ls() or []
-    
-    isolatedNodes = []
-
-    for nodeName in candidates:
-        connections = MC.listConnections(nodeName, source=True, destination=True) or []
-        if len(connections) == 0:
-            # Orphan found!
-            isolatedNodes.append(Wrapper(nodeName))
-    
-    return isolatedNodes                
-
-
-
-
-def namespaces(*args):
-    with Core.RootNamespaceActive():
-        # 'UI' and 'shared' are internal namespaces
-        sceneNamespaces = [x for x in MC.namespaceInfo(listOnlyNamespaces=True) if x not in ['UI', 'shared']]
-    return sceneNamespaces
-
-    # MC.namespace(rename=['oldNamespace', 'newNamespace'])
-    # MC.namespaceInfo(listOnlyDependencyNodes=True) --> get the list of nodes in the current namespace
-    # MC.referenceQuery(xxx, nodes=True, dagPath=True) --> get the nodes
-    #
-    # HERE CHECK IF THE NEW NAMESPACE EXISTS (the '__TEMP__' is to get idempotency)
-    # MC.file(fileName, edit=True, namespace='__TEMP__')
-    # MC.file(fileName, edit=True, namespace='newNamespace')
-    # MC.file(file???, edit=True, namespace='newNamespace'  --> to modify a referenced file namespace (the new one must not exist)
-
-     
-
-
-def references():
-    #----------------------------------------------------------------------------------
-    # File referenced once:
-    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_fucky_rig.ma"
-    #
-    # File referenced multiple times:
-    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma"      (NOT {0})
-    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{1}"
-    #   ...
-    #   "Y:/01_SAISON_4/08_ASSETS/3D/ch/ch_buffa/rig/ch_buffa_rig.ma{16}"
-    #----------------------------------------------------------------------------------
-    """
-    This can't be a <List>: at the present time List works only for DGNodes and
-    a <Reference> is NOT...
-    """
-    referencedFiles = MC.file(query=True, reference=True, withoutCopyNumber=False)
-    return [Core.Reference(x) for x in referencedFiles]
-
-
-
-
-def createReference(*args, **kwargs):
-    """
-    Add a reference to the scene and return the 'Reference' object
-    """
-    pass
-
-
-
-
-def animationInfo():
-    animationInfoDict = {
-        'minTime':   MC.playbackOptions(query=True, minTime=True),
-        'maxTime':   MC.playbackOptions(query=True, maxTime=True),
-        'startTime': MC.playbackOptions(query=True, animationStartTime=True),
-        'endTime':   MC.playbackOptions(query=True, animationEndTime=True),
-    }
-    return animationInfoDict
-
-
-
-
-def currentUnits():
-    # ex: {'angle': 'degree', 'linear': 'centimeter', 'time': 'pal'}
-    currentUnitsDict = {
-        'linear': MC.currentUnit(query=True, linear=True, fullName=True),
-        'angle':  MC.currentUnit(query=True, angle=True, fullName=True),
-        'time':   MC.currentUnit(query=True, time=True)
-    }
-    return currentUnitsDict
-
-
-
-
-def nodeExists(nodeName):
-    """
-    To add:
-     - 'smart' exists;
-     - regExp exists;
-     - namespace confination 
-    """
-    return MC.objExists(nodeName)
-
-
-
-
-def parent(nodeName):
-    node = Core.MuNode(nodeName)
-    return node.parent()
-
-
-
-
-def setCurrentUnits():
-    pass
-
-
-
-
-
-#------------------------------------------------------------------------------
-# Module loaded!
-Utils.moduleLoadedMessage()
-#------------------------------------------------------------------------------
-
