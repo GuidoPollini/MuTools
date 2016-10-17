@@ -976,7 +976,8 @@ class TitleBar(QG.QFrame):
         """)
         self.label.setAlignment(QC.Qt.AlignHCenter)
         self.layout.addWidget(self.label)
-
+        
+        self.label.setObjectName('ssshit')
 
         # MU ICON
         #----------------------
@@ -1004,7 +1005,8 @@ class TitleBar(QG.QFrame):
             parentObject.addWidget(self)
 
 
-
+def _undocked(*args):
+    print args
 
 class Window(QG.QWidget):
     #-----------------------------
@@ -1059,8 +1061,8 @@ class Window(QG.QWidget):
         #-----------------------------------------------------------------------------------------------------
         # TITLEBAR
         #-----------------------------------------------------------------------------------------------------
-        TitleBar(title='Alembic Export', parentObject=mainLayout)
-
+        self._titleBar = TitleBar(title='Alembic Export', parentObject=mainLayout)
+        #self._titleBar.label.setObjectName('ssshit')
 
 
 
@@ -1397,6 +1399,24 @@ class Window(QG.QWidget):
     def currentShotChanged_slot(self, textItem):
         print 'current shot:', textItem
     
+    def _dockChanged(self):
+
+        isFloating = MC.dockControl('alembicExportDock', query=True, floating=True)
+        print isFloating
+        if isFloating:
+            cursorPosition = QG.QCursor().pos()
+            MC.window('SHIT', edit=True, titleBar=False) 
+            #offset = self._globalPos - self.localClickPosition
+
+            MC.window('SHIT', edit=True, topLeftCorner=(cursorPosition.y() - 10, cursorPosition.x() - 100))
+
+            # This won't work. After the override, 'mousePressEvent' has become a simple method
+            # PROBABLY YOU NEED TO ADD AN OVERRIDE OF THE DOCK CONTROL, a shitty MEL CALL BACK
+            # is not enough because I don't know how to emit a proper pressMouseEvent from 
+            # outide (inside you could call for __super__)
+            """self.mousePressEvent.emit()"""   
+        else:
+            MC.window('SHIT', edit=True, titleBar=True)    
 
 
     def dock(self):
@@ -1414,7 +1434,7 @@ class Window(QG.QWidget):
             MC.deleteUI('SHIT')    
         MC.window('SHIT')
         floating = MC.paneLayout(configuration='single', width=300, height=300)
-        MC.dockControl('alembicExportDock', area='right', allowedArea=['right', 'left'], content='SHIT', label='Alembic export')
+        MC.dockControl('alembicExportDock', fcc=self._dockChanged, area='right', allowedArea=['right', 'left'], content='SHIT', label='Alembic export')
         
         MC.control('TEST', e=True, p=floating)
         
@@ -1437,32 +1457,37 @@ class Window(QG.QWidget):
     #-----------------------------
     # OVERRIDES OF C++ VIRTUALS
     #-----------------------------  
-    """
     def mousePressEvent(self, event):
+        print '*'
         self.isDragged = False
         clickedObject = self.childAt(event.pos())
-        if clickedObject and clickedObject.objectName() == '_windowTitleBar':
+        if clickedObject and clickedObject.objectName() == 'ssshit':
             if event.button() == QC.Qt.LeftButton:
-                self.dragPosition = event.globalPos() - self.frameGeometry().topLeft()
+                print 'clicked!!!'
+                self.localClickPosition = event.pos()
+                #self._globalPos = event.globalPos() # To avoid window jumping
                 self.isDragged = True
+
                 event.accept()
         else:
+            print 'ignore'
+            print clickedObject
             event.ignore()
             
     def mouseMoveEvent(self, event):
         if self.isDragged and event.buttons() == QC.Qt.LeftButton:
-            self.move(event.globalPos() - self.dragPosition)
+            pos = event.globalPos() - self.localClickPosition
+            MC.window('SHIT', edit=True, topLeftCorner=(pos.y(), pos.x()))
             event.accept()        
     
     def mouseReleaseEvent(self, event):
         self.isDragged = False      
-    """
 
-
-
+    
 
 def run(*args):
     myWin = Window(windowName='TEST')
+    #myWin.topLevelChanged.connect(_undocked)
     myWin.dock()
 
     #myWin.minimize()      
