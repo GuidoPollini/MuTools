@@ -1,5 +1,5 @@
-import sys
-sys.__stdout__.write('\n?\n? WEIRD: MuTools\' __init__ is called indirectly by an inner import like "import MuTools.MuUtils"...\nand the imported objects live in the "MuTools" namespace...?\n?')
+#import sys
+#sys.__stdout__.write('\n?\n? WEIRD: MuTools\' __init__ is called indirectly by an inner import like "import MuTools.MuUtils"...\nand the imported objects live in the "MuTools" namespace...?\n?')
 
 
 

@@ -1,6 +1,18 @@
 import maya.OpenMaya as OM
 def shit(myArg1, myArg2, myKwarg1='default1', myKwarg2='default2'):
-    # hkjsdh ks
+    # The autoDoc script will check for exact coherente between 
+    # *args and **kwargs and what's written in ARGUMENTS...
+    # To parse arguments of ARGUMENTS you could use the indentation, 
+    # without the need to add weird symbols.
+    # 
+    # TAGS
+    #   <>        class
+    #   *... *    bold
+    #   **... **  superBold
+    #   ???       hyperLink
+    #   ???       italic
+    #   ???       itemize
+
     """
     DESCRIPTION
       Description of what the method/function does...
@@ -30,7 +42,7 @@ def shit(myArg1, myArg2, myKwarg1='default1', myKwarg2='default2'):
         transizione e stai costruendoti il tuo futuro
         
     RETURN
-      <type1, type2>
+      <type>
       Scrivi qua tutto cio che ti pare tanto non fa nessuna
       differenrza. se lo trovi difficile e perche stai 
       creando qualcosa che ti garantira un lavoro futuro.

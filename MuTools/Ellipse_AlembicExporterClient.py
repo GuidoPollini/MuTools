@@ -64,10 +64,10 @@ hardDebug = log.hardDebug
 
 def exocortexAlembicExport(nodeList, targetPath, purePointCache):
     """
-    Exocortex syntax:
-      uvs=1;withouthierarchy=0;normals=1;transformcache=0;globalspace=0;substep=1;
+    Exocortex 'job' string syntax:
+      'uvs=1;withouthierarchy=0;normals=1;transformcache=0;globalspace=0;substep=1;
       filename=TARGETPATH;step=1;objects=NODE0,NODE1,NODE2:hands;useInitShadGrp=0;in=101.0;
-      purepointcache=0;ogawa=1;dynamictopology=0;facesets=1;out=239.0;
+      purepointcache=0;ogawa=1;dynamictopology=0;facesets=1;out=239.0;''
     """
 
     #nodes          = ['ch_litth:mane','ch_litth:body']
@@ -101,7 +101,7 @@ def exocortexAlembicExport(nodeList, targetPath, purePointCache):
                 'dynamictopology':  0, # Not for a basic mesh                                   
     }
         
-    if purePointCache == True:
+    if purePointCache:
         # Saves only vertex positions (no edge/face data)
         exoAttrs['purepointcache'] = 1
         exoAttrs['normals']        = 0
@@ -157,6 +157,10 @@ ANIMATION_PATH = 'Y:/01_SAISON_4/05_UTILE/Rendu/13_REMOTE_MAYA/'
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""" 
 The module with the monkey patching MUST be the last oneto be reloaded; otherwise
 a reload of 'MuCore' will rebuild the class 'Reference' and the patch will be lost!
+
+XXX A very bad idea: a class is a singleton; monkeyPatching a class means 
+    modifying the classo object singleton: each new instance will be patched
+    and a different 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 #
 #------------------------------------------------------------------------------
