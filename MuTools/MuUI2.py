@@ -190,7 +190,7 @@ Python (first form)
 NOTE:
   'Signals' are indeed <PySide.QtCore.SignalInstance> objects, apparently related to QC.Signals;
   they implement (if needed) 'getitem', useful to resolve C++ overloads.
-  In cas of overloads, chose the right Python type and:
+  In case of overloads, chose the right Python type and:
 
     obj.overloadedSignal(PYTHON_TYPE).connect(whatever)
     comboBox.currentIndexChanged[int].connect(changed_int)
@@ -1007,6 +1007,7 @@ class TitleBar(QG.QFrame):
 
 def _undocked(*args):
     print args
+
 
 class Window(QG.QWidget):
     #-----------------------------

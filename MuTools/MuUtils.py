@@ -10,6 +10,50 @@ import time
 
 
 
+
+
+
+
+
+#---------------------------------------------------------------------------------------------------
+# <math> monkey patching
+# There's no 'clamp' function... ouch
+#---------------------------------------------------------------------------------------------------
+#
+# Note: "Lambda is q simplified alternative to def to create <function> objects"
+#
+#   lambda ARGUMENTS: EXPRESSION
+#             ||
+#             || (synonyms)
+#             ||
+#   def funcObj(ARGUMENTS): return EXPRESSION
+#
+# - 'lambda' return a <function> as 'def': same syntax, same rules (but one line, no statements)!
+# - EXPRESSION can involve function/method calls (they return always something, by default None)
+# 
+#                 lambda: EXPRESSION  -->  'def ?(): return EXPRESSION'
+#                                          only for collateral effects of EXPRESSION
+#
+# lambda *args, **kwargs: EXPRESSION  -->  'def ?(*args, **kwargs): return EXPRESSION'
+#                                          exactly as a function
+
+import math
+math.clamp = lambda value, minValue, maxValue: max(min(value, maxValue), minValue)
+
+
+
+
+"""
+USER SETUP
+    if not os.environ.has_key('MAYA_SKIP_USERSETUP_PY'):
+        try:
+            for path in sys.path[:]:
+                scriptPath = os.path.join( path, 'userSetup.py' )
+                if os.path.isfile( scriptPath ):
+                    import __main__
+                    execfile( scriptPath, __main__.__dict__ )
+"""
+
 """
 #=====================================================================================
               _        _____             
