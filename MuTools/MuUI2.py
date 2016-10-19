@@ -1042,7 +1042,7 @@ class Window(QG.QWidget):
         self.move(mayaPosition + QC.QPoint(100, 100))
         # Size
         self.setMinimumSize(200, 300)
-        self.resize(200, 600)
+        self.resize(200, 600)                                      
 
 
         #-----------------------------------------------------------------------
