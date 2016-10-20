@@ -28,19 +28,36 @@ Utils.moduleLoadingMessage()
 
 
 
-
-
-
-
-
-
                           
 
 
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Relative icons path
+---------------------------------------------------------------------------------
+[MuTools]
+  |
+  +-- MuUtils.py
+  |
+  +-- MuCore.py
+  |
+  +-- MuUI.py
+  |
+  +-- [MuIcons]
+        |
+        +-- mu_icon.png
+        +-- remoteMaya_icon.png
+        +-- closeWindow_icon.png
+        |
+       ...
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+class IconPaths():
+    _iconsPath  = Utils.muToolsPath() + '\\MuIcons\\'
+    mu          = _iconsPath + 'mu.png'
+    remoteMaya  = _iconsPath + 'remoteMaya.png'
+    closeWindow = _iconsPath + 'closeWindow.png'
 
-
-
+# Ex: IconPaths.mu
 
 
 
@@ -126,6 +143,7 @@ class Color(QG.QColor):
         hsva = list(self.getHsv()) #hsva
         hsva[2] = clamp(hsva[2] + addend, 0, 255)
         self.setHsv(*hsva)
+        return self
 
     def lighten(self, factor):
         pass
@@ -139,12 +157,15 @@ class Color(QG.QColor):
 
 class VerticalLayout(QG.QVBoxLayout):
     """
-    Reset spacing and content margins
+    Set (or default) layout spacing/margins 
     """
     def __init__(self, *args, **kwargs):
+        spacing = kwargs.pop('spacing', 0)
+        margins = kwargs.pop('margins', (0, 0, 0, 0))
         super(VerticalLayout, self).__init__(*args, **kwargs)
-        self.setSpacing(0)
-        self.setContentsMargins(0, 0, 0, 0)
+
+        self.setSpacing(spacing)
+        self.setContentsMargins(*margins)
 
 
 
@@ -154,9 +175,51 @@ class HorizontalLayout(QG.QHBoxLayout):
     Reset spacing and content margins
     """
     def __init__(self, *args, **kwargs):
+        spacing = kwargs.pop('spacing', 0)
+        margins = kwargs.pop('margins', (0, 0, 0, 0))
+
         super(HorizontalLayout, self).__init__(*args, **kwargs)
-        self.setSpacing(0)
-        self.setContentsMargins(0, 0, 0, 0)
+        self.setSpacing(spacing)
+        self.setContentsMargins(*margins)
+
+
+
+
+class HorizontalContainer(QG.QFrame):
+    def __init__(self, *args, **kwargs):
+        super(HorizontalContainer, self).__init__(*args, **kwargs)
+        self.setFrameStyle(QG.QFrame.NoFrame)
+        self._layout = HorizontalLayout(self)
+        self.setStyleSheet("""
+            border-radius: 0px;         
+            padding: 0px;
+            margin: 0px;
+        """)    
+
+    def addWidget(self, widget):
+        self._layout.addWidget(widget)
+
+    def addStretch(self, *args, **kwargs):
+        self._layout.addStretch(*args, **kwargs)
+
+
+
+class VerticalContainer(QG.QFrame):
+    def __init__(self, *args, **kwargs):
+        super(VerticalContainer, self).__init__(*args, **kwargs)
+        self.setFrameStyle(QG.QFrame.NoFrame)
+        self._layout = VerticalLayout(self)
+        self.setStyleSheet("""
+            border-radius: 0px;         
+            padding: 0px;
+            margin: 0px;
+        """)    
+
+    def addWidget(self, widget):
+        self._layout.addWidget(widget)
+
+    def addStretch(self, *args, **kwargs):
+        self._layout.addStretch(*args, **kwargs)
 
 
 
@@ -173,8 +236,12 @@ class ToolButton(QG.QToolButton):
             padding: 0px;
             margin: 0px;
         """)
-        
+
         self.setFixedSize(size, size)
+        self.size = size
+
+        #self.setIconSize(QC.QSize(size, size)) NO, YOU CUSTOMIZE THE paintEvent...this is useless!!!
+
         self.setCursor(QC.Qt.PointingHandCursor)
 
         if clicked_slot:
@@ -182,8 +249,8 @@ class ToolButton(QG.QToolButton):
 
         if iconPath:
             # Store the neutral/hover/clicked images and a "message" to .paintEvent
-            self.imageNeutral = QG.QImage(iconPath).scaled(size, size, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
-            self.imageHover = QG.QImage(iconPath).scaled(size * 1.2, size * 1.2, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
+            self.imageNeutral = QG.QPixmap(iconPath)#.scaled(size, size, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
+            self.imageHover = QG.QPixmap(iconPath)#.scaled(size * 1.2, size * 1.2, QC.Qt.IgnoreAspectRatio, QC.Qt.SmoothTransformation)
             self.isHover = False
 
             # PROVA A  USARE QPAINTER fuori dal paintEvent per manipolare un image e 
@@ -207,11 +274,12 @@ class ToolButton(QG.QToolButton):
     def paintEvent(self, event):
         painter = QG.QPainter()
         painter.begin(self)
+        rect = QC.QRectF(0, 0, self.size, self.size)
         if self.isHover:
             #painter.setCompositionMode(QG.QPainter.CompositionMode_Plus)   
-            painter.drawImage(-1, -1, self.imageHover)
+            painter.drawPixmap(rect, self.imageHover, rect)
         else:
-            painter.drawImage(0, 0, self.imageNeutral)
+            painter.drawPixmap(rect, self.imageNeutral, rect)
       
         painter.end()
 
@@ -219,7 +287,7 @@ class ToolButton(QG.QToolButton):
 
 
 class TitleBar(QG.QFrame):
-    def __init__(self, title='...', parentObject=None):
+    def __init__(self, title='...', parentObject=None, showMuIcon=True):
         # NOTE: at this point, self has already the structure of a QG.QFrame...
         super(TitleBar, self).__init__(parentObject)
         
@@ -228,19 +296,23 @@ class TitleBar(QG.QFrame):
         self.setStyleSheet("""
             background-color:rgb(115, 192, 255); 
             font-size:18px;
-            padding: 0px 6px 0px 4px;
+            padding: 0px 0px 0px 0px;
             border-radius: 2px;         
         """)
         self.layout = HorizontalLayout(self)
         
+
+
         # MU ICON
         #----------------------
-        self.muIcon =ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/mu_icon.png', 
-            size=12,
-            clicked_slot=self._muIconClicked,
-            parentObject=self.layout
-        )
+        if showMuIcon:
+            self.muIcon =ToolButton(
+                iconPath=IconPaths.mu, 
+                size=24,
+                clicked_slot=self._muIconClicked,
+                parentObject=self.layout
+            )
+
 
         """
         # OPTIONS ICON
@@ -279,8 +351,8 @@ class TitleBar(QG.QFrame):
         # CLOSE ICON
         #----------------------
         self.closeIcon = ToolButton(
-            iconPath='C:/Users/guido.pollini/Desktop/closeIcon.png', 
-            size=16,
+            iconPath=IconPaths.closeWindow, 
+            size=24,
             clicked_slot=self._closeIconClicked,            
             parentObject=self.layout
         )
@@ -333,6 +405,8 @@ class TitleBar(QG.QFrame):
 
 
 class InfoWindow(QG.QMainWindow):
+    """ ==> ==> MAKE IT A WINDOW, WITHOUT THE MU_ICON... """
+
     def __init__(self, windowName, text='...', parentObject=None):
         #if MC.control(windowName, query=True, exists=True):
         #    MC.deleteUI(windowName)
@@ -498,6 +572,27 @@ class PushButton(QG.QPushButton):
 
 
 
+class CheckBox(QG.QCheckBox):
+    def __init__(self, text='',
+                       initialChecked=False,
+                       stateChanged_slot=None,
+                       parentObject=None):
+
+        super(CheckBox, self).__init__(text)
+        self.setChecked(initialChecked)
+        self.setCursor(QC.Qt.PointingHandCursor) # It's clickable:)       
+
+        if parentObject:
+            parentObject.addWidget(self)
+
+        if stateChanged_slot:
+            self.stateChanged.connect(stateChanged_slot)
+
+
+
+
+
+
 """
 ----------------------------------------------------------------------------
   __  __ _      _            
@@ -658,7 +753,7 @@ class MayaDockableMixin(MayaQWidgetBaseMixin):
         myWidget.show(dockable=False)
         print myWidget.showRepr()
     '''
-    def setDockableParameters(self, dockName=None, title='TEST', dockable=None, floating=None, area=None, allowedArea=None, width=None, height=None, x=None, y=None, *args, **kwargs):
+    def setDockableParameters(self, showMuIcon=True, dockName=None, title='TEST', dockable=None, floating=None, area=None, allowedArea=None, width=None, height=None, x=None, y=None, *args, **kwargs):
         '''
         Set the dockable parameters.
         
@@ -739,7 +834,7 @@ class MayaDockableMixin(MayaQWidgetBaseMixin):
                         detects the dragging... woaaaaaaaaah"""   
                 #titleBar = QG.QLabel('NOOOOOOOOPE') #TitleBar('ALEMBICCCC', dockWidget)
                 
-                self.titleBar = TitleBar(title, self)                
+                self.titleBar = TitleBar(title, self, showMuIcon)                
                 dockWidget.setTitleBarWidget(self.titleBar)
 
 
@@ -1043,7 +1138,7 @@ class Window(MayaDockableMixin, QG.QWidget):
         """
 
         self.resize(0, 0)  
-        self.show(dockName=mayaName, title=title, dockable=True)
+        self.show(dockName=mayaName, showMuIcon=True, title=title, dockable=True)
         #self.parent().resize(0, 0)  
     def name(self):
         return self.objectName()
@@ -1496,3 +1591,132 @@ class MayaWindow(object):
         return shiboken.wrapInstance(long(pointer), QG.QMainWindow)     
 """
 
+
+
+'''
+import sys
+muPath = r"C:\Users\guido.pollini\Desktop\MuTools"
+if muPath not in os.sys.path:
+    sys.path.append(muPath)
+
+
+import MuTools.MuUtils     as Utils;     reload(Utils)
+import MuTools.MuCore      as Core;      reload(Core)
+import MuTools.MuScene     as Scene;     reload(Scene)
+import MuTools.MuUI        as UI;        reload(UI)
+ 
+x = UI.Window('AE', 'alembicExporter_')
+x.layout = UI.VerticalLayout(x)
+episodeList = ['...', 'YKR000', 'YKR666', 'YKR123', 'YKRfuck', 'YKR999', 'YKRNope', 'YKRWow', 'YKRKY']        
+"""
+shit = UI.LabelComboBox(
+            text='Select an <b>episode</b>:', 
+            itemList=episodeList, 
+            align='right', 
+            labelFixedWidth=140,             
+            comboBoxFixedWidth=86,           
+            #currentIndexChanged_slot=self.currentEpisodeChanged_slot, 
+            parentObject=x.layout
+        ) 
+"""
+
+exportButton = UI.PushButton(
+            text='EXPORT',
+            baseColor=UI.Color(100, 90, 90),
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=x.layout
+        ) 
+        
+HContainer = UI.HorizontalContainer()   
+x.layout.addWidget(HContainer)
+            
+container1 = UI.VerticalContainer()
+HContainer.addWidget(container1)
+
+UI.PushButton(
+            text='Load',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container1
+        )
+UI.PushButton(
+            text='Save',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container1
+        )
+
+UI.PushButton(
+            text='Kill',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container1
+        ) 
+container1.addStretch()
+UI.PushButton(
+            text='Kill',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container1
+        )                                    
+#x.shrink()
+
+container2 = UI.VerticalContainer()
+HContainer.addWidget(container2)
+
+container2.addStretch()
+UI.PushButton(
+            text='Load',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container2
+        )
+UI.PushButton(
+            text='Save',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container2
+        )
+
+UI.PushButton(
+            text='Kill',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container2
+        ) 
+
+UI.CheckBox('just fuck you', True, parentObject=container2)
+UI.CheckBox('just fuck you', True, parentObject=container2)
+UI.CheckBox('just fuck you', True, parentObject=container2)
+
+col = UI.Color(20, 40, 30)
+
+for i in range(40):
+        UI.PushButton(
+            text='',
+            fixedWidth=40,
+            baseColor=col.addToValue(10),
+            fixedHeight=10,
+            #clicked_slot=None, 
+            parentObject=container2
+        )  
+        print col 
+        
+UI.PushButton(
+            text='Kill',
+            #fixedWidth=90,
+            #fixedHeight=24,
+            #clicked_slot=None, 
+            parentObject=container2
+        )                                    
+#x.shrink()
+'''

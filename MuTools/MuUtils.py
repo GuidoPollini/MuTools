@@ -15,6 +15,18 @@ import time
 
 
 
+def muToolsPath():
+    """ UGLY """
+    # __file__  -->  C:\Users\guido.pollini\Desktop\MuTools\MuTools\MuUtils.py
+    #  return   -->  C:\Users\guido.pollini\Desktop\MuTools\MuTools
+    tokens = __file__.split('\\')
+    path = '\\'.join(tokens[:-1])
+    return path
+
+
+
+
+
 #---------------------------------------------------------------------------------------------------
 # <math> monkey patching
 # There's no 'clamp' function... ouch

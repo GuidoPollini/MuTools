@@ -1159,6 +1159,57 @@ class Transform(DAGNode):
 
 
 
+
+    def incapsulate(self, capsuleName):    
+        """
+        Create a new transform, holder of self.
+        Ex:
+         capsule = trans.incapsulate('myCapsule')
+        """
+        capsule = DGNode.create(nodeType='transform', name=capsuleName)
+        parent = self.parent()
+
+
+        if parent is not None:
+            # Move the capsule at the same hierarchy position of node
+            capsule.setParent(parent)
+
+
+        # Copy all the transform values (pivots and compensation included) 
+        """ the matrix is the result of these parameters; if you copy 
+            the matrix I don't know it's a brutal copy (dataloss) or 
+            if it copies all the info needed... """
+            
+        transformAttributes = [
+            'translate', 
+            'rotate', 
+            'scale', 
+            'shear', 
+            'rotateOrder', 
+            'rotateAxis',                       
+            'inheritsTransform', 
+
+            'rotatePivot', 
+            'rotatePivotTranslate', 
+            'transMinusRotatePivot',                        
+            'scalePivot', 
+            'scalePivotTranslate', 
+        ]
+        MC.copyAttr(self.name(), capsule.name(), values=True, attribute=transformAttributes)
+
+
+        # This is enough to match the TRS, but not the pivots
+        self.setParent(capsule, absolute=True) 
+        # Reset all pivots included compensation
+        MC.xform(self.name(), zeroTransformPivots=True)
+
+        # Fluency
+        """ It must return the capsule, NOT self """
+        return capsule
+
+
+
+
     def mesh(self):
         """
         If nothing is found, returns None!
@@ -1186,7 +1237,10 @@ class Transform(DAGNode):
         return List(meshChildren)
         
 
-
+    def setParent(self, parent, absolute=False):
+        """ WRAP IT A LITTLE BETTER """
+        MC.parent(self.name(), parent.name(), absolute=absolute)
+        return self
 
 
 
