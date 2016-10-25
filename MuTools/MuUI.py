@@ -23,6 +23,51 @@ Utils.moduleLoadingMessage()
 
 
 
+#--------------------------------------------
+# RECOVER THE MAIN PROGRESS BAR
+#--------------------------------------------
+
+''' 
+HARD WAY
+
+mw = mainWindow()
+helpLine = mw.findChild(QG.QToolBar, 'toolBar3')
+helpLineLayout = helpLine.findChild(QG.QWidget, 'MainHelpLineLayout')
+helpLineFrame = helpLineLayout.findChild(QG.QWidget, 'helpLineFrame')
+widgy = helpLineFrame.findChild(QG.QFrame, 'mayaLayoutInternalWidget')
+formLayout16 = widgy.findChild(QG.QWidget, 'formLayout16')
+mainProgressBar = formLayout16.findChild(QG.QProgressBar, 'mainProgressBar')
+
+----------------------------------------------------------------------------
+
+EASY WAY
+
+pointer = OMUI.MQtUtil.findControl('mainProgressBar') # --> a generic <SwigPyObject>
+mainProgressBar = shiboken.wrapInstance(pointer.__long__(), QG.QProgressBar) # take the address and set the pointer type
+
+#NOPE, THIS IS THE HELP 
+#helpLinePointer = OMUI.MQtUtil.findControl('helpLine1')
+#helpLine = shiboken.wrapInstance(helpLinePointer.__long__(), QG.QStatusBar)
+
+def _valueChangedSlot(value):
+    print '>>>', mainProgressBar.text()
+mainProgressBar.valueChanged.connect(_valueChangedSlot)    
+
+
+==> You need to keep track of the connection you make: Qt doesn't <==
+try:
+    mainProgressBar.valueChanged.disconnect(_valueChangedSlot)
+except:
+    # Not connected
+    pass
+'''
+
+
+
+
+
+
+
 
 
 

@@ -50,7 +50,7 @@ def getFiles(dirName, fullName=False):
 
 def exocortexAlembicExport(nodeList, targetPath, purePointCache):
     """
-    Exocortex syntax:
+    Exocortex job syntax:
       uvs=1;withouthierarchy=0;normals=1;transformcache=0;globalspace=0;substep=1;
       filename=TARGETPATH;step=1;objects=NODE0,NODE1,NODE2:hands;useInitShadGrp=0;in=101.0;
       purepointcache=0;ogawa=1;dynamictopology=0;facesets=1;out=239.0;

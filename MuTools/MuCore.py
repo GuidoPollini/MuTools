@@ -39,7 +39,6 @@ correctWeights('skinCluster12', 3)
 
 
 
-print '>>>[{}] DON\'T use the API 2.0: a LOT of classes aren\'t implemented (e.g. MObjectHandle)!'.format(__name__)
 print '>>>[{}] Interface:'.format(__name__)
 print
 print '                    GETTER    -->  object.myProp()        (or object.myProp(*args, **kwargs) if needed)'
@@ -59,7 +58,7 @@ print '                    --> BE CONSISTENT, NOT "PYTHONIC" <--'
 import MuTools.MuUtils   as Utils
 
 import maya.cmds         as MC
-import maya.api.OpenMaya as OM # >>> NO, REVERT TO THE API 1.0; the 2.0 is better but incomplete! <<<
+import maya.OpenMaya     as OM 
 
 import functools
 import os
@@ -217,11 +216,11 @@ class Fatality(Exception):
         return self.mess
 
 
-class AttributeFatality(Fatality):
+class PlugFatality(Fatality):
     def __init__(self, attrName):
         tag = "attribute error"
         mess = "you just did shit \"" + attrName + "\" die!"        
-        super(AttributeFatality, self).__init__(tag, mess)
+        super(PlugFatality, self).__init__(tag, mess)
             
 
 class NameFatality(Fatality):
@@ -483,7 +482,7 @@ CLASS STRUCTURE
 CLASS HIERARCHY
 -----------------------------------
 MuNode            [FACTORY]
-MuAttribute       [MPLUG WRAP]
+MuPlug       [MPLUG WRAP]
 
 DGNode          
   DAGNode         [ABSTRACT]
@@ -507,6 +506,12 @@ Scene             [MODULE?]
 
 
 class DGNode(object):
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    TO DO:
+    - implement an '.addPlug'!
+      (they're plugs, not attributes 'cause' it's per-instance, not per-class)
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
     """
     ------------------------------------------
     NEW BASIC GETTERS
@@ -576,8 +581,7 @@ class DGNode(object):
         <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>        
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
 
-        """_type = mObject.apiTypeStr()"""
-        _type = mObject.apiTypeStr
+        _type = mObject.apiTypeStr()
 
         if _type == 'kTransform':
             self._pointer = OM.MFnTransform(mObject)
@@ -592,8 +596,7 @@ class DGNode(object):
             self._pointer = OM.MFnDependencyNode(mObject)
         
 
-        """self.type()  = self._pointer.typeName()"""
-        self._type = self._pointer.typeName
+        self._type = self._pointer.typeName()
 
         """
         Here you should check for MObjectHandle... apparently 
@@ -688,23 +691,55 @@ class DGNode(object):
 
     
 
+
+
+
+
     def __getattr__(self, attr):
         # '__getattr__' is called only when the Python object has not an 
         # attribute named 'attr'; hence we try to ask the same attribute 
         # to the underlying DependNode
 
+        """ 
+        NOTE:
+          The old __getattr__ is gonna fail in these cases:
+          - array plug (as 'input1D[0]')
+          - child of a compound (as 't.tx')
+
+          I should try to recover the arrayPlug this way:
+          -            myNode.plugName[3] <--> myNode.__getattr__('plugName').__getitem__[3]
+          - myNode.compoundPlug.childPlug <--> myNode.__getattr__('compoundPlug').__getattr__('childPlug')
+          Where le last __getitem__ and __getattr__ are methods of MuPlug
+
+        """
         try: 
-            # Pass the MFn* and the MPlug
-            # (I cant' recover the minimal name of a node from one of its plugs without passing
-            #  for MObject-MFnDependencyNode) 
             # Accessing the attribute via the commandEngine is necessary...
             mPlug = self._pointer.findPlug(attr, True)
 
         except: # It's a fucking generic <RuntimeError> (__doc__ == 'Unspecified...' WOW!)
             # Even the DependNode can't answer
-            MC.error('[Attribute Error] The attribute "{0}" can\'t be found on node/MuNode "{1}"!'.format(attr, self.name))
+            MC.error('[Plug Error] The plug "{0}" can\'t be found on node/MuNode "{1}"!'.format(attr, self.name()))
 
-        return MuAttribute(self, mPlug)
+        return MuPlug(mPlug)
+    
+
+    def getPlug(self, attributeName):
+        """ 
+        Get plug by:
+        -   NAME: myNode.myAttr
+        - STRING: myNode.getPlug('myAttr')
+        
+        NOTE:
+          You will have to check when attributeName has special chars '.' or '[]'
+          - myNode.getattr('input1[1]')
+          - myNode.getattr('t.tx')
+          For the moment, it fails!!!  
+        """
+
+        return self.__getattr__(attributeName)
+
+
+
 
 
 
@@ -723,6 +758,139 @@ class DGNode(object):
     #-----------------------------
     # METHODS
     #-----------------------------
+
+
+
+    def addPlug(self, **kwargs):
+        """
+        ----------------------------------------------------
+        EXTRA FLAGS:
+          type(t) --> shortcut for dataType/attributeType
+          name(n) --> EXTRA for longName
+        ----------------------------------------------------
+
+        FLAGS of MC.addAttrs:
+          niceName=string, 
+          longName=string, 
+          shortName=string, 
+
+          exists=boolean, 
+
+          keyable=boolean, 
+          hidden=boolean, 
+
+          defaultValue=float, 
+          dataType=string, 
+          attributeType=string, 
+
+          enumName=string, 
+          
+          hasMaxValue=boolean, 
+          hasMinValue=boolean, 
+          maxValue=float, 
+          minValue=float,           
+          hasSoftMaxValue=boolean, 
+          hasSoftMinValue=boolean, 
+          softMaxValue=float, 
+          softMinValue=float, 
+
+          multi=boolean, 
+          indexMatters=boolean, 
+          parent=string,           
+          numberOfChildren=uint, 
+
+          internalSet=boolean, 
+
+          readable=boolean, 
+          writable=boolean 
+          storable=boolean, 
+
+          binaryTag=string, 
+          cachedInternally=boolean, 
+          usedAsColor=boolean, 
+        """
+
+        # If present, 'name' rules over 'longName' and 'shortName'
+        name_flag = kwargs.pop('name', kwargs.pop('n', None))
+        if name_flag is not None:
+            plugName = name_flag
+            try:
+                del kwargs['longName']
+                del kwargs['ln']
+                del kwargs['shortName']
+                del kwargs['sn']
+            except:
+                pass
+
+            kwargs['longName'] = name_flag    
+        else:
+            plugName = kwargs.get('shortName', kwargs.get('sn', kwargs.get('longName', kwargs.get('ln', None))))
+
+
+        # 'type' flag to simplify creation
+        plugType  = kwargs.pop('type',  kwargs.pop('t', None))
+        if plugType is None:
+            raise PlugFatality("flag 'type' (t) is mandatory!")                               
+        
+
+
+        # Check if already exists
+        if MC.attributeQuery(plugName, node=self.name(), exists=True):
+            raise PlugFatality("MayaNode " + self.name() + " has already a <Plug> named " + plugName)  
+        
+
+        # Creation
+        if plugType == "double":
+            # horrid
+            defaultValue = kwargs.get('defaultValue', kwargs.get('dv', 0.0))
+            keyable      = kwargs.get('keyable', kwargs.get('k', True))
+
+            MC.addAttr(self.name(), longName=plugName, attributeType="double",
+                defaultValue=defaultValue, keyable=True, hidden=False)
+            
+            return self.__getattr__(plugName) # (HORRID)A MuPlug
+
+
+
+        elif plugType == "string":
+            # 'defaultValue' is meaningful only for numerics; just initialize 
+            initValue = kwargs.get("defaultValue", kwargs.get("dv", ""))
+            MC.addAttr(nodeName, longName=attrName, dataType="string", 
+            multi=multiFlag, keyable=False)        
+            MC.setAttr(nodeName + "." + attrName, initValue, type="string")
+            print "created!"
+            
+        elif plugType == "bool":
+            # 'defaultValue' is meaningful only for numerics; just initialize 
+            initValue = kwargs.get("defaultValue", kwargs.get("dv", False))
+            MC.addAttr(nodeName, longName=attrName, attributeType="bool", 
+            multi=multiFlag, keyable=False)        
+            MC.setAttr(nodeName + "." + attrName, initValue)
+            print "created!"    
+        
+        elif plugType == "enum":
+            enumArg = kwargs.get("enumName", kwargs.get("en", None))
+            enumName = ""
+            for i, name in enumerate(enumArg):
+                enumName += name + "=" + str(i) + ":"
+            
+            enumName = enumName.rstrip(":")
+            print enumName
+            MC.addAttr(nodeName, longName=attrName, attributeType="enum", 
+            multi=multiFlag, keyable=False, enumName=enumName)                 
+
+            initValue = kwargs.get("defaultValue", kwargs.get("dv", None))
+            try:
+                numericInitValue = enumArg.index(initValue)
+            except:
+                MC.error("the default value for the enum is unknown")
+                    
+            if initValue:
+                MC.setAttr(nodeName + "." + attrName, numericInitValue)
+        
+
+
+
 
 
     @massiveMethod
@@ -924,7 +1092,7 @@ class Reference(object):
 
 
     def isLoaded(self):
-        return MC.referenceQuery(self._filePath, isLoaded=True)
+        return MC.referenceQuery(self.filePath(), isLoaded=True)
 
 
 
@@ -932,7 +1100,7 @@ class Reference(object):
         # Try to load a reference only if the file exists; if nod, don't do anything;
         """ Probably it should return True if succeeded or False if it failed! """
         if self.isValid():
-            MC.file(self._filePath, loadReference=self.getReferenceNode().name(), loadReferenceDepth='asPrefs')
+            MC.file(self.filePath(), loadReference=self.getReferenceNode().name(), loadReferenceDepth='asPrefs')
             return True
         else:
             return False
@@ -940,7 +1108,7 @@ class Reference(object):
 
 
     def cleanFilePath(self):
-        return self._filePath.split('{')[0]
+        return self.filePath().split('{')[0]
 
 
 
@@ -950,7 +1118,7 @@ class Reference(object):
          - should this return True/False if it succeeded/failed???
         """ 
         try:
-            MC.file(self._filePath, edit=True, namespace=newNamespace)
+            MC.file(self.filePath(), edit=True, namespace=newNamespace)
         except:
             raise
 
@@ -959,7 +1127,7 @@ class Reference(object):
     def namespace(self):
         # After a bare load scene (no reference load), each virtual reference has
         # a 'potential' namespace, which is not yet a real namespace
-        potentialNamespace = MC.file(self._filePath, query=True, namespace=True)
+        potentialNamespace = MC.file(self.filePath(), query=True, namespace=True)
         return Namespace(potentialNamespace) 
 
 
@@ -1110,20 +1278,31 @@ class Transform(DAGNode):
     #-----------------------------
     @staticmethod    
     def create(**kwargs):
+        # myTrans = Core.Transform.create(name='myName', parent=parentObj)
         """
         CommandEngine kargs:
           n  name 
-          p  parent 
+          p  parent  --> <str>|<DAGNode>
           s  shared 
-          ss skipSelected
+          ss skipSelect=True
 
-        Extra kwargs   
+        TO DO: Extra kwargs   
           t  translation
           r  rotation
           s  scale
           ws worldSpace
         """
         
+
+        # Set 'skipSelect=True' as default
+        kwargs['skipSelect'] = kwargs.pop('skipSelect', kwargs.pop('ss', True))
+        
+
+        # Allow a MuNode as a parent
+        parent = kwargs.pop('parent', kwargs.pop('p', None))
+        if parent is not None and not isinstance(parent, basestring):
+            kwargs['parent'] = parent.name()
+
 
         newNodeName = MC.createNode('transform', **kwargs)
         return MuNode(newNodeName)
@@ -1143,19 +1322,64 @@ class Transform(DAGNode):
     # METHODS
     #-----------------------------
     def children(self, **kwargs):
+        """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+        Argumetns to add:
+        - FILTERING:         nameFilter=REGEXP
+        - MULTIPLE TYPES:    type=[type1, type2, ...]
+        - TYPIZEDTRANSFORMS: 'pureTransform', 'meshTransform', 'nurbsTransform', 'XXXTransform'
+
+        Ex:
+        node.children(type='meshTransform')
+        node.children(type='locatorTransform')
+        node.children(type='ShittyNodeTypeTransform')
+
+        """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+
         """
         Recycle the syntax of 'listRelatives(children=True, ...)'
         and correct the type/noIntermediate bug!
         """
+        type_flag  = kwargs.get('type', kwargs.get('t', None))
 
-        type_flag = kwargs.get("type", kwargs.get("t", None))
+        typizedTransform_flag = None
+        if 'Transform' in type_flag:
+            typizedTransform_flag = type_flag.replace('Transform', '')
+            type_flag = 'transform'
+
+
+        nameFilter = kwargs.get('nameFilter', kwargs.get('nf', None))
 
         if not type_flag:
             children = MC.listRelatives(self.name(), children=True, path=True) or []
         else:
             children = MC.listRelatives(self.name(), children=True, type=type_flag, path=True) or []
 
+        if nameFilter is not None:
+            """ --> Here you should put a regExp; like this is too harsh and limited <--""" 
+            children = [x for x in children if nameFilter in x]
+
+        if typizedTransform_flag is not None:
+            children = [x for x in children if MuNode(x)._isTypedTransform(allowedType=typizedTransform_flag)]
+
         return List(children)
+
+
+
+
+
+
+    def shapes(self, **kwargs):
+        """ Return the shape children """
+        # --> DO A BETTER WRAP
+        shapes = MC.listRelatives(self.name(), children=True, shapes=True, path=True) or []
+        
+        # Does the flag work for shapes?                                                                      
+        #if noIntermediate:
+        #    meshChildren = [x for x in meshChildren if MC.getAttr(x + '.intermediateObject') == 0]
+        
+        return List(shapes)
+
 
 
 
@@ -1239,6 +1463,11 @@ class Transform(DAGNode):
 
     def setParent(self, parent, absolute=False):
         """ WRAP IT A LITTLE BETTER """
+        
+        """
+        TO DO:
+        - add an 'index' flag: first childre, last children relative position
+        """
         MC.parent(self.name(), parent.name(), absolute=absolute)
         return self
 
@@ -1247,8 +1476,32 @@ class Transform(DAGNode):
 
 
 
+'''
+======================================================
+Mesh shit...
+======================================================
+# Is a list 'subset' of another list:
+#   [CYCLE STYLE] if all(item in list1 for item in list2): ...
+#   [ SET  STYLE] if set(list1).issubset(list2): ...
 
-
+class Mesh(object):
+    _smoothDefault = {
+       'smoothLevel': 2, 
+       'displayType': 'shit', 
+       'renderSmoothLevel': 2
+    }
+    def smooth(self, **smoothKwargs):
+        #if not all(key in Mesh._smoothDefault for key in smoothKwargs):
+        if not set(smoothKwargs).issubset(Mesh._smoothDefault):
+            print 'shitty arg'
+            return
+        originalSmooth = Mesh._smoothDefault.copy() # This shallow copy is indeed a deep copy
+        originalSmooth.update(smoothKwargs)
+        print originalSmooth
+      
+x = Mesh()
+x.smooth(smoothLevel='SHIT') 
+'''
 class Mesh(DAGNode):
     #-----------------------------
     # INITIALIZER
@@ -1736,12 +1989,10 @@ class MuNode(object):
 
 
 
-        """mObject = OM.MObject()"""
-        """selList.getDependNode(0, mObject)"""
-        mObject = selList.getDependNode(0)
+        mObject = OM.MObject()
+        selList.getDependNode(0, mObject)
 
-        """nodeAPIType = mObject.apiTypeStr()"""
-        nodeAPIType = mObject.apiTypeStr
+        nodeAPIType = mObject.apiTypeStr()
         
         if nodeAPIType == 'kTransform':
             # A transform
@@ -1764,140 +2015,361 @@ class MuNode(object):
 
 
 
-class MuAttribute(object):
+
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+TO DO:
+
+This is really heavy:
+- newController.rz.setLocked().setVisible(False) # .lock().hide()
+- newController.ry.setLocked().setVisible(False)
+- newController.rz.setLocked().setVisible(False)
+
+If possible, replace with this:
+- INVALID SYNTAX newController.('rx', 'ry', 'rz').lock().hide()
+- newController.getPlugs('rx', 'ry', 'rz').lock().hide()
+
+- myNode.getPlugs('plug1', 'plug2', ...) --> <List> or <PlugList>
+Note that we're gonna need MASSIVES!!!
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+class MuPlug(object):
     """
-    Technically, even a plug should be 'pointed to' API-style... slower?
-    ------------------------------------------------------------------------
-    
-    Wishlist:
-    fuck = MuNode('FUCK') # Transform
-    shit = MuNode('SHIT') # Transform
-  
     Getters:
-      fuck.tx
-      fuxk.tx.get()
-      fuck.tx.get(ws=True)
+      node.plug.get(*args, **kwargs)
 
     Setters:
-      fuck.tx.set(666)           # Simple
-      fuck.tx.set(666, ws=True)  # kwargs (depending on nodeType)
-      fuck.tx.set(shit)          # Has 'shit' a 'tx'?
-      fuck.tx.set(shit.ty)       # A specified plug
+      node.plug.set(<value>  [, **kwargs])
+               .set(<DGNode> [, **kwargs])
+               .set(<MuPlug> [, **kwargs])
+               .set(<string> [, **kwargs])
     
     Connectors (force=True):
-      fuck.tx >> fuck.ty >> fuck.sx
-      fuck.tx << fuck.ty << fuck.sx
+      <MuPlug> >> <MuPlug>
+      <MuPlug> << <MuPlug>
+      <MuPlug> >> <string>
+      <string> << <MuPlug> (??? Is it possible???)
+
+      Allow fluency:
+      plug1 >> plug2 >> plug 3
 
     """
 
 
-    def __init__(self, node, mPlug):
-        # GO FOR API 2.0
-        # I can't recover the minimalName necessary to use the commandEngine
-        #  _mPlug.name() AIN'T ENOUGH?
-        #  _mPlug.partialName()        
-        self._mPlug   = mPlug
-        self.attrName = mPlug.partialName()
-        self.node     = node
+    def __init__(self, mPlug):
+        """
+        --> I need also the constructor:
+             - MuPlug('nodeName.attrName')
+            Get the nodeName, recover the mPlug and that's all; just check
+            if the node exists in Maya. mPlugs has a pointer to the node!!!
+        """
+        self._mPlug = mPlug
+
+
 
 
 
     def __rshift__(self, other):
-        # self >> other
+        """
+        <MuPlug> >> <MuPlug>|<string>|<iterable of <MuPlug>s>
 
+        Ex:
+        - myNode.myPlug >> otherNode.otherPlug
+        - myNode.myPlug >> 'pippo.tx'
+        - myNode.myPlug >> node1.plug1, node2.plug2, ...
 
-        """ 
-        VORREI ANCHE LA FORMA:
-          xxx.tx >> 'pippo.fck'
-        Oppure fai un __init__ che accetta anche stringhe (MuAttribute('pippo.tx')...  
         """
 
-        plug      = self.node.name()  + '.' + self.attrName
-        otherPlug = other.node.name() + '.' + other.attrName
+
+        """ IT DOESN'T WORK WITH STRINGS... only wuth <MuPlugs> """
+        selfPlugName  = self.name()
 
 
-        try:
-            MC.connectAttr(plug, otherPlug, force=True)
+        if not isinstance(other, (List, Set, list, set, tuple)):
+            """ For the moment it's just a MuPlug   """
+            """ (don't forget to extend to strings) """
+            plugIterable = [other]
+        else:
+            plugIterable = other
+
+
+        for plug in plugIterable:
+            plugName = plug.name()
+            try:
+                MC.connectAttr(selfPlugName, plugName, force=True)            
+            except RuntimeError:
+                # Exception to swallow: "Warning: 'xxx.aaa' is already connected to 'xxx.yyy'."
+                # Unluckily, it raises the same exception 'RuntimeError' than 'locked attribute' 
+                if MC.isConnected(selfPlugName, plugName, ignoreUnitConversion=True):
+                    # It will nonetheless show the 'warning', but swallow the exception
+                    pass
+                else:
+                    # A genuine error: reraise!
+                    raise    
         
-        except RuntimeError:
-            # Exception to swallow: "Warning: 'xxx.aaa' is already connected to 'xxx.yyy'."
-            # Unluckily, it raises the same exception 'RuntimeError' than 'locked attribute' 
-            if MC.isConnected(plug, otherPlug, ignoreUnitConversion=True):
-                # It will nonetheless show the 'warning', but swallow the exception
-                pass
-            else:
-                # A genuine error: reraise!
-                raise    
-        
-        # Allow fluency (a.tx >> b.sx >> c.rx >> ...)
+        # As concerning 'fluency':
+        # - for a 'simple' connect return  the last MuPlug (ex: a.tx >> b.sx >> c.rx >> ...)
+        # - for a 'massive' connect return None
         return other
+
+
+
 
 
 
     def __lshift__(self, other):
         # self << other
-        MuAttribute.__rshift__(other, self)
+        MuPlug.__rshift__(other, self)
 
         # Allow fluency (a.tx << b.sx << c.rx << ...)
         return other
 
 
+    def __getitem__(self, index):
+        if not self._mPlug.isArray():
+            MC.error(self.name() + ' is not an array plug!')
+
+        """ A littyle of safety wouldn't bad at all:) """
+        # logicalIndex == the sparse index (used by the commandEngine)
+        return MuPlug(self._mPlug.elementByLogicalIndex(index))    
+
+
+    """ 
+     ||
+    \  /
+     \/
+    Don't ever catch with 'except Exception as ...' NEVER   
+    CATCH EXACTLY WHAT YOU NEED BUT NOT EVERYTHING
+    EAFP: it's (E)asier to (A)sk for (F)orgiveness than (P)ermission
+    But a bare except is simply STUPID
+    """
+        
+    #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    #
+    # plugName = nodeMinimalName . attributeName    
+    #            |root|superNode . myAttr
+    #
+    #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    def nodeName(self):
+        """
+        AND WHAT HAPPENS IF THE POINTER HAS BECOME INVALID???
+        """
+        mObj = self._mPlug.node() # --> MObject
+
+        if mObj.hasFn(OM.MFn.kDagNode):
+            # It's a DagNode: recover its minimal name
+            ptr = OM.MFnDagNode(mObj)
+            return ptr.partialPathName()
+
+        else:
+            ptr = OM.MFnDependencyNode(mObj)
+            return ptr.name()    
+
+
+        '''
+        NO: YOU NEED TO PASS FOR THE MFN; or on creation put a reference to the original node
+        try:
+            # It's a Dag
+            return mObj.partialPathName()
+        except AttributeError:
+            # 
+            return mObj.name()
+        '''
+        #if mObj.hasFn(OM.MFn.kDagNode):
+        #    # It's a DagNode: recover its minimal name
+        #    ptr = OM.MFnDagNode(mObj)
+        #    return ptr.partialPathName()
+        #else:
+        #    return ptr.name() 
+
+
+    def attributeName(self):
+        """ (object)--(class) is like (plug)--(attribute)  """
+        return self._mPlug.partialName()
+
+
+    def name(self):
+        # Can't find a way to get the complete plug name in case of 
+        # Dag ambiguity; am I missing something?
+        return self.nodeName() + '.' + self.attributeName()  
+
+
+    def type(self):
+        return MC.getAttr(self.name(), type=True)
+
+    #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
 
 
     def get(self):
-        return MC.getAttr(self.node.name() + '.' + self.attrName)
-
+        return MC.getAttr(self.name())
 
 
     def set(self, *args, **kwargs):
-        #print 'MuAttribute.__set__() ARGS', args, kwargs
-        plug = self.node.name() + '.' + self.attrName
-        typology = MC.getAttr(plug, type=True)
+        """
+        .set(<value>|<DGNode>|<MuPlug>|<str> [, **kwargs])
+        
+        myNode.myPlug.set(69.69)               --> Direct mutation
+        myNode.myPlug.set(otherNode)           --> Check if otherNode has the same plug and copies its value
+                                                   (it should copy even the eventual incoming connection....)
+        myNode.myPlug.set(otherNode.otherPlug) --> MuPlug Syntax
+        myNode.myPlug.set('node2.fuck')        --> String syntax
 
+        """
+        plugName = self.name()
+        plugType = self.type()
+
+
+        #--------------------------------------
+        # Syntax: myNode.myPlug.set(<DGNode>)
+        #--------------------------------------
         if len(args) == 1 and issubclass(type(args[0]), DGNode):
             # Only one positional argument which is a DGNode
-            args = [MC.getAttr(args[0].name() + '.' + self.attrName)]
+            #args = [MC.getAttr(args[0].name() + '.' + self.attrName)]
+            args = [args[0].getPlug(self.attributeName()).get()]
 
-        if typology == 'string':
+
+        if plugType == 'string':
             # 'string' attributes need a special syntax
-            MC.setAttr(plug, *args, type='string')
+            MC.setAttr(plugName, *args, type='string')
         else:
-            MC.setAttr(plug, *args)     
+            MC.setAttr(plugName, *args)     
         
-        # What should return? 'self' of course:
-        # myShit.rx.set(360)\
-        #          .lock()\
-        #          .hide()
 
+        # Enable fluency
         return self
+
+
+
+
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    HUGE WARNING...
+    Check the API doc, because you haven't yet undestood what 
+    - keyable
+    - visible
+    - locked
+    - channelbox 
+
+    mean... it's slightly more confused than this shit!!!
+    "Being non-keyable is not a hard block against adding keys to an attribute."
+    ChannelBox flag "Sets whether this plug is displayed in the channel box. This overrides the 
+    default display of a plug set with MFnAttribute::setChannelBox. Keyable attributes 
+    are always shown in the channel box so this flag is ignored on keyable plugs."
+
+    
+    So, LOCKED and CHANNELBOX are only visual gimmicks, not real constraints
+
+    KEYABLE (not a real block, just a gimmick of the channelBox)
+    - A 'nonKeyable' plug can still have an animation connected... 
+    - credo che sia solo una questione di channelBox, per impedire che il set key 
+      ci metta sopra un'animawione... ma puoi connetterci o meno una curva d'anim
+      a prescindere che sia 'keyable' or not...
+    
+    LOCKED (a True block)
+    - a locked attribute cant have incoming connections
+    - In reality, LOCK means that the plug 'value' can't be altered:
+      1'  if the plug had no incoming connection, it's static value its unmodifiable
+      2'  if the plug was connected, nothing change. BUT THE CONNECTION CAN'T BE BROKEN
+    
+    - LOCKED blocks every -->INPUT<-- deconnection, reconnection, manual set Key...
+      It's BLOCKING!!!
+    
+    - but LOCKED doesn't do anything to the OUTPUT connections!
+
+
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    IT'S MORE RELATED TO THE PLUG MUTABILITY (LOCKED PLUG <==> a tuple is immutable):
+    - if it's a pure value, it can't change
+    - if it derives from a connection, it's teh connection that can't be broken, 
+      BUT THE VALUE WILL CHANGE (exactly as in a tuple holding mutable and immutable objects in Python)
+    >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+    --> SO, LOCKED is indeed the IMMUTABILITY for the plug (value or connection)
+        (a LOCKED plug can change it's value if it was connected to something before
+         the locking...) 
+
+    NOTE THAT THIS IS PLAIN UTTERLY FALSE:
+    "LOCKED: Sets the locked state for this plug's value. A plug's locked 
+    state determines whether or not the plug's value can be changed."
+
+    Seriously autodesk...
+
+
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+    """
+    plug.setLocked(True)
+    # Even if there's a link between visible and keyable, try to limit the shit
+    plug.setVisible(False)
+    plug.setKeyable(True) # --> it's visible
+    plug.setKeyable(False) # --> it stays visible if it was visible!!!
+
+    # Visible + Unkeyable:
+    MC.setAttr('null1.XXX', keyable=False, channelBox=True)
+
+    # Visible + Keyable:
+    MC.setAttr('null1.XXX', keyable=True) # The channelBox flag is ignored on keyable attributes. 
+
+    # Invisible
+    MC.setAttr('null1.XXX', keyable=False, channelBox=False)
+    """
 
 
 
     def isLocked(self):
-        """ Nouveaute' API2.0 """
-        # In the API2.0 the 'MPlug.isLocked' is an getter/setter attribute!
-        # ex:
-        #   shit.tx.isLocked = True
-        #   xxx = shit.tx.isLocked
-        return self._mPlug.isLocked
-
-
-
-    def lock(self):
-        self._mPlug.isLocked = True
-        return self   
-
-    
-
-    def unlock(self):
-        self._mPlug.isLocked = False
-        return self
-
+        return self._mPlug.isLocked()
 
     def setLocked(self, lockStatus=True):
-        self._mPlug.isLocked = lockStatus
+        """
+        plug.setLocked() --> it's locked!
+        """
+        self._mPlug.setLocked(lockStatus)
         return self
 
+
+
+    def isKeyable(self):
+        return self._Mplug.isKeyable()
+
+    def setKeyable(self, keyableStatus=True):
+        if keyableStatus:
+            self._mPlug.setKeyable(True)
+            self._mPlug.setChannelBox(True)
+        else:
+            oldChannelBoxFlag = self._mPlug.isChannelBoxFlagSet()
+            self._mPlug.setKeyable(False)
+            self._mPlug.setChannelBox(oldChannelBoxFlag)        
+        return self    
+
+
+
+    def isVisible(self):
+        return self._mPlug.isChannelBoxFlagSet()
+    
+    def setVisible(self, visibleStatus=True):
+        print 'NOT IMPLEMENTED, no idea...'
+        #oldKeyableStatus = self._mPlug.isKeyable()
+        return self
+
+
+    """ BETTER AND EASIER """
+    #----------------------------------
+    def lock(self):
+        pass
+    def unlock(self):
+        pass    
+    def hide(self):
+        pass
+    def show(self):
+        pass
+    def keyable(self):
+        pass
+    def unkeyable(self):
+        pass            
+    #----------------------------------
 
 
     def __call__(self, *args, **kwargs):
@@ -1908,12 +2380,15 @@ class MuAttribute(object):
 
 
 
+
+
 class MuObject(object):
     """
     For objects which don't have a nodal representative in Maya;
     probably useless, but who knows...
     """
     pass        
+
 
 
 
@@ -2162,18 +2637,18 @@ class Metadata(object):
         multiFlag = kwargs.get("multi", kwargs.get("m", False))
         
         if attrType is None:
-            raise AttributeFatality("flag 'type' (t) is mandatory!")                               
+            raise PlugFatality("flag 'type' (t) is mandatory!")                               
         
         # Just once please (don't trigger API methods for nothing)
         # Here we don't modify the DAG, hence we can revert to the commandEngine
         nodeName = self._pointer.name() 
         
         if attrType not in Metadata._supportedTypes:
-            raise AttributeFatality("The attribute type <" + attrType + "> is unknown!")                               
+            raise PlugFatality("The attribute type <" + attrType + "> is unknown!")                               
         
         # Check if already exists
         if MC.attributeQuery(attrName, node=nodeName, exists=True):
-            raise AttributeFatality("MayaNode " + nodeName + " has already a <metaAttribute> named " + attrName)  
+            raise PlugFatality("MayaNode " + nodeName + " has already a <metaAttribute> named " + attrName)  
         
         # Creation
         if attrType == "double":

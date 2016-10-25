@@ -1,19 +1,16 @@
 //Maya ASCII 2015 scene
 //Name: BDG100_006_lay_007.ma
-//Last modified: Thu, Oct 20, 2016 11:30:06 AM
+//Last modified: Mon, Oct 24, 2016 09:06:38 AM
 //Codeset: 1252
 file -rdi 1 -ns "st_BDG100_0060" -rfn "st_BDG100_0060RN" -op "v=0;" "R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma";
-file -rdi 1 -ns "SH006_CAM" -rfn "SH006_CAMRN" -op "v=0;" "R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/cam/bdg_camera.ma";
+file -rdi 1 -ns "SH006_CAM" -rfn "TEMPRN" -op "v=0;" "C:/Users/guido.pollini/Desktop/MuTools/DEBUG_BADGERS/[02.06] bgd_camera.ma";
 file -r -ns "st_BDG100_0060" -dr 1 -rfn "st_BDG100_0060RN" -op "v=0;" "R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma";
-file -r -ns "SH006_CAM" -dr 1 -rfn "SH006_CAMRN" -op "v=0;" "R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/cam/bdg_camera.ma";
+file -r -ns "SH006_CAM" -dr 1 -rfn "TEMPRN" -op "v=0;" "C:/Users/guido.pollini/Desktop/MuTools/DEBUG_BADGERS/[02.06] bgd_camera.ma";
 requires maya "2015";
-requires -nodeType "ilrOptionsNode" -nodeType "ilrUIOptionsNode" -nodeType "ilrBakeLayerManager"
-		 -nodeType "ilrBakeLayer" "Turtle" "2015.0.0";
 requires -nodeType "mentalrayFramebuffer" -nodeType "mentalrayOptions" -nodeType "mentalrayGlobals"
 		 -nodeType "mentalrayItemsList" -dataType "byteArray" "Mayatomr" "2015.0 - 3.12.1.12 ";
-requires "sqtVelvetShader" "2.3";
-requires "poseReader" "6.0";
-requires "hairAndFur" "2.8";
+requires -nodeType "ilrOptionsNode" -nodeType "ilrUIOptionsNode" -nodeType "ilrBakeLayerManager"
+		 -nodeType "ilrBakeLayer" "Turtle" "2015.0.0";
 currentUnit -l centimeter -a degree -t pal;
 fileInfo "application" "maya";
 fileInfo "product" "Maya 2015";
@@ -22,12 +19,12 @@ fileInfo "cutIdentifier" "201503261530-955654";
 fileInfo "osv" "Microsoft Windows 7 Business Edition, 64-bit Windows 7 Service Pack 1 (Build 7601)\n";
 createNode transform -s -n "persp";
 	setAttr ".v" no;
-	setAttr ".t" -type "double3" 1722.8982881311254 568.65219795850817 1140.81014757821 ;
-	setAttr ".r" -type "double3" -15.338352729615771 49.000000000000128 -1.2119925726643512e-015 ;
+	setAttr ".t" -type "double3" 409.12133458354606 357.82904782067783 462.97314283433099 ;
+	setAttr ".r" -type "double3" -23.138352729630526 39.79999999999967 2.0699094694800731e-015 ;
 createNode camera -s -n "perspShape" -p "persp";
 	setAttr -k off ".v" no;
 	setAttr ".fl" 34.999999999999993;
-	setAttr ".coi" 2178.8318231588919;
+	setAttr ".coi" 864.860229995591;
 	setAttr ".imn" -type "string" "persp";
 	setAttr ".den" -type "string" "persp_depth";
 	setAttr ".man" -type "string" "persp_mask";
@@ -91,8 +88,8 @@ createNode imagePlane -n "sh006ImagePlaneShape" -p "sh006ImagePlane";
 createNode transform -n "__CHARS__";
 createNode transform -n "__PROPS__";
 createNode lightLinker -s -n "lightLinker1";
-	setAttr -s 12 ".lnk";
-	setAttr -s 12 ".slnk";
+	setAttr -s 8 ".lnk";
+	setAttr -s 8 ".slnk";
 createNode displayLayerManager -n "layerManager";
 createNode displayLayer -n "defaultLayer";
 createNode renderLayerManager -n "renderLayerManager";
@@ -290,20 +287,6 @@ createNode shot -n "sh006";
 	setAttr ".sn" -type "string" "sh006";
 	setAttr ".wres" 1024;
 	setAttr ".ca" 1;
-createNode reference -n "SH006_CAMRN";
-	setAttr -s 2 ".phl";
-	setAttr ".phl[1]" 0;
-	setAttr ".phl[2]" 0;
-	setAttr ".ed" -type "dataReferenceEdits" 
-		"SH006_CAMRN"
-		"SH006_CAMRN" 0
-		"SH006_CAMRN" 3
-		0 "|SH006_CAM:camera_rig" "|__CAMERA__" "-s -r "
-		5 3 "SH006_CAMRN" "|__CAMERA__|SH006_CAM:camera_rig|SH006_CAM:camera_global|SH006_CAM:cameras_holder|SH006_CAM:cameraPROJ|SH006_CAM:cameraPROJShape.message" 
-		"SH006_CAMRN.placeHolderList[1]" ""
-		5 4 "SH006_CAMRN" "|__CAMERA__|SH006_CAM:camera_rig|SH006_CAM:camera_global|SH006_CAM:cameras_holder|SH006_CAM:cameraHD_controller|SH006_CAM:cameraHD|SH006_CAM:cameraHDShape.imagePlane" 
-		"SH006_CAMRN.placeHolderList[2]" "";
-lockNode -l 1 ;
 createNode animCurveTU -n "sh006ImagePlaneShape_frameExtension";
 	setAttr ".tan" 2;
 	setAttr ".wgt" no;
@@ -318,6 +301,14 @@ createNode audio -n "sh006Audio";
 createNode script -n "sceneConfigurationScriptNode";
 	setAttr ".b" -type "string" "playbackOptions -min 101 -max 238 -ast 101 -aet 238 ";
 	setAttr ".st" 6;
+createNode reference -n "TEMPRN";
+	setAttr ".ed" -type "dataReferenceEdits" 
+		"TEMPRN"
+		"TEMPRN" 0
+		"TEMPRN" 1
+		0 "|SH006_CAM:camera_rig" "|__CAMERA__" "-s -r ";
+	setAttr ".ptag" -type "string" "";
+lockNode -l 1 ;
 select -ne :time1;
 	setAttr ".o" 101;
 	setAttr ".unw" 101;
@@ -330,7 +321,7 @@ select -ne :defaultShaderList1;
 select -ne :postProcessList1;
 	setAttr -s 2 ".p";
 select -ne :defaultRenderUtilityList1;
-	setAttr -s 4 ".u";
+	setAttr -s 10 ".u";
 select -ne :defaultRenderingList1;
 	setAttr -s 3 ".r";
 select -ne :defaultTextureList1;
@@ -357,8 +348,8 @@ select -ne :hardwareRenderingGlobals;
 	setAttr ".aoon" yes;
 select -ne :defaultHardwareRenderGlobals;
 	setAttr ".res" -type "string" "ntsc_4d 646 485 1.333";
-connectAttr "SH006_CAMRN.phl[1]" "sh006.ccm";
-connectAttr "sh006ImagePlaneShape.msg" "SH006_CAMRN.phl[2]";
+select -ne :ikSystem;
+	setAttr -s 4 ".sol";
 connectAttr "sh006ImagePlaneShape_frameExtension.o" "sh006ImagePlaneShape.fe";
 relationship "link" ":lightLinker1" ":initialShadingGroup.message" ":defaultLightSet.message";
 relationship "link" ":lightLinker1" ":initialParticleSE.message" ":defaultLightSet.message";
@@ -371,6 +362,6 @@ connectAttr "sh006Audio.msg" "sh006.aud";
 connectAttr "sequencer1.msg" ":sequenceManager1.seqts[0]";
 connectAttr "defaultRenderLayer.msg" ":defaultRenderingList1.r" -na;
 dataStructure -fmt "raw" -as "name=externalContentTable:string=node:string=key:string=upath:uint32=upathcrc:string=rpath:string=roles";
-applyMetadata -fmt "raw" -v "channel\nname externalContentTable\nstream\nname v1.0\nindexType numeric\nstructure externalContentTable\n0\n\"st_BDG100_0060RN\" \"\" \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma\" 3405490775 \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma\" \"FileRef\"\n1\n\"SH006_CAMRN\" \"\" \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/cam/bdg_camera.ma\" 201127705 \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/cam/bdg_camera.ma\" \"FileRef\"\n2\n\"|__CAMERA__|sh006ImagePlane|sh006ImagePlaneShape\" \"imageName\" \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/panels/edit_01/BDG_100_006_01.jpg\" 2497651655 \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/panels/edit_01/BDG_100_006_01.jpg\" \"fileSequence;sourceImages\"\n3\n\"sh006Audio\" \"filename\" \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/wav/BDG100_006.wav\" 311865475 \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/wav/BDG100_006.wav\" \"audio\"\nendStream\nendChannel\nendAssociations\n" 
+applyMetadata -fmt "raw" -v "channel\nname externalContentTable\nstream\nname v1.0\nindexType numeric\nstructure externalContentTable\n0\n\"st_BDG100_0060RN\" \"\" \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma\" 3405490775 \"R:/01_SAISON_1/13_PRODUCTION/03_ASSETS/03_3D/st/st_100_0060/rig/st_BDG100_0060_rig.ma\" \"FileRef\"\n1\n\"TEMPRN\" \"\" \"C:/Users/guido.pollini/Desktop/MuTools/DEBUG_BADGERS/[02.06] bgd_camera.ma\" 1980589069 \"C:/Users/guido.pollini/Desktop/MuTools/DEBUG_BADGERS/[02.06] bgd_camera.ma\" \"FileRef\"\n2\n\"|__CAMERA__|sh006ImagePlane|sh006ImagePlaneShape\" \"imageName\" \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/panels/edit_01/BDG_100_006_01.jpg\" 2497651655 \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/panels/edit_01/BDG_100_006_01.jpg\" \"fileSequence;sourceImages\"\n3\n\"sh006Audio\" \"filename\" \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/wav/BDG100_006.wav\" 311865475 \"R:/01_SAISON_1/13_PRODUCTION/04_EPISODES/02_Fabrication_3D/BDG100/animatic/wav/BDG100_006.wav\" \"audio\"\nendStream\nendChannel\nendAssociations\n" 
 		-scn;
 // End of BDG100_006_lay_007.ma

@@ -58,41 +58,18 @@ if nullifyExceptions.exceptions ius not None:
 #------------------------------------------------------------------------------
 __version__ = '1.0.0'
 
-
-"""
-===============================================================================
---> You should try a * import; it's getting very boring to prefix everything...
-
-  from MuTools.MuUtils import *
-  from MuTools.MuCore  import *
-  from MuTools.MuUI    import *
-  from MuTools.MuScene import *
-
-JUST WATCH OUT FOR INTERNAL COLLISIONS!!!
-Or only for the main modules of MuTools:
-
-  from MuTools import *
-
-(by defining __all__ in the __init__ of MuTools)
-===============================================================================
-"""
-
-
-
 import MuTools.MuUtils as Utils
-from MuTools.MuCore import * 
+import MuTools.MuCore  as Core
 import MuTools.MuUI    as UI
 import MuTools.MuScene as Scene
 
 import maya.cmds as MC
 
-
-
-"""
 import sys
 muPath = r"C:\Users\guido.pollini\Desktop\MuTools"
 if muPath not in sys.path:
     sys.path.append(muPath)
+
 
 import MuTools.MuUtils     as Utils;     reload(Utils)
 import MuTools.MuCore      as Core;      reload(Core)
@@ -101,323 +78,62 @@ import MuTools.MuUI        as UI;        reload(UI)
 
 import DEBUG_BADGERS.finalizeLayoutBuild as FLB; reload(FLB)
 FLB.CameraPlatesLinker.link()
-"""
-
-
-class UndoChunkOpen(object):
-    def __init__(self, undoChunkName):
-        self._name = undoChunkName
-    def __enter__(self):
-        MC.undoInfo(chunkName=self._name, openChunk=True)
-
-    def __exit__(self, *args):
-        MC.undoInfo(chunkName=self._name, closeChunk=True)
 
 
 class CameraPlatesLinker(object):
-    def __init__(self):
-        self._linkErrors = []
+    _linkReport = []
 
-
-    def _getOrInvalidate(self, nodeName):
-        """ --> you should check for camera namespace integrity <-- """
-
-        candidates = Scene.listObjects(nodeName)
-        if len(candidates) != 1:
-            self._linkErrors.append('Name error for "{}"! Can\'t proceed.'.format(nodeName))
-            return None
-        else:
-            return candidates[0]
-              
-
-    def link(self):
+    @staticmethod
+    def link():
         print 'Linking'
         
+        subset = Scene.listObjects('*__SUBSET__', recursive=True)
+        print subset
 
+        #platesFolder            = getOrInvalidate("__SET__")
 
+        """
+        cameraRigFolder         = getOrInvalidate("__CAMERA__")
+        camera_global           = getOrInvalidate("camera_global")
+        cameras_holder          = getOrInvalidate("cameras_holder")
+        cameraHD_controller     = getOrInvalidate("cameraHD_controller")
+        camera_aim              = getOrInvalidate("camera_aim")
+        realCameraHD            = getOrInvalidate("cameraHD")
+        realCameraPROJ          = getOrInvalidate("cameraPROJ")
+        controllerTemplate      = getOrInvalidate("plateCtrl") #It's inside the cameraRig
+        platesFolder            = getOrInvalidate("__SET__")
+        platesList              = []
+        """
 
+    @staticmethod
+    def _loggedMuNode(nodeName, errorLog):
+        """
+        Return the MuNode wrapper if possible, 
+        otherwise None and put the nodeName in the passed
+        list...
+        """
 
-
-        #----------------------------------------------------------------------
-        # Collect the required nodes
-        #----------------------------------------------------------------------
+        node = None
         
-        # No namespace, no Dag-ambiguity, worldChildren!         
-        cameraFolder         = self._getOrInvalidate('__CAMERA__')
-        platesFolder         = self._getOrInvalidate('__SET__')
-
-
-        # Namespaced, but no Dag-ambiguity allowed!
-        controllerTemplate   = self._getOrInvalidate('*:__plate_controller')
-
-        cameraAim            = self._getOrInvalidate('*:camera_aim')
-        cameraGlobal         = self._getOrInvalidate('*:camera_global')
-
-        camerasHolder        = self._getOrInvalidate('*:cameras_holder')
-        cameraBG             = self._getOrInvalidate('*:cameraBG')
-        
-        cameraHD             = self._getOrInvalidate('*:cameraHD')
-        cameraHDController   = self._getOrInvalidate('*:cameraHD_controller')
-
-        cameraPROJ           = self._getOrInvalidate('*:cameraPROJ')
-        cameraPROJController = self._getOrInvalidate('*:cameraPROJ_controller')
-
-        if self._linkErrors:
-            print 'FATAL -->', self._linkErrors
-            return
-
-        # Extra
         try:
-            animaticImagePlane = cameraFolder.children(type='imagePlaneTransform')[0]
+            node = Core.MuNode(nodeName)
         except:
-            print 'FATAL --> Animatic image plane, missing or ambiguous'
-            return 
+            errorLog.append(nodeName)
         
-        
+        return node
+
+    @staticmethod
+    def _getOrInvalidate(object):
+        #Look for the object XXXXXXobject (namespace irrelevant), invalidate an None if missing
+        results = mc.ls("*" + object, recursive=True)
+        if len(results) != 1:
+            LINKING_REPORT[0] += " - \"" + object + "\" is missing!\n"
+            LINKING_STATUS[0] = "INVALID"
+            return None 
+        else:
+            return results[0]    
 
 
-            
-        #----------------------------------------------------------------------
-        # First check on plates
-        #----------------------------------------------------------------------
-
-        plates = platesFolder.children(type='locatorTransform')
-        if not plates:
-            print 'FATAL --> No plates to link, sorry'
-            return 
-
-        numOfPlates = len(plates)
-        platesList = [None] * numOfPlates # The plate list with correct order
-        
-        # Order plates by 'priority'
-        for plate in plates:
-            # Plate priority is the third tag from left: XXXXXXX_###_GlobalSRT_XXXXXXX
-            priority = int(plate.name().split('_')[-3])
-            platesList[numOfPlates - priority] = plate 
-           
-
-
-
-
-        #----------------------------------------------------------------------
-        # platesHolder
-        #----------------------------------------------------------------------
-
-        platesHolder = Core.Transform.create(name='platesHolder', parent=platesFolder)
-
-        platesHolder.addPlug(name='size', type='double', defaultValue=1)
-        #platesHolder.size.setKeyable(False)
-
-        platesHolder.size >> (platesHolder.sx,
-                              platesHolder.sy)
-
-        cameraBGFocalFactor = self._getOrInvalidate('*:__cameraBGFocalFactor')
-        cameraBGFocalFactor.outputX >> platesHolder.size
-
-        # Put the 'placeHolder' where the fartest plate is
-        platesHolder.tz.set(-100 * (numOfPlates - 1))
-
-
-
-
-        #----------------------------------------------------------------------
-        # Manage cameras
-        #----------------------------------------------------------------------
-        
-        # Move the whole rig far fro the origin
-        cameraGlobal.t.set(0, 0, 100)
-        cameraGlobal.r.set(0, 0, 0)
-
-        # Set the aim in the same position of 'placeHolder'
-        cameraAim.t.set(0, 0, -100 * (numOfPlates - 1) - 100)
-
-        
-        #camerasHolder.t.set(0, 0, 0)
-        # Badgers has very large assets
-        camerasHolder.controllers_size.set(4.5)
-
-        # 'platesHolder' must follow 'cameraAim'
-        'UNWRAPPED'; MC.parentConstraint(cameraAim.name(), 'platesHolder', mo=True)
-        
-        # ???
-        cameraMarker = Transform.create(name='cameraMarker', parent=platesHolder)
-
-        'UNWRAPPED'; MC.pointConstraint(camerasHolder.name(), 'cameraMarker', mo=False) 
-        
-
-
-
-        #----------------------------------------------------------------------
-        # Plates
-        #----------------------------------------------------------------------
-        
-        maxWidth  = 0.0
-        maxHeight = 0.0
-
-        for i, plate in enumerate(platesList):
-
-            # Get the plate size (by its boundingBox)
-            plateWidth  = plate.bbsx.get()
-            plateHeight = plate.bbsy.get()
-            maxWidth  = max(maxWidth,  plateWidth)   
-            maxHeight = max(maxHeight, plateHeight) 
-            
-
-
-            # Hide the locator of the plate 
-            # (Note that plate is a pure <locatorTransform>)
-            plate.shapes()[0].visibility.set(0)
-            
-
-            # Create new controller
-            newControllerName = controllerTemplate.name() + str(numOfPlates- i)
-
-            'UNWRAPPED'; MC.duplicate(controllerTemplate.name(), n=newControllerName)
-            newController = MuNode(newControllerName)
-
-            newController.visibility.setLocked().setVisible(False)
-
-            newController.rz.setLocked().setVisible(False) # .lock().hide()
-            newController.ry.setLocked().setVisible(False)
-            newController.rz.setLocked().setVisible(False)
-            
-            newController.tz.set(-100 * i)
-            
-            newControllerOffset = newController.incapsulate(newController.name() + "_offset")
-            
-            print newController.shapes()
-            # Create cluster for rescaling Interface
-
-            newControllerShapeNames = [x.name() for x in newController.shapes()]
-            'UNWRAPPED'; MC.select(newControllerShapeNames, r=True)
-            'UNWRAPPED'; clusterTransform = MuNode(mc.cluster(name=newController.name() + "Clustering", relative=True)[1])
-            
-            clusterTransform.visibility.set(0)
-
-            camerasHolder.controllers_size >> (clusterTransform.sx, 
-                                               clusterTransform.sy)
-
-            clusterTransform.setParent(newControllerOffset)
-
-
-            newControllerOffset.setParent(platesHolder, absolute=True)
-
-
-
-
-
-            # MAKE PLATES DYNAMIC
-            # Add the Zs of controller and offset to get the Z relative to "platesHolder"
-            zCoordNode = DGNode.create('addDoubleLinear', name=newController.name() + '_zCoord')
-            newController.tz       >> zCoordNode.input1
-            newControllerOffset.tz >> zCoordNode.input2
-
-
-            # Compute orthogonal distance 
-            zDistanceNode = DGNode.create('plusMinusAverage', name=newController.name() + '_zDistance')
-            zDistanceNode.operation.set(2) # Subtract
-            
-
-            # zDistanceNode.__getattr__('input1D').__getitem__(0), the second one being a method of MuPlug
-            cameraMarker.tz   >> zDistanceNode.input1D[0] 
-            zCoordNode.output >> zDistanceNode.input1D[1]
-
-
-            # Create a factorNode to have a first approximation of size
-            factorNode = DGNode.create('multDoubleLinear', name=newController.name() + '_factor')
-            zDistanceNode.output1D >> factorNode.input1 # Branch HERE the FOCAL LENGHT
-            factorNode.input2.set(.001) # <-- plug the factor HERE!!!
-            
-            factorNode.output >> (newControllerOffset.sx,
-                                  newControllerOffset.sy)
-
-
-
-            # The real plate is still unlinked to solve the rotation bug; do constraint now
-            'UNWRAPPED'; MC.parentConstraint(newController.name(), plate.name(), mo=False)        
-
-            # Get the meshTransform child of the plate
-            meshTrans = plate.children(type='meshTransform')[0]
-            
-            # Connect visibility and lock to the controller
-            meshTrans.overrideDisplayType.set(2) # Reference
-            newController.lockPlate >> meshTrans.overrideEnabled
-            newController.showPlate >> meshTrans.visibility
-            newController.rotX      >> meshTrans.rx
-            newController.rotY      >> meshTrans.ry
-            newController.rotZ      >> meshTrans.rz
-
-           
-
-            # multiply togheter the dynamic plate scale with the controller scale
-            trueSx = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleX')
-            trueSy = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleY')
-            trueSz = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleZ')
-
-            newController.sx >> trueSx.input1
-            newController.sy >> trueSy.input1
-            newController.sz >> trueSz.input1
-            
-            factorNode.output >> (trueSx.input2, 
-                                  trueSy.input2, 
-                                  trueSz.input2)
-
-            # Don't forget the focal correction of PROJ
-            focalTrueSx = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleX')
-            focalTrueSy = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleY')
-            focalTrueSz = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleZ')
-            
-            trueSx.output >> focalTrueSx.input1
-            trueSy.output >> focalTrueSy.input1
-            trueSz.output >> focalTrueSz.input1
-            
-            # It HAS to be the full S scale
-            # Otherwise, the bug's still there
-            platesHolder.sx >> (focalTrueSx.input2, 
-                                focalTrueSy.input2, 
-                                focalTrueSz.input2)
-
-            # finally link all together...
-            focalTrueSx.output >> plate.sx
-            focalTrueSy.output >> plate.sy
-            focalTrueSz.output >> plate.sz
-
-        """
-        # Hide controller template
-        controllerTemplate.visibility.set(0)
-
-        # scale the plane following the frustum
-        # mayaUnits=cm, focalLenght=mm, cameraAperture=inches, 1inch=2.54cm
-        apertureX = (maxWidth  * 0.1 * 6.0) / (100 * 2.54) # The size in cm of the first plate (1/10 always)
-        apertureY = (maxHeight * 0.1 * 6.0) / (100 * 2.54) # Divide for 100cm, multiply for 6cm and convert in inches
-        #mc.setAttr(realCameraPROJ + "Shape.horizontalFilmAperture", apertureX)
-        #mc.setAttr(realCameraPROJ + "Shape.verticalFilmAperture", apertureY)
-        
-        # position the imagePlane correctly
-        candidates = mc.listRelatives(cameraRigFolder, type="imagePlane", allDescendents=True)
-        if candidates != None:
-            # ImagePlane found: connect to cameraHD attributes
-            imagePlaneShape = candidates[0]
-            mc.connectAttr(cameraHD_controller + ".show", imagePlaneShape + ".visibility")
-            # Alpha sensitivity
-            mc.createNode("multiplyDivide", n="imagePlaneAlphaFactor")
-            mc.connectAttr(cameraHD_controller + ".opacity", "imagePlaneAlphaFactor.input1X")
-            mc.setAttr    ("imagePlaneAlphaFactor.input2X", 100)
-            mc.setAttr    ("imagePlaneAlphaFactor.operation", 2) # Divide
-            mc.connectAttr("imagePlaneAlphaFactor.outputX", imagePlaneShape + ".alphaGain")
-            # Adapt depth (just put the imagePlane a bit farther than nearClippingPlane)
-            mc.createNode("addDoubleLinear", n="depthCorrection")
-            mc.setAttr    ("depthCorrection.input2", 0.01)
-            mc.connectAttr(cameras_holder  + ".near", "depthCorrection.input1")
-            mc.connectAttr("depthCorrection.output", imagePlaneShape + ".depth")
-            # FilmGate offset moves the imagePlane too; correct:
-            mc.connectAttr(realCameraHD + "Shape.horizontalFilmOffset", imagePlaneShape + ".offsetX")
-            mc.connectAttr(realCameraHD + "Shape.verticalFilmOffset", imagePlaneShape + ".offsetY")
-        """
-
-linker = CameraPlatesLinker()
-with UndoChunkOpen('link'):
-    linker.link()
 
 
 
@@ -536,9 +252,6 @@ def _OLD_linkCameraAndPlates(*args):
         mc.createNode("transform", n="cameraMarker", p="platesHolder")
         mc.pointConstraint(cameras_holder, "cameraMarker", mo=False) 
         
-
-
-
         maxWidth  = 0.0
         maxHeight = 0.0
         for (i, plate) in enumerate(platesList):

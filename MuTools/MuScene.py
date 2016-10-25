@@ -35,10 +35,12 @@ class FileError(Exception):
     """
     Generic exception to catch file errors
     """
-    def __init__(self, message):
-        MC.error('[FILE ERROR] ' + message)
+    def __init__(self, message, data):
+        self.message = message
+        self.data    = data
 
-
+    def __str__(self):
+        return '[FileError] ' + self.message
 
 
 
@@ -133,28 +135,81 @@ def isolatedNodes(**kwargs):
     
     return isolatedNodes                
 
-def load(filePath, loadReferences=False):
+
+
+def listObjects(*args, **kwargs):
+    """
+    Wrap around 'ls'; return a List of DGNodes
+
+    NOTES
+    - 'ls' returns always the minimalilstName of a DagNode (it's enough)
+    - 'ls' returns an empty list if nothing matches
+    """
+    nodes = MC.ls(*args, **kwargs)
+    return Core.List(nodes)
+
+
+
+
+def load(filePath, loadReferences=True):
+    """
+    ---------------------------------------------------------------------------
+    DESCRIPTION
+      Load a binary or ASCII scene. 
+       - Disable error dialogs;
+       - Return True if no error was found.
+      Raise a <FileError> if...
+    
+
+    ARGUMENTS
+      filePath <str>
+
+      loadReferences=True <bool>
+        If True, load all references with no limit depth; otherwise, load 
+        only the scene container.
+
+
+    RETURN
+      <bool>
+    ---------------------------------------------------------------------------      
+    """
+
     if not MC.file(filePath, query=True, exists=True):
-        raise FileError('The path "{}" is wrong!'.format(filePath))
+        raise FileError(message='The file "{}" doesn\'t exist!'.format(filePath), data=filePath)
     
-    # type --> [knownTypeStr], an list (!) with a type known by Maya;
-    #      --> None, a type of file Maya can't handle.    
+    # Allow only ASCII and binary loads
     fileType = MC.file(filePath, query=True, type=True)
+
+    # type --> [knownTypeStr], a list (!);
+    #      --> None, a type of file Maya can't handle. 
     if not fileType or fileType[0] not in ('mayaAscii', 'mayaBinary'):
-        raise FileError('The file "{}" is not a Maya ASCII or binary!'.format(filePath))
+        raise FileError(message='The file "{}" is not a Maya ASCII or binary!'.format(filePath), data=filePath)
             
-    loadReferenceDepth = 'all' if loadReferences else 'none'
+    # Disable the error dialogs that may block the UI in case of MEL errors
+    MC.file(prompt=False)
     
-    MC.file(filePath, 
-            open=True,    
-            force=True, 
-            loadReferenceDepth=loadReferenceDepth,             
-            ignoreVersion=True, 
-            options="v=0;")  
+    MC.file(
+        filePath, 
+        open=True,    
+        force=True, 
+        loadReferenceDepth='all' if loadReferences else 'none',             
+        ignoreVersion=True,
+        options='v=0;', 
+    )  
             
-    # Add the filePath to the 'Recent Files' ('optionVars' stuff...)            
+    # Add the filePath to the 'Recent Files' ( it's optionVar stuff...)            
     melCommand = 'addRecentFile("{0}", "{1}");'.format(filePath, fileType)
     MM.eval(melCommand)
+
+
+    # Return True if no error was found
+    # (unluckily, it doesn't say the type of error)
+    return not MC.file(query=True, errorStatus=True)
+
+
+
+
+
 
 def loadPlugin(*args):
     """
