@@ -57,7 +57,7 @@ if nullifyExceptions.exceptions ius not None:
 
 #------------------------------------------------------------------------------
 __version__ = '1.0.0'
-
+print 'Version:', __version__
 
 """
 ===============================================================================
@@ -104,16 +104,6 @@ FLB.CameraPlatesLinker.link()
 """
 
 
-class UndoChunkOpen(object):
-    def __init__(self, undoChunkName):
-        self._name = undoChunkName
-    def __enter__(self):
-        MC.undoInfo(chunkName=self._name, openChunk=True)
-
-    def __exit__(self, *args):
-        MC.undoInfo(chunkName=self._name, closeChunk=True)
-
-
 class CameraPlatesLinker(object):
     def __init__(self):
         self._linkErrors = []
@@ -148,7 +138,8 @@ class CameraPlatesLinker(object):
 
 
         # Namespaced, but no Dag-ambiguity allowed!
-        controllerTemplate   = self._getOrInvalidate('*:__plate_controller')
+        controllerTemplate   = self._getOrInvalidate('*:plate_controller')
+        pivotTemplate        = self._getOrInvalidate('*:plate_pivot')
 
         cameraAim            = self._getOrInvalidate('*:camera_aim')
         cameraGlobal         = self._getOrInvalidate('*:camera_global')
@@ -186,14 +177,14 @@ class CameraPlatesLinker(object):
             print 'FATAL --> No plates to link, sorry'
             return 
 
-        numOfPlates = len(plates)
-        platesList = [None] * numOfPlates # The plate list with correct order
+        numPlates = len(plates)
+        platesList = [None] * numPlates # The plate list with correct order
         
         # Order plates by 'priority'
         for plate in plates:
             # Plate priority is the third tag from left: XXXXXXX_###_GlobalSRT_XXXXXXX
             priority = int(plate.name().split('_')[-3])
-            platesList[numOfPlates - priority] = plate 
+            platesList[numPlates - priority] = plate 
            
 
 
@@ -203,7 +194,7 @@ class CameraPlatesLinker(object):
         # platesHolder
         #----------------------------------------------------------------------
 
-        platesHolder = Core.Transform.create(name='platesHolder', parent=platesFolder)
+        platesHolder = Transform.create(name='platesHolder', parent=platesFolder)
 
         platesHolder.addPlug(name='size', type='double', defaultValue=1)
         #platesHolder.size.setKeyable(False)
@@ -211,11 +202,11 @@ class CameraPlatesLinker(object):
         platesHolder.size >> (platesHolder.sx,
                               platesHolder.sy)
 
-        cameraBGFocalFactor = self._getOrInvalidate('*:__cameraBGFocalFactor')
+        cameraBGFocalFactor = self._getOrInvalidate('*:cameraBGFocalFactor')
         cameraBGFocalFactor.outputX >> platesHolder.size
 
         # Put the 'placeHolder' where the fartest plate is
-        platesHolder.tz.set(-100 * (numOfPlates - 1))
+        platesHolder.tz.set(-100 * (numPlates - 1))
 
 
 
@@ -229,7 +220,7 @@ class CameraPlatesLinker(object):
         cameraGlobal.r.set(0, 0, 0)
 
         # Set the aim in the same position of 'placeHolder'
-        cameraAim.t.set(0, 0, -100 * (numOfPlates - 1) - 100)
+        cameraAim.t.set(0, 0, -100 * (numPlates - 1) - 100)
 
         
         #camerasHolder.t.set(0, 0, 0)
@@ -251,6 +242,8 @@ class CameraPlatesLinker(object):
         # Plates
         #----------------------------------------------------------------------
         
+        'DEV'; sizeList = []
+
         maxWidth  = 0.0
         maxHeight = 0.0
 
@@ -261,43 +254,72 @@ class CameraPlatesLinker(object):
             plateHeight = plate.bbsy.get()
             maxWidth  = max(maxWidth,  plateWidth)   
             maxHeight = max(maxHeight, plateHeight) 
-            
+            'DEV'; sizeList.append((plateWidth, plateHeight))
 
 
             # Hide the locator of the plate 
             # (Note that plate is a pure <locatorTransform>)
-            plate.shapes()[0].visibility.set(0)
+            plate.shapes()[0].hide()
             
 
-            # Create new controller
-            newControllerName = controllerTemplate.name() + str(numOfPlates- i)
+
+
+            #-------------------------------------------------------------------------------
+            # Plate controller/pivot creation
+            #-------------------------------------------------------------------------------
+            """
+            def customDuplicate(originalName):
+                newName = originalName + str(numPlates - 1)
+                'UNWRAPPED'; MC.duplicate(originalName, n=newName)
+                newObj = MUNode(newName)
+                
+                # Lock and hide teh visibility
+                newController.visibility.setLocked()\
+                                        .setVisible(False)
+                return 
+            """
+
+            newControllerName = controllerTemplate.name() + str(numPlates - i)
+            #newPivotName      = pivotTemplate.name()      + str(numPlates - i) 
+            
+            #customDuplicate
+
 
             'UNWRAPPED'; MC.duplicate(controllerTemplate.name(), n=newControllerName)
+            #'UNWRAPPED'; MC.duplicate(pivotTemplate.name(),      n=newPivotName)            
             newController = MuNode(newControllerName)
+            #newPivot      = MuNode(newPivotName)
+            
+            newController.visibility.lock().hide()
 
-            newController.visibility.setLocked().setVisible(False)
-
-            newController.rz.setLocked().setVisible(False) # .lock().hide()
-            newController.ry.setLocked().setVisible(False)
-            newController.rz.setLocked().setVisible(False)
+            newController.rx.lock().hide()
+            newController.ry.lock().hide()
+            newController.rz.lock().hide()
             
             newController.tz.set(-100 * i)
             
             newControllerOffset = newController.incapsulate(newController.name() + "_offset")
             
-            print newController.shapes()
             # Create cluster for rescaling Interface
-
             newControllerShapeNames = [x.name() for x in newController.shapes()]
             'UNWRAPPED'; MC.select(newControllerShapeNames, r=True)
-            'UNWRAPPED'; clusterTransform = MuNode(mc.cluster(name=newController.name() + "Clustering", relative=True)[1])
+            'UNWRAPPED'; clusterTransform = MuNode(MC.cluster(name=newController.name() + "Clustering", relative=True)[1])
             
-            clusterTransform.visibility.set(0)
+            clusterTransform.hide()
 
             camerasHolder.controllers_size >> (clusterTransform.sx, 
                                                clusterTransform.sy)
 
-            clusterTransform.setParent(newControllerOffset)
+
+            # To avoid z-deformation of the controller, inverse the controllers' size
+            clusterSzCorrection = DGNode.create('multiplyDivide', name=newController.name() + '__szCorrection')
+            clusterSzCorrection.operation.set(2) # Division
+            clusterSzCorrection.input1X.set(1)
+            camerasHolder.controllers_size >> clusterSzCorrection.input2X
+            clusterSzCorrection.outputX >> clusterTransform.sz 
+
+
+            clusterTransform.setParent(newControllerOffset, absolute=False)
 
 
             newControllerOffset.setParent(platesHolder, absolute=True)
@@ -339,10 +361,72 @@ class CameraPlatesLinker(object):
             # Get the meshTransform child of the plate
             meshTrans = plate.children(type='meshTransform')[0]
             
+
+
+
+
+
+
+
+
+
+            #-------------------------------------------------------------------------------
+            # Fake mesh (<imagePlane>) creation
+            #-------------------------------------------------------------------------------
+
+            # NOTE: this create returns the wrapped shape, not the extra transform
+            fakeMesh = DGNode.create('imagePlane', name=meshTrans.name() + '__fakeMeshShape')
+            fakeMesh.lockedToCamera.set(False)
+            fakeMesh.width.set(plateWidth)
+            fakeMesh.height.set(plateHeight)
+
+            # Hide frame, display referenced
+            fakeMesh.frameVisibility.set(0)
+            fakeMesh.overrideEnabled.set(1)
+            fakeMesh.overrideDisplayType.set(2) # 2 --> Reference
+
+            shadingEngine   = meshTrans.mesh().shadingEngine()
+            shader          = shadingEngine.surfaceShader.inputPlug().node()
+            fileTextureNode = shader.color.inputPlug().node()
+            fakeMesh.imageName.set(fileTextureNode.fileTextureName.get())
+            fakeMesh.textureFilter.set(1) # 1 --> Bilinear
+
+            
+            fakeMeshParent = fakeMesh.parent()
+            fakeMeshParent.rename(meshTrans.name() + '__fakeMesh')\
+                          .setParent(meshTrans, absolute=False)
+            """
+            Or:
+            fakeMesh.parent().rename(meshTrans.name() + '__fakeMesh')\
+                             .setParent(meshTrans, absolute=False)
+            """
+
+
+            # Visibility control
+            newController.showPlate >> fakeMesh.visibility
+
+            # Make the original mesh invisible
+            meshTrans.mesh().hide()
+
+
+
+
+
+
+
+            """
+            PIVOT CHANGE
+             - pPlane2.transMinusRotatePivotX:   0.0 --> -23.2399443858
+             - pPlane2.transMinusRotatePivotZ:   0.0 --> 11.6290221059
+             - pPlane2.scalePivotZ:   0.0 --> -11.6290221059
+             - pPlane2.scalePivotX:   0.0 --> 23.2399443858
+             - pPlane2.rotatePivotX:   0.0 --> 23.2399443858
+             - pPlane2.rotatePivotZ:   0.0 --> -11.6290221059
+            """
+
+
+
             # Connect visibility and lock to the controller
-            meshTrans.overrideDisplayType.set(2) # Reference
-            newController.lockPlate >> meshTrans.overrideEnabled
-            newController.showPlate >> meshTrans.visibility
             newController.rotX      >> meshTrans.rx
             newController.rotY      >> meshTrans.ry
             newController.rotZ      >> meshTrans.rz
@@ -353,6 +437,19 @@ class CameraPlatesLinker(object):
             trueSx = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleX')
             trueSy = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleY')
             trueSz = DGNode.create('multDoubleLinear', name=plate.name() + '_trueScaleZ')
+            
+
+
+            """"""""""""""""""""""""""""""""""""""""""""""""""""""""" 
+            MORE READABLE???
+
+            trueSx, trueSy, trueSz = DGNode.create('multDoubleLinear', names=[
+                plate.name() + '_trueScaleX', 
+                plate.name() + '_trueScaleY', 
+                plate.name() + '_trueScaleZ'
+            ])
+            """""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
 
             newController.sx >> trueSx.input1
             newController.sy >> trueSy.input1
@@ -366,7 +463,18 @@ class CameraPlatesLinker(object):
             focalTrueSx = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleX')
             focalTrueSy = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleY')
             focalTrueSz = DGNode.create('multDoubleLinear', name=plate.name() + '_focal_trueScaleZ')
-            
+ 
+
+            """"""""""""""""""""""""""""""""""""""""""""""""""""""""" 
+            MORE READABLE??? ... Nope
+
+            focalTrueSx, focalTrueSy, focalTrueSz = DGNode.create('multDoubleLinear', names=[
+                plate.name() + '_focal_trueScaleX', 
+                plate.name() + '_focal_trueScaleY',
+                plate.name() + '_focal_trueScaleZ'
+            ])
+            """""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
             trueSx.output >> focalTrueSx.input1
             trueSy.output >> focalTrueSy.input1
             trueSz.output >> focalTrueSz.input1
@@ -382,17 +490,27 @@ class CameraPlatesLinker(object):
             focalTrueSy.output >> plate.sy
             focalTrueSz.output >> plate.sz
 
-        """
+        
         # Hide controller template
-        controllerTemplate.visibility.set(0)
+        controllerTemplate.hide()
+        
+        'DEV';
+        for x in sizeList: 
+            print x
+        '/DEV';
 
-        # scale the plane following the frustum
-        # mayaUnits=cm, focalLenght=mm, cameraAperture=inches, 1inch=2.54cm
+
+        # ??? Scale the plane following the frustum
+        # ??? mayaUnits=cm, focalLenght=mm, cameraAperture=inches, 1inch=2.54cm
         apertureX = (maxWidth  * 0.1 * 6.0) / (100 * 2.54) # The size in cm of the first plate (1/10 always)
         apertureY = (maxHeight * 0.1 * 6.0) / (100 * 2.54) # Divide for 100cm, multiply for 6cm and convert in inches
-        #mc.setAttr(realCameraPROJ + "Shape.horizontalFilmAperture", apertureX)
-        #mc.setAttr(realCameraPROJ + "Shape.verticalFilmAperture", apertureY)
         
+        for cam in (cameraHD, cameraPROJ):
+            camShape = cam.shapes()[0]
+            camShape.horizontalFilmAperture.set(apertureX)
+            camShape.verticalFilmAperture.set(apertureY)
+        
+        """
         # position the imagePlane correctly
         candidates = mc.listRelatives(cameraRigFolder, type="imagePlane", allDescendents=True)
         if candidates != None:

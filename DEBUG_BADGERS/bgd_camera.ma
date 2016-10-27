@@ -1,6 +1,6 @@
 //Maya ASCII 2015 scene
-//Name: [02.07] bgd_camera.ma
-//Last modified: Tue, Oct 25, 2016 11:06:20 AM
+//Name: [09] bgd_camera.ma
+//Last modified: Thu, Oct 27, 2016 10:16:51 AM
 //Codeset: 1252
 requires maya "2015";
 currentUnit -l centimeter -a degree -t film;
@@ -11,12 +11,12 @@ fileInfo "cutIdentifier" "201503261530-955654";
 fileInfo "osv" "Microsoft Windows 7 Business Edition, 64-bit Windows 7 Service Pack 1 (Build 7601)\n";
 createNode transform -s -n "persp";
 	setAttr ".v" no;
-	setAttr ".t" -type "double3" 47.002856599712494 39.696328949725071 53.046105415893045 ;
-	setAttr ".r" -type "double3" -29.138352714359208 -2121.8000000003276 -2.0236220545178324e-015 ;
+	setAttr ".t" -type "double3" 35.594194504868774 28.87169859961514 37.450969054667297 ;
+	setAttr ".r" -type "double3" -32.738352712060063 -2109.7999999996214 4.9687650164462114e-015 ;
 createNode camera -s -n "perspShape" -p "persp";
 	setAttr -k off ".v" no;
 	setAttr ".fl" 34.999999999999993;
-	setAttr ".coi" 87.894863807976037;
+	setAttr ".coi" 56.721121115143816;
 	setAttr ".imn" -type "string" "persp";
 	setAttr ".den" -type "string" "persp_depth";
 	setAttr ".man" -type "string" "persp_mask";
@@ -1876,7 +1876,7 @@ createNode transform -n "__internals" -p "camera_rig";
 	setAttr -l on -k off ".sx";
 	setAttr -l on -k off ".sy";
 	setAttr -l on -k off ".sz";
-createNode transform -n "__plate_controller" -p "__internals";
+createNode transform -n "plate_controller" -p "__internals";
 	addAttr -ci true -sn "showResizingArrows" -ln "showResizingArrows" -min 0 -max 
 		1 -en "OFF:ON" -at "enum";
 	addAttr -ci true -sn "ROTATION_OFFSET" -ln "ROTATION_OFFSET" -min 0 -max 0 -en "--------------" 
@@ -1895,7 +1895,7 @@ createNode transform -n "__plate_controller" -p "__internals";
 	setAttr -cb on ".PLATE_OPTIONS";
 	setAttr -k on ".lockPlate" 1;
 	setAttr -k on ".showPlate" 1;
-createNode nurbsCurve -n "__plate_controllerShape_2" -p "__plate_controller";
+createNode nurbsCurve -n "plate_controllerShape_0" -p "plate_controller";
 	setAttr -k off ".v";
 	setAttr ".ove" yes;
 	setAttr ".ovc" 17;
@@ -1923,7 +1923,7 @@ createNode nurbsCurve -n "__plate_controllerShape_2" -p "__plate_controller";
 		1.038962099152745e-014 13.636247074798371 2.7136728028332184
 		-11.060845530016083 13.184885057749252 2.7136728028332193
 		;
-createNode nurbsCurve -n "__plate_controllerShape_1" -p "__plate_controller";
+createNode nurbsCurve -n "plate_controllerShape_1" -p "plate_controller";
 	setAttr -k off ".v";
 	setAttr ".ove" yes;
 	setAttr ".ovc" 17;
@@ -1950,6 +1950,67 @@ createNode nurbsCurve -n "__plate_controllerShape_1" -p "__plate_controller";
 		11.936766142264856 14.229010713502518 2.7136728028332184
 		1.0826557830156371e-014 14.716116588762709 2.7136728028332184
 		-11.936766142264879 14.229010713502518 2.7136728028332184
+		;
+createNode transform -n "plate_pivot" -p "__internals";
+createNode nurbsCurve -n "plate_pivotShape_0" -p "plate_pivot";
+	setAttr -k off ".v";
+	setAttr ".ove" yes;
+	setAttr ".ovc" 22;
+	setAttr ".cc" -type "nurbsCurve" 
+		3 8 2 no 3
+		13 -2 -1 0 1 2 3 4 5 6 7 8 9 10
+		11
+		4.2187347930125085 4.2187347930125014 5.8159335252307329
+		-6.8067116468118607e-016 5.9661919603335365 5.8159335252307329
+		-4.2187347930125041 4.2187347930125041 5.8159335252307329
+		-5.9661919603335365 1.7288531677669272e-015 5.8159335252307338
+		-4.2187347930125059 -4.2187347930125032 5.8159335252307347
+		-1.7977300745568685e-015 -5.9661919603335383 5.8159335252307347
+		4.2187347930125014 -4.218734793012505 5.8159335252307347
+		5.9661919603335365 -3.2044533403514309e-015 5.8159335252307338
+		4.2187347930125085 4.2187347930125014 5.8159335252307329
+		-6.8067116468118607e-016 5.9661919603335365 5.8159335252307329
+		-4.2187347930125041 4.2187347930125041 5.8159335252307329
+		;
+createNode nurbsCurve -n "plate_pivotShape_1" -p "plate_pivot";
+	setAttr -k off ".v";
+	setAttr ".ove" yes;
+	setAttr ".ovc" 22;
+	setAttr ".cc" -type "nurbsCurve" 
+		3 8 2 no 3
+		13 -2 -1 0 1 2 3 4 5 6 7 8 9 10
+		11
+		3.3989203666467023 3.3989203666466969 5.8159335252307329
+		-5.4839832275210654e-016 4.8067992799378958 5.8159335252307329
+		-3.3989203666466992 3.3989203666466992 5.8159335252307329
+		-4.8067992799378958 1.3928901747029669e-015 5.8159335252307338
+		-3.3989203666467005 -3.3989203666466983 5.8159335252307347
+		-1.4483824331089017e-015 -4.8067992799378967 5.8159335252307347
+		3.3989203666466969 -3.3989203666466996 5.8159335252307347
+		4.8067992799378958 -2.5817412700436707e-015 5.8159335252307338
+		3.3989203666467023 3.3989203666466969 5.8159335252307329
+		-5.4839832275210654e-016 4.8067992799378958 5.8159335252307329
+		-3.3989203666466992 3.3989203666466992 5.8159335252307329
+		;
+createNode nurbsCurve -n "plate_pivotShape_2" -p "plate_pivot";
+	setAttr -k off ".v";
+	setAttr ".ove" yes;
+	setAttr ".ovc" 22;
+	setAttr ".cc" -type "nurbsCurve" 
+		3 8 2 no 3
+		13 -2 -1 0 1 2 3 4 5 6 7 8 9 10
+		11
+		3.8019862240500504 3.8019862240500442 5.8159335252307329
+		-6.1343092614219695e-016 5.3768204820072496 5.8159335252307329
+		-3.8019862240500464 3.8019862240500464 5.8159335252307329
+		-5.3768204820072496 1.558068058258162e-015 5.8159335252307338
+		-3.8019862240500482 -3.8019862240500459 5.8159335252307347
+		-1.6201409458936376e-015 -5.3768204820072514 5.8159335252307347
+		3.8019862240500442 -3.8019862240500473 5.8159335252307347
+		5.3768204820072496 -2.8879007696351259e-015 5.8159335252307338
+		3.8019862240500504 3.8019862240500442 5.8159335252307329
+		-6.1343092614219695e-016 5.3768204820072496 5.8159335252307329
+		-3.8019862240500464 3.8019862240500464 5.8159335252307329
 		;
 createNode joint -n "__controllersVisualScaler" -p "__internals";
 	addAttr -ci true -sn "liw" -ln "lockInfluenceWeights" -min 0 -max 1 -at "bool";
@@ -3232,9 +3293,35 @@ createNode multDoubleLinear -n "globalScalePROJ";
 createNode multiplyDivide -n "normalizeFocalPROJ";
 	setAttr ".op" 2;
 	setAttr ".i2" -type "float3" 60 1 1 ;
-createNode multiplyDivide -n "__cameraBGFocalFactor";
+createNode multiplyDivide -n "cameraBGFocalFactor";
 	setAttr ".op" 2;
 	setAttr ".i1" -type "float3" 60 0 0 ;
+createNode hyperGraphInfo -n "nodeEditorPanel2Info";
+createNode hyperView -n "hyperView1";
+	setAttr ".vl" -type "double2" -333.718487394958 -584.34873949579821 ;
+	setAttr ".vh" -type "double2" 1273.0042016806724 259.34873949579838 ;
+	setAttr ".dag" no;
+createNode hyperLayout -n "hyperLayout1";
+	setAttr ".ihi" 0;
+	setAttr -s 9 ".hyp";
+	setAttr ".hyp[0].x" 530;
+	setAttr ".hyp[0].y" -177.14285278320312;
+	setAttr ".hyp[0].nvs" 1920;
+	setAttr ".hyp[1].x" 530;
+	setAttr ".hyp[1].y" -72.857139587402344;
+	setAttr ".hyp[1].nvs" 1920;
+	setAttr ".hyp[2].x" 1.4285714626312256;
+	setAttr ".hyp[2].y" -180;
+	setAttr ".hyp[2].nvs" 1920;
+	setAttr ".hyp[3].x" 741.4285888671875;
+	setAttr ".hyp[3].y" -177.14285278320312;
+	setAttr ".hyp[3].nvs" 1920;
+	setAttr ".hyp[4].nvs" 1920;
+	setAttr ".hyp[5].nvs" 1920;
+	setAttr ".hyp[6].nvs" 1920;
+	setAttr ".hyp[7].nvs" 1920;
+	setAttr ".hyp[8].nvs" 1920;
+	setAttr ".anf" yes;
 select -ne :time1;
 	setAttr -av -k on ".cch";
 	setAttr -cb on ".ihi";
@@ -3395,6 +3482,8 @@ select -ne :defaultHardwareRenderGlobals;
 	setAttr -k on ".aap";
 	setAttr -av -k on ".gh";
 	setAttr -cb on ".sd";
+select -ne :ikSystem;
+	setAttr -s 4 ".sol";
 connectAttr "skinCluster4.og[0]" "camera_globalShape.cr";
 connectAttr "tweak18.pl[0].cp[0]" "camera_globalShape.twl";
 connectAttr "skinCluster4GroupId.id" "camera_globalShape.iog.og[2].gid";
@@ -4234,7 +4323,13 @@ connectAttr "cameras_holder.controllers_size" "globalScaleHD.i2";
 connectAttr "cameras_holder.controllers_size" "globalScalePROJ.i1";
 connectAttr "normalizeFocalPROJ.ox" "globalScalePROJ.i2";
 connectAttr "cameraPROJ_controller.focalLength" "normalizeFocalPROJ.i1x";
-connectAttr "cameraBGShape.fl" "__cameraBGFocalFactor.i2x";
+connectAttr "cameraBGShape.fl" "cameraBGFocalFactor.i2x";
+connectAttr "hyperView1.msg" "nodeEditorPanel2Info.b[0]";
+connectAttr "hyperLayout1.msg" "hyperView1.hl";
+connectAttr "plate_pivotShape_0.msg" "hyperLayout1.hyp[0].dn";
+connectAttr "plate_pivotShape_2.msg" "hyperLayout1.hyp[1].dn";
+connectAttr "plate_pivot.msg" "hyperLayout1.hyp[2].dn";
+connectAttr "plate_pivotShape_1.msg" "hyperLayout1.hyp[3].dn";
 connectAttr "isCameraPROJ.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "isCameraHD.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "panX_sensitivityCorrection.msg" ":defaultRenderUtilityList1.u" -na;
@@ -4245,7 +4340,7 @@ connectAttr "normalizeFocalHD.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "globalScaleHD.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "globalScalePROJ.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "normalizeFocalPROJ.msg" ":defaultRenderUtilityList1.u" -na;
-connectAttr "__cameraBGFocalFactor.msg" ":defaultRenderUtilityList1.u" -na;
+connectAttr "cameraBGFocalFactor.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "defaultRenderLayer.msg" ":defaultRenderingList1.r" -na;
 connectAttr ":perspShape.msg" ":defaultRenderGlobals.sc";
-// End of [02.07] bgd_camera.ma
+// End of [09] bgd_camera.ma

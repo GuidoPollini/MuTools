@@ -91,6 +91,33 @@ def printDebug(*args, **kwargs):
 
 
 
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Try this;
+Then in the wrappers you can do:
+def wrappedCluster(node):
+    MC.cluster(name=nodeName(node) + "Clustering", relative=True)
+And call it in two ways:
+
+wrappedCluster(<MuNode>)
+wrappedCluster(<str>)
+
+--> OR WRAP THE ENTIRE COMMAND ENGINE TO AUTOMATIZE THIS...    
+
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+def nodeName(obj):
+    if isinstance(obj, basestring):
+        # Node name
+        return obj
+    else:
+        # MuNode derived
+        return obj.name()
+
+
+
+
+
+
+
 
 
 
@@ -189,6 +216,14 @@ class WaitCursorActive(object):
 
 
 
+class UndoChunkOpen(object):
+    def __init__(self, undoChunkName):
+        self._name = undoChunkName
+    def __enter__(self):
+        MC.undoInfo(chunkName=self._name, openChunk=True)
+
+    def __exit__(self, *args):
+        MC.undoInfo(chunkName=self._name, closeChunk=True)
 
 
 
@@ -532,8 +567,28 @@ class DGNode(object):
     @staticmethod    
     def create(nodeType='network', name=None):
         """
-        A 'create' for a generic DGNode; each subclass of DGNode will override it.
-        """
+        ---------------------------------------------------------------------------
+        DESCRIPTION
+          Create a new dependNode of the chosen type.
+          If others auxiliary nodes must be created (as for 'mesh'), they'll be 
+          named automatically.
+
+
+        ARGUMENTS
+          nodeType
+
+
+        RETURN
+          <MuNode>
+            The wrapped node (not the auxiliaries)
+
+
+        NOTE
+          Each derived class should reimplement this method!
+        ---------------------------------------------------------------------------      
+        """        
+
+
         if name is not None:
             newNodeName = MC.createNode(nodeType, n=name, skipSelect=True)
         else:
@@ -912,7 +967,7 @@ class DGNode(object):
 
     def rename(self, newName):
         newName = MC.rename(self.name(), newName)
-        return newName
+        return self
 
 
 
@@ -1263,11 +1318,49 @@ class DAGNode(DGNode):
 
 
 
+    """ If I am not wrong, the 'visibility' is present on every derived of DagNode """
+    def hide(self):
+        """
+        A simple shortcut; note that it works on self, not on it's descendants
+        myNode.hide()
+        myNode.mesh().hide()
+          VS
+        myNode.visibility.set(False)
+        """
+        MC.setAttr(self.name() + '.visibility', False)
+        return self
+
+
+    def show(self):    
+        MC.setAttr(self.name() + '.visibility', True)
+        return self
 
 
 
 
 class Transform(DAGNode):
+    """
+    matrix = SP^-1 * S * SH * SP * <SPT> * RP^-1 * RA * R * RP * <RPT> * T
+
+    <RPT> = Rotate pivot correction.
+            Used when moving the rotate pivot point without 
+            affecting the overall transformation matrix.
+    <SPT> = Scale pivot correction. 
+            Used to moving the scale pivot point without 
+            affecting the overall transformation matrix.
+
+    transMinusRotatePivot (tmrp)    
+      Attribute to extract the offset of the translation from 
+      the rotate pivot. The offset is in the same transformation 
+      space as the translate attribute which is parent-space. 
+      This value is typically used in expressions where it is subtracted 
+      from a position before setting the translation attribute. 
+      This causes the object to move so that the rotate pivot point 
+      is positioned at the desired position.    
+
+    """
+
+
     """=========================================================="""
     """ Only a <transform> (and its derived) can have "children" """
     """ ??? SURE ??? The DAGNodes have children methods...       """
@@ -1300,8 +1393,8 @@ class Transform(DAGNode):
 
         # Allow a MuNode as a parent
         parent = kwargs.pop('parent', kwargs.pop('p', None))
-        if parent is not None and not isinstance(parent, basestring):
-            kwargs['parent'] = parent.name()
+        if parent is not None:
+            kwargs['parent'] = nodeName(parent)
 
 
         newNodeName = MC.createNode('transform', **kwargs)
@@ -1384,7 +1477,7 @@ class Transform(DAGNode):
 
 
 
-    def incapsulate(self, capsuleName):    
+    def incapsulate(self, capsuleName):
         """
         Create a new transform, holder of self.
         Ex:
@@ -1434,6 +1527,7 @@ class Transform(DAGNode):
 
 
 
+
     def mesh(self):
         """
         If nothing is found, returns None!
@@ -1443,6 +1537,7 @@ class Transform(DAGNode):
             return self.meshes()[0]
         except IndexError:
             return None
+
         
 
 
@@ -1459,16 +1554,59 @@ class Transform(DAGNode):
             meshChildren = [x for x in meshChildren if MC.getAttr(x + '.intermediateObject') == 0]
         
         return List(meshChildren)
+
+
+
         
 
-    def setParent(self, parent, absolute=False):
-        """ WRAP IT A LITTLE BETTER """
+    def setParent(self, parent=None, absolute=True):
+        """
+        ---------------------------------------------------------------------------
+        DESCRIPTION 
+          BlahBlahBlah...
+
         
+        ARGUMENTS  
+          parent = None <str>|<MuNode>
+            Accepts a name or a MuNode. 
+            setParent([absolute=<bool>]) unparents the node to world (absolutely or not)
+
+          absolute = True <bool>
+            True  -->  Preserve world matrix
+            False -->  Preserve local matrix (it's gonna jump)
+        
+
+        RETURN
+          self For fluency
+
+
+        NOTES
+          - The flags 'absolute' and 'relative' are valuelessin Mel; hence in 
+            Python 'absolute=False' means 'flag absent', NOT '-relative';
+          - Probably something difefrent happens for joints.. check that out!  
+        ---------------------------------------------------------------------------
         """
-        TO DO:
-        - add an 'index' flag: first childre, last children relative position
-        """
-        MC.parent(self.name(), parent.name(), absolute=absolute)
+
+        '''
+        FLAGS TO DO
+        NOTE: If the object to parent is a joint, it will alter the translation and 
+              joint orientation of the joint to preserve the world object transformation 
+              if this suffices. Otherwise, a transform will be inserted between the joint 
+              and the parent for this purpose. In this case, the transformation inside 
+              the joint is not altered. [default]
+        - add an 'index' flag: first children, last children, relative position
+        
+        INHERITANCE
+        - Every shape has the right to be reparented... Move this in DAGNode
+        '''
+        
+        if parent is not None:
+            # Note the use here of 'MuCore.nodeName(obj)' to allow <str> and <MuNode>
+            MC.parent(self.name(), nodeName(parent), absolute=absolute, relative=not absolute)
+        else:
+            # Reparent to the world
+            MC.parent(self.name(), world=True, absolute=absolute, relative=not relative)
+
         return self
 
 
@@ -1605,13 +1743,26 @@ class Mesh(DAGNode):
 
 
     def shadingEngine(self, **kwargs):
-        pass
+        """
+        FIRST WRAP: it doesn't check anything (e.g. per-component shadingEngines)
+        """
         """
         renderLayer_flag = kwargs.get("renderLayer", kwargs.get("rl", "defaultRenderLayer"))
         
         if self.isInstanced():
            MC.error("[FATAL] Instanced, not implemented!")
         """
+        
+        shadingEngineNames = MC.listConnections(self.name(), source=False, destination=True, type='shadingEngine') or []
+        if len(shadingEngineNames) == 0:
+            # No shadingEngine connected
+            return None
+        elif len(shadingEngineNames) > 1:
+            # per-component shadingEngines: FATALITY
+            MC.error('[FATALITY] Per-component shadingEngines!')       
+        else:
+            return MuNode(shadingEngineNames[0])
+
 
 
 
@@ -2056,14 +2207,37 @@ class MuPlug(object):
     """
 
 
-    def __init__(self, mPlug):
+
+
+    def __init__(self, plugArg):
         """
-        --> I need also the constructor:
-             - MuPlug('nodeName.attrName')
-            Get the nodeName, recover the mPlug and that's all; just check
-            if the node exists in Maya. mPlugs has a pointer to the node!!!
+        DESCRIPTION 
+          The public initializer/binder:
+          myWrappedPlug = MuPlug('myNode.myPlug')
+
+        ARGUMENTS
+          plugArg <MPlug>|<string>
         """
-        self._mPlug = mPlug
+        if isinstance(plugArg, OM.MPlug):
+            # <MPlug> passed: private initializer    
+            self._mPlug = plugArg
+
+        else:
+            # <string> passed: public initializer    
+            # 'nodeName.plugName*'
+            selList = OM.MSelectionList()
+            try:
+                selList.add(plugArg)
+                mPlug = OM.MPlug()
+                selList.getPlug(0, mPlug)                
+            except:
+                # '.add' and '.getPlug' can both fail (ex, you passed a 
+                # name of a node, not of a plug)... Not really important!
+                MC.error('The name "{}" can\'t be bound to an existing plug!'.format(plugArg))
+
+            self._mPlug = mPlug
+
+
 
 
 
@@ -2116,13 +2290,15 @@ class MuPlug(object):
 
 
 
-
     def __lshift__(self, other):
         # self << other
         MuPlug.__rshift__(other, self)
 
         # Allow fluency (a.tx << b.sx << c.rx << ...)
         return other
+
+
+
 
 
     def __getitem__(self, index):
@@ -2132,6 +2308,9 @@ class MuPlug(object):
         """ A littyle of safety wouldn't bad at all:) """
         # logicalIndex == the sparse index (used by the commandEngine)
         return MuPlug(self._mPlug.elementByLogicalIndex(index))    
+
+
+
 
 
     """ 
@@ -2150,6 +2329,9 @@ class MuPlug(object):
     #            |root|superNode . myAttr
     #
     #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+
     def nodeName(self):
         """
         AND WHAT HAPPENS IF THE POINTER HAS BECOME INVALID???
@@ -2183,6 +2365,13 @@ class MuPlug(object):
         #    return ptr.name() 
 
 
+
+    def node(self):
+        # Return the MuNode of this plug
+        """ HORRID """
+        return MuNode(self.nodeName())
+
+
     def attributeName(self):
         """ (object)--(class) is like (plug)--(attribute)  """
         return self._mPlug.partialName()
@@ -2196,6 +2385,75 @@ class MuPlug(object):
 
     def type(self):
         return MC.getAttr(self.name(), type=True)
+
+
+
+
+    #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    #skipConversionNodes=False scn
+    #shapes=False sh
+    #nodeType = type
+    #exactType =
+    #connections =
+
+
+
+
+    def inputPlug(self, **kwargs):
+        """ 
+        WHAT HAPPENS FOR AN ARRAY/COMPOUND PLUG??? 
+        ------------------------------------------
+        Could this return a list of plugs???
+        """
+
+        """ ==> Caso facile, a 'simple' plug (not array or compound) """
+        type_               = kwargs.get('t',   kwargs.get('type',                ''))
+        exactType           = kwargs.get('et',  kwargs.get('exactType',           False))
+        skipConversionNodes = kwargs.get('scn', kwargs.get('skipConversionNodes', False))
+        
+        inputPlugNames = MC.listConnections(
+            self.name(), 
+            source=True, 
+            destination=False, 
+            plugs=True, 
+            type=type_, 
+            exactType=exactType,
+            skipConversionNodes=skipConversionNodes
+        ) or []
+
+        if len(inputPlugNames) == 0:
+            # No input plug
+            return None 
+        elif len(inputPlugNames) > 1:
+            # NOT IMPLEMENTED (array or compounds???)
+            MC.error('COMPOUND or ARRAY')    
+        else:
+            # Return a MuPlug
+            # (Apparently <MPlug> has a way to get all plug connected, but then it's
+            #  up to you to filter them...)
+            return MuPlug(inputPlugNames[0])
+
+
+
+    """
+    def outputPlugs(self, type=None, exactType=None, shapes=True, skipConversionNodes):
+        kwargs.pop(kwargs.pop(p, True))
+        outputPlugNames = MC.listConnections(
+            self.name(), 
+            source=False, 
+            destination=True, 
+            plugs=True,
+            type=???, 
+            exactType=???, 
+            shapes=???,
+            skipConversionNodes=???
+        ) or []
+    """    
+
+
+
+
+
 
     #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2358,11 +2616,18 @@ class MuPlug(object):
     """ BETTER AND EASIER """
     #----------------------------------
     def lock(self):
-        pass
-    def unlock(self):
-        pass    
+        self._mPlug.setLocked(True)
+        return self
+  
+
     def hide(self):
-        pass
+        self._mPlug.setChannelBox(False)  
+        self._mPlug.setKeyable(False) 
+        return self
+
+
+    def unlock(self):
+        pass  
     def show(self):
         pass
     def keyable(self):
@@ -2896,3 +3161,165 @@ class Occlusion(object):
 
 
 
+
+'''
+
+import maya.OpenMaya as OM
+mayaState = OM.MGlobal.mayaState()
+"""
+mayaState() flags:
+     maya  0  OM.MGlobal.kInteractive
+mayaBatch  1  OM.MGlobal.kBatch
+   mayapy  2  OM.MGlobal.kLibraryApp
+      ???  3  OM.MGlobal.kBaseUIMode
+"""  
+
+# maya.exe -prompt --> MEL command line
+# mayabatch.exe    --> maya -batch: open maya, executes a command, close maya
+# Render.exe
+
+# maya.exe -log fileFullPath --> stdout and sterr in a chosen file
+
+
+
+
+"""
+An instanced node is a SINGLE NODE that is 'pointer' more than once;
+But there's ONLY ONE NODE; hence the mObject CAN'T be enough!
+YOU NEED THE DAGPATH (there's only ONE node, hence only a real pointer!!!)
+
+Should I really care???
+"""
+#-----------------------------------------------------------
+# YEEEEEEEEEESSS... you can use it, the penalty is minimal
+class Node(object):
+    _functionSets = {
+    # int <--> singleton OM.MFn*
+    #
+    # DependencyNode (generic)
+    # |
+    # +--DagNode (abstract)
+    # |  |
+    # |  +--Mesh    
+    # |  |
+    # |  +--Transform
+    # |
+    # +--Reference
+    # |
+    # +--Set
+
+    # NOTE
+    # Comment out the kDependencyNode; then:
+    #   self._mFn = Node._funtionSets.get(self._mObject.apiType(), OM.MFnDependencyNode)()
+    # If the type has not a specific wrapper, regress to a generic DependencyNode
+    # (or a generic MFnDagNode, even if abstract??? Ex: constraints, locator, annotations, SHAPES in general...) 
+
+    OM.MFn.kDependencyNode: OM.MFnDependencyNode,
+    OM.MFn.kTransform:      OM.MFnTransform,
+    OM.MFn.kMesh:           OM.MFnMesh,
+    OM.MFn.kDagNode:        OM.MFnDagNode,
+    OM.MFn.kSet:            OM.MFnSet,
+    OM.MFn.kReference:      OM.MFnReference
+    }
+    
+    _wrappedNodeTypes = {
+        OM.MFn.kJoint           OM.MFnJoint,
+        OM.MFn.kTransform:      OM.MFnTransform,
+        OM.MFn.kMesh:           OM.MFnMesh,
+        OM.MFn.kSet:            OM.MFnSet,
+        OM.MFn.kReference:      OM.MFnReference
+    }
+
+    # THIS IS A LOT BETTER (it works even for unwrapped Dags)
+    try:
+        self._mFn = Node._wrappedNodeTypes[self._mObject.apiType()]()
+    except KeyError: # <-- This is a nice EAFP (NOT a bare silly 'except:'')
+        # It's not a wrapped type
+        if self._mObject.hasFn(OM.MFn.kDagNode):
+            # It's a DagNode derived
+            self.mFn = OM.MFnDagNode()
+        else:
+            # It's a generic dependency node
+            self.mFn = OM.MFnDependencyNode()   
+
+        # SHORTER VERSION, not necessarily better (? Or is it?)
+        # self.mFn = OM.MFnDagNode() if self._mObject.hasFn(OM.Mfn.kDagNode) else OM.MFnDependencyNode()
+
+
+
+    def __init__(self, nodeName):
+        # TERMINOLOGY:
+        # The MObject is indeed the c++ pointer (with type included)
+        # pointing to the true c++ object; the MFn is only the
+        # simplification of the real interface od the apiObj
+        # The mechanic MObject-MFn only exists to allow the 'facade' interface
+        #
+        # But in the end, once you have a proper valid MFn(MObject), you have
+        # full access to the apiObj
+
+        # Hence I'll stick to:
+        #-------------------------------------------------
+        # self._apiObj --> self._Mfn.setObject(self._mObject)
+        #------------------------------------------------
+        # (even though it's just the 'facaded' interface of the real apiObject)
+
+
+        # Every wrap carries:
+        # - _mObject        -->  the real C++ pointer
+        # - _mObjectHandle  -->  the pointer validator
+        # - _mFn            -->  a detached compatible functionSet
+        # - _apiObj         -->  a 'property' return a valid mFn
+        #                        (this is the only exception of a tolerated 'property')
+        # 
+        # To use an API method:
+        
+        #   (OLD) self._mObj.method(... )
+        #   (NEW) self._apiObj.method(... )
+
+        # There will be an exception if the _mObj is invalid!
+        # (DO MORE TESTS, BUT APPARENTLY THE PERFORMANCE PENALTY IS IRRELEVANT)
+
+        selList = OM.MSelectionList()
+        selList.add(nodeName)
+        self._mObject = OM.MObject()
+        selList.getDependNode(0, self._mObject)
+        self._mObjectHandle = OM.MObjectHandle(self._mObject)
+
+        self._mFn = OM.MFnDependencyNode()
+        """ Or generically: """
+        """ self._mFn = Node._funtionSets[self._mObject.apiType()]() # It's an instance! """
+        
+    @property
+    def _apiObj(self):
+        """
+        Probably a little overzealous and paranoid; but nonetheless the performance
+        penalty is irrelevant compared to the huge weight of using the
+        API in the first place (even in a minimalistic not pymel-like way)
+
+        This way, if an MObject enters in the 'dangling pointer' state, we're
+        gonna know it:)
+        """
+        # THE ONLY PROPERTY TOLERATED IN MUTOOLS
+        #-----------------------------------------------
+        # To return a VALID mFn:
+        # - Use _mObjectHandle to test if the pointer _mObject is still valid
+        # - Attach _mFn to _mObject
+        # - Return _mFn
+
+        if self._mObjectHandle.isValid():
+            self._mFn.setObject(self._mObject)
+            return self._mFn
+        else:
+            # The pointer is invalid; check if it's alive (i.e. the apiObj is deleted
+            # but still in memory, e.g. in the undo queue)
+            MC.error('INVALID POINTER!!!')
+            # ... Now what? Need to recover? How? Or simply a blocking 'Fatality'?
+
+    _functionSets = {
+    OM.MFn.kDependencyNode: OM.MFnDependencyNode,
+    OM.MFn.kTransform:      OM.MFnTransform,
+    OM.MFn.kMesh:           OM.MFnMesh,
+    OM.MFn.kDagNode:        OM.MFnDagNode
+    }
+
+'''
