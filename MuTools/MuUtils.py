@@ -1,15 +1,55 @@
-__version__ = '1.0.4' 
+__version__ = '1.0.5' 
 
 
-import maya.cmds as MC
+import maya.cmds     as MC
+import maya.OpenMaya as OM
 
 import inspect
 import os
 import sys
+import tempfile
 import time
 
 
 
+
+
+def isMayaStandalone():
+    """ 
+    ---------------------------------------------------------------------------          
+    DESCRIPTION
+      Detect if the current Maya instance was invoked in 'standalone' mode:
+      - C++ core loaded;
+      - commandEngine MEL/Python wrappers loaded;
+      - No UI available;
+      - No 'commandPort' available.
+
+      Note that 'mayapy.exe' creates just a Python 2.7 interpreter with paths 
+      pointing to the maya main folders, but that's NOT a Maya standalone! 
+      To load the core you need these:
+
+        import maya.standalone
+        maya.standalone.initialize()
+      
+      Now you have a functional core and you can import safely the commandEngine
+      and C++ API wrappers (BUT NOT QT WRAPPERS!!!)
+
+
+    RETURN <bool>
+      True  --> The UI is available
+      False --> No UI, hence avoid completely Qt wrappers
+    ---------------------------------------------------------------------------            
+    """
+
+    
+    # MGlobal.mayaState() results
+    #-------------------------------------------------
+    #  0 --> OM.MGlobal.kInteractive  (full UI)
+    #  1 --> OM.MGlobal.kBatch        (standalone as in mayabatch.exe)
+    #  2 --> OM.MGlobal.kLibraryApp   (standalone as in mayapy.exe)
+    #  3 --> OM.MGlobal.kBaseUIMode   (standalone ???)
+
+    return True if OM.MGlobal.mayaState() != 0 else False
 
 
 
@@ -40,7 +80,14 @@ def muToolsPath():
 #             ||
 #   def funcObj(ARGUMENTS): return EXPRESSION
 #
-# - 'lambda' return a <function> as 'def': same syntax, same rules (but one line, no statements)!
+# - 'lambda' return a <function> as 'def' does: same semantic and arg rules 
+#   (but the code object must be composed of one line, only 1 expression and no statements)!
+# 
+# ----------------------------------------------------------------------------
+# - Of course, comething like this (func1(), func2(), ...) is an expression
+#   (every function/method returns something, None if no explicit return is there)
+#   SO YOU CAN CONCATENATE CALLBACKS:)
+# ----------------------------------------------------------------------------
 # - EXPRESSION can involve function/method calls (they return always something, by default None)
 # 
 #                 lambda: EXPRESSION  -->  'def ?(): return EXPRESSION'
@@ -118,66 +165,188 @@ with open(filePath, 'r') as fileObj:
 
 
 
+""" TIENILO EMPRE APERTO... E' PIU RAPIDO, PARECCHIO"""
+""" Potresti attaccare un 'fileLog.close()' alla chousura dell'interfaccia grafica"""
+""" o al try/except/finally per uno cript seza UI... """
 
 
 
+def logModuleCaller():
+    # This works with CPython (Maya) and you can't use the generic 'getCaller'
+    # because in this case, OR YOU CAN??? CHECK IT BETTER
+
+
+    # Get the list of outer frames <6-uples>
+    outerFrames = inspect.getouterframes(inspect.currentframe())
+    # Frame 6-uple:
+    # 0 --> <frame object at 0x000000012D1DEB88>
+    # 1 --> <str> module caller path 
+    # 2 --> <int>
+    # 3 --> <module> module caller obj
+    # 4 --> <list> caller Name, 
+    # 5 --> <int>
+
+    # Actual outer frames in the stack (in this special case, we need item 2)
+    #     (0) logModuleCaller   (Here)
+    #     (1) Log.__init__      (Here)
+    # ==> (2) the caller module (The caller module, where Log(...) was called)
+    #     (3) ...                                       ...
+    #     ...
+    callerStackIndex = 2 
+    moduleName = inspect.getmodulename(outerFrames[callerStackIndex][1])
+    del outerFrames
+
+    return moduleName
 
 
 class Log(object):
-    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-    'log.debug' and 'log.hardDebug' shouldn't pollute the 
-    scriptEditor. Save the info elsewhere and make it accessible
-    at ease!
-    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-
     """
-    LEADING CHARACTERS
-    -  Nothing to say
-    !  Something important or warning
-    >  Success
-    ?  Error/fatality
-    @  Debug
-     
-    Ex:
-    ! [MuTools.MuCore] Trying to reload from "C:/Users/guido.pollini/Desktop/MuTools/MuTools\MuCore.pyc"...
-    """
-
-    """
-    WISHLIST
-
-      from MuTools.MuUtils import Log
-      log = Log('globalLogId')
-      ...
-      log.fileOutput = 'C:/blahblahblah.log'
-      log.verbosity = Log.DEBUG
-      ...
-      log('Working on asset XXX...')
-      log.debug('Data', data, lista, dico)
-      log.('Completed')
-   
-    Probably a singleton for each logName (ex: MuCoreLog, MuSceneLog, MuToolsGlobalLog,...)
+    Se un applicazione e decomposta in tanti pezzettini, vorrei un modo per ragruppare i log dei moduli chiamati
+    Insomma... se diverse applicazioni usano lo stesso modulo, vorrei un log ciascuno
+    Ex: hai un superShit.py e un superFuck.py che usano entrambi XXX.py
+       superShit.log
+       superFuck.log
+       XXX_superShit.log (e qua un log() generico)
+       XXX.superFuck.log (e qua un log generico)
     """
 
 
-    SILENT     = None
-    STANDARD   = 0
-    DEBUG      = 1
-    HARD_DEBUG = 2
-    
+    def __init__(self, logFilePath=None, logInFile=True):
+        """
+        DESCRIPTION
+          Each module should instance Log and use the instance to replace 'print':
+          - log = Log() # TEMP
+          - log(a, b, 'incredibile', d) # --> as replacement for 'print'
+          - debug = log.debug
+          - debug('Arg passed:', args, kwarg) # Log it only if the script is in debug omde
+          - hard = log.hard
+          - hard('Very verbose, function call, caller, ...') # Log only if in hardDebug mode
+          This way, your script can choose if or not enter debug mode and everything
+          is managed automatically (no verbose if not debug/hardDebug mode).
+          It should provide a function hook to allow to connect log to another output
+
+        ARGUMENTS
+          logFilePath=None <str>
+            A full path, ex 'C:\Users\Guido\Desktop\myLog.txt'.
+            If None set the path to 'TEMP/MuLogs_MODULENAME/MODULENAME.txt'
+
+          logInFile=True<bool>
+            In case you don't wanna try to log also in a file. Note that
+            in case of a bad 'logFileName' or without the proper right
+            access to TEMP there'll be no logFile.
+
+
+        RETURN
+        """
+
+        # In case of 'logInFile'==False or impossibility to open a logFile 
+        self._logFileObj = None 
+        self._mode       = 'normal' # 'normal', 'debug', extreme'
+        # 'normal'  --> scriptEditor (output window is no UI)
+        # 'debug'   --> logFile only (nowhere if logFile failed!)
+        # 'extreme' --> function calls, etc etc (nowhere if logFile failed)
+                
+        if not logInFile:
+            # No logFile needed; skip the entire part that follows
+            return
+
+
+        if logFilePath is None:            
+            # The preferred solution: TEMP
+            #--------------------------------------------------------
+            # Auto hierarchy for log (preferred)
+            #
+            # [TEMP]
+            #   |
+            #   +-- [MULOGS]
+            #   |      |
+            #   |      +-- [ellipse_badgersMenu.log]
+            #   |      +-- [alembicExporter_client.log]
+            #   |      +-- [MODULE_NAME.log]
+            #   |      +-- ...
+            #   |      |
+            #   |     ...
+            #  ...
+            #--------------------------------------------------------
+
+
+            # logFilePath --> TEMP/muLogsFolderNames/logName
+            muLogsFolderName = 'MULOGS'
+            moduleCallerName = logModuleCaller()
+            if moduleCallerName is None:
+                # In the exceptional case that Log is instanciated in __main__
+                # (the root interpreter, akak scriptEditor)
+                moduleCallerName = 'MayaScriptEditor'
+            logName = moduleCallerName + '.log'
+
+
+            # Check for existence the Windows TEMP folder
+            tempFolderPath = tempfile.gettempdir()
+            if not os.path.isdir(tempFolderPath):
+                # TEMP doesn't exist (this shouldn't be possible)
+                print '[ERROR] no TEMP'
+                return
+            
+
+            # Check if we have enough rights in TEMP
+            try:
+
+                # Create a test folder
+                testFolderPath = os.path.join(tempFolderPath, 'testFolder')
+                os.makedirs(testFolderPath)
+
+                # Create a test file inside the test folder
+                testFilePath = os.path.join(testFolderPath, 'testFile.txt')
+                testFileObj  = file(testFilePath, 'a+', 0)
+                testFileObj.write('Testing access rights...')
+                testFileObj.seek(0)
+                testFileObj.read()
+                testFileObj.close()
+
+                # Delete file and folder
+                os.remove(testFilePath)
+                os.rmdir(testFolderPath)      
+               
+                # If we get here with no exceptions, we have the right to 
+                # create the folder/log
+
+            except:
+                # An exception il the latter operations means we have
+                # not enough rights in TEMP
+                print '[ERROR] Not enough rights!'
+                return
+            
+
+            # Check/create the MULOGS folder
+            muLogsFolderPath = os.path.join(tempFolderPath, muLogsFolderName)
+            if not os.path.isdir(muLogsFolderPath):
+                # No folder, create one
+                os.makedirs(muLogsFolderPath)
+            
+            # The path for the TEMP log is ready
+            logFilePath = os.path.join(muLogsFolderPath, logName)
+
+
+        #---------------------------------------------------------------------------------
+        # NOTE: at this point, 'logFilePath' has the proper TEMP path or the original path
+        #---------------------------------------------------------------------------------
+        # Open the log file and keep it constantly open (it's faster)
+        # (append + read, buffer=0 --> no flush required)
+        try:
+            self._logFileObj = file(logFilePath, 'a+', 0) 
+            print '[LOG SUCCESS] Created the logFile "{}"!'.format(logFilePath)
+        except Exception as exc:
+            print '[ERROR] Something went wrong: can\'t create the log!', exc
+            return
+
+
 
     @staticmethod
-    def _stringifyArgs(args):
+    def _stringifyArgs(*args):
         # For <str> use str(), for another type of object use repr()
         #    str('soleil')  -->  soleil
         #   repr('soleil')  -->  'soleil' (useless)
         return ' '.join([str(x) if type(x) == str else repr(x) for x in args])
-
-
-
-    def __init__(self, globalLogId=None, verbosity=None):
-        self.verbosity = verbosity or Log.STANDARD
-
 
 
     def __call__(self, *args):
@@ -185,8 +354,6 @@ class Log(object):
         Easy to call:
         log('Wonderful message incoming...')
         """
-        if self.verbosity is None:
-            return
 
         #-----------------------------------------------------------------------------------------
         # NOTE
@@ -208,22 +375,25 @@ class Log(object):
         #  __str__ to avoid ugly 'xxx.object().asString()'  
         #-----------------------------------------------------------------------------------------
     
-        message = Log._stringifyArgs(args)
-        print message
-
-
-
+        message = Log._stringifyArgs(*args)
+        try:
+            self._logFileObj.write(message + '\n')
+        except:
+            # Log failed
+            pass   
 
     def debug(self, *args):
         """
         Standard 'debugging' message (informative but not too much).
         >>> It should output NOT on the scriptEditor, but elsewhere!!!
         """
-
+        
+        self(*args)
+        '''
         if self.verbosity in (Log.DEBUG, Log.HARD_DEBUG):
             message = '[D] ' + Log._stringifyArgs(args)
             print message
-
+        '''
 
 
 
@@ -232,12 +402,13 @@ class Log(object):
         HardDebug shows everything, function calls, internals...
         >>> Again, DON'T pollute the scriptEditor with this shit!
         """
-
+        
+        self(*args)
+        '''
         if self.verbosity == Log.HARD_DEBUG:
             message = '[H] ' + Log._stringifyArgs(args)
             print message
-
-    
+        '''
 
 
     def iterable(self, iterable, title=None):
@@ -266,22 +437,7 @@ class Log(object):
         else:
             print '  NONE'  
 
-    
-    """
-    ---------------------------------------------------------------------------------------------------
-    WISHLIST
 
-    'MuTools.MuScene': {'path':             'C:/Users/guido.pollini/Desktop/MuTools/MuTools/MuScene.py'
-                        'version':          '1.0.4'
-                        'lastModification': '05/10/16, 13:35:15'}
-    'MuTools.MuCore':  {'path':             'C:/Users/guido.pollini/Desktop/MuTools/MuTools/MuCore.pyc'
-                        'version':          '1.0.4'
-                        'lastModification': '05/10/16, 14:56:19'}
-    'MuTools.MuUI':    ['item0'
-                        'item1'
-                        'item2']
-    ---------------------------------------------------------------------------------------------------
-    """
     def dictionary(self, dico, title=None):
         def _recurse(actualDico, actualIndent=0):
             partialText = ''
@@ -309,33 +465,9 @@ class Log(object):
 
 
 
-    """
-    import logging
-
-    logPath = 'C:/Users/guido.pollini/Desktop/MuTools/muLog.log'
-    logger = logging.getLogger('spamApplication')
-
-    consoleHandler = logging.StreamHandler()
-    consoleHandler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s  %(levelname)s - %(message)s')
-    consoleHandler.setFormatter(formatter)
-    #logger.addHandler(consoleHandler)
-    logger.info('FUCK YOU')
-    for x in logger.handlers:
-        print x.get_name()
-        #logger.removeHandler(x)
 
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter('%(message)s')
-    fh = logging.FileHandler('C:/Users/guido.pollini/Desktop/MuTools/mySuperLog.txt', mode='w')
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-    logger.debug('Just fuck you.')    
-    """  
 
 
 

@@ -41,9 +41,10 @@ mainProgressBar = formLayout16.findChild(QG.QProgressBar, 'mainProgressBar')
 ----------------------------------------------------------------------------
 
 EASY WAY
-
-pointer = OMUI.MQtUtil.findControl('mainProgressBar') # --> a generic <SwigPyObject>
-mainProgressBar = shiboken.wrapInstance(pointer.__long__(), QG.QProgressBar) # take the address and set the pointer type
+# Get the generic <SwigPyObject> (a wrapped void*)
+pointer = OMUI.MQtUtil.findControl('mainProgressBar') 
+# Cast the void* to the required Qt type and create the PySide wrap
+mainProgressBar = shiboken.wrapInstance(pointer.__long__(), QG.QProgressBar) 
 
 #NOPE, THIS IS THE HELP 
 #helpLinePointer = OMUI.MQtUtil.findControl('helpLine1')

@@ -1,107 +1,171 @@
-import sys
-muPath = r"C:\Users\guido.pollini\Desktop\MuTools"
-if muPath not in sys.path:
-    sys.path.append(muPath)
-
-
-'''
-def loggedMuNode(nodeName, errorLog):
-    """
-    Return the MuNode wrapper if possible, 
-    otherwise None and put the nodeName in the passed
-    list...
-    """
-
-    node = None
-    
-    try:
-        node = Core.MuNode(nodeName)
-    except:
-        errorLog.append(nodeName)
-    
-    return node
-
-errorLog = []
-cameraRigFolder = loggedMuNode('__CAMERA__', errorLog) 
-camera_global   = loggedMuNode('camera_global', errorLog)
-...
-
-if len(errorLog) > 0:
-    # Somewhere it failed!!!
-    pass
-else:
-    pass
-    everything went well!!!    
-
-'''
-
-# Nullify exceptions:
-
-'''
-from MuTools.MuCore import *
-nullifyExceptions = Utils.nullifyExceptions()
-
-cameraRigFolder = nullifyExceptions.MuNode('__camera__')
-cameraRigFolder = nullifyExceptions.MuNode('__camera__')
-cameraRigFolder = nullifyExceptions.MuNode('__camera__')
-cameraRigFolder = nullifyExceptions.MuNode('__camera__')
-
-if nullifyExceptions.exceptions ius not None:
-    # it failed somewhere
-'''
+__version__ = '1.1.0'
+print '--> Executing "{0}" (version {1})...'.format(__name__, __version__)
 
 
 
 
 
 
-#------------------------------------------------------------------------------
-__version__ = '1.0.0'
-print 'Version:', __version__
-
+from MuTools.MuUtils import *
+from MuTools.MuCore  import * 
 """
-===============================================================================
---> You should try a * import; it's getting very boring to prefix everything...
-
-  from MuTools.MuUtils import *
-  from MuTools.MuCore  import *
-  from MuTools.MuUI    import *
-  from MuTools.MuScene import *
-
-JUST WATCH OUT FOR INTERNAL COLLISIONS!!!
-Or only for the main modules of MuTools:
-
-  from MuTools import *
-
-(by defining __all__ in the __init__ of MuTools)
-===============================================================================
+Import MuTools core modules without namespace (JUST WATCH OUT FOR INTERNAL COLLISIONS!)
+(try an 'from MuTools import *' by defining __all__ in the __init__ of MuTools)
 """
-
-
-
-import MuTools.MuUtils as Utils
-from MuTools.MuCore import * 
 import MuTools.MuUI    as UI
 import MuTools.MuScene as Scene
 
 import maya.cmds as MC
 
-
-
-"""
 import sys
-muPath = r"C:\Users\guido.pollini\Desktop\MuTools"
-if muPath not in sys.path:
-    sys.path.append(muPath)
+import re
 
-import MuTools.MuUtils     as Utils;     reload(Utils)
-import MuTools.MuCore      as Core;      reload(Core)
-import MuTools.MuScene     as Scene;     reload(Scene)
-import MuTools.MuUI        as UI;        reload(UI)
 
-import DEBUG_BADGERS.finalizeLayoutBuild as FLB; reload(FLB)
-FLB.CameraPlatesLinker.link()
-"""
+log = Log() # --> "c:\users\guido~1.pol\appdata\local\temp\MULOGS\finalizeLayoutBuild.log"
+
+
+
+def getProperEpisodeShotName(*args): 
+    """
+    ---------------------------------------------------------------------------    
+    RETURN (<str>, <str>)|(None, None) 
+      ('BDG###', '###')    <--  'BDG###_###'    
+                                'BDG###_###_*'
+      ('BDG###", "###_@')  <--  'BDG###_###_@'  
+                                'BDG###_###_@_*'
+      (None, None)         <--  Invalid scene name!    
+    ---------------------------------------------------------------------------
+    """
+    
+    # Ex: 
+    #'BDG100_006_A_lay_007.ma'  -->  ['BDG100', '006', 'A', 'lay', '007']
+    sceneName = MC.file(q=True, sceneName=True, shortName=True)
+    tokens = sceneName.rstrip('.ma').rstrip('.mb').split('_')
+
+    episode, shot = None, None
+    
+    if len(tokens) >= 2:
+        # tokens[0] --> 'BDG###'
+        if re.match(r'^BDG[0-9]{3}$', tokens[0]):    
+            # tokens[1] --> '###'
+            if re.match(r'^[0-9]{3}$', tokens[1]):
+                episode = tokens[0]
+                shot    = tokens[1]        
+                # tokens[2] --> '@' (if any)
+                if len(tokens) >= 3:
+                    if re.match(r'^[A-Z]{1}$', tokens[2]):
+                        shot = shot + '_' + tokens[2]                        
+    
+    return (episode, shot)
+
+
+
+
+
+class ShotgunBadgers(object):
+    """
+    ---------------------------------------------------------------------------    
+    DESCRIPTION
+    Try to instantiate shotgun; it will NEVER raise an exception.
+    Instead check if .isActive() 
+
+    NOTE: --> EVERY POSSIBLE EXCEPTION MUST BE SILENCED!!!
+    ---------------------------------------------------------------------------
+    """
+    
+    def __init__(self):
+        self._projectId = 73 # Badgers Id
+        self._handle    = None
+        self._lastError = None
+             
+        try:
+            shotgunPath = r'R:\01_SAISON_1\00_PROGRAMMATION\shotgun_pipeline'
+            if shotgunPath not in sys.path:
+                sys.path.append(shotgunPath)
+            
+            # Import the shotgunApi            
+            from shotgun_api3 import shotgun
+        
+            # Instantiate shotgun
+            shotgun.NO_SSL_VALIDATION     
+            serverPath   = 'https://ellipsanime.shotgunstudio.com/'
+            scriptName   = 'ellipse_packager'
+            scriptKey    = '874c205a45e841393046a7e871cda1f24a2922cd06becc39ee3584246392bc36'
+            self._handle = shotgun.Shotgun(serverPath, scriptName, scriptKey)
+    
+            # Success:)
+            self._lastError = None
+            
+        except Exception as exc:
+            # Impossible to connect to shotgun (DON'T raise anything!)
+            self._lastError = str(exc)
+        
+
+    def isActive(self):
+        # Return True iff the shotgun instance was successfully created.
+        return self._handle is not None
+    
+    
+    def lastError(self):
+        return self._lastError
+            
+    
+    def getShotCameraType(self, episode=None, shot=None):
+        """
+        ---------------------------------------------------------------------------
+        DESCRIPTION
+           If no argument is provided, it takes the name of the actual scene and 
+           tries to recover episode and shot name!
+           
+           
+        ARGUMENTS
+          epidode=None <str>
+            'BDG###' 
+          shot=None <str>  
+            'sh###'|'sh###_@'
+        
+        
+        RETURN <str>|None
+          'HD'|'PROJ' if camera is set.
+          None if unable to detect the camera type.
+        ---------------------------------------------------------------------------            
+        """
+        
+        cameraType = None
+
+        if not self.isActive():
+            # No valid shotgun instance
+            return
+                
+        try:
+            if episode is None or shot is None:
+                episode, shot = getProperEpisodeShotName()
+                # Shotgun requires episode --> 'sh###'
+                shot = 'sh' + shot            
+            
+            episodeDict = self._handle.find_one(
+                'CustomEntity01', 
+                [['project', 'is', {'type': 'Project', 'id': self._projectId}], ['code', 'is', episode]], 
+                []
+            )
+            filters = [
+                ['project', 'is', {'type': 'Project', 'id': self._projectId}],
+                ['sg_episode', 'is', episodeDict],
+                ['sg_shortname', 'is', shot]
+            ]
+            cameraType = self._handle.find_one('Shot', filters, ['sg_cam_type'])['sg_cam_type']
+
+            # Success:)
+            self._lastError = None
+            
+        except Exception as exc:
+            # Impossible to get the camera type from shotgun (DON'T raise anything!)
+            self._lastError = str(exc)
+        
+        return cameraType         
+        
+        
+
 
 
 class CameraPlatesLinker(object):
@@ -132,12 +196,13 @@ class CameraPlatesLinker(object):
         # Collect the required nodes
         #----------------------------------------------------------------------
         
-        # No namespace, no Dag-ambiguity, worldChildren!         
-        cameraFolder         = self._getOrInvalidate('__CAMERA__')
-        platesFolder         = self._getOrInvalidate('__SET__')
+        # No namespace, no Dag-ambiguity and worldChildren
+        # (the leading "|" forces an complete fullDagPath: it can't be partial)
+        cameraFolder         = self._getOrInvalidate('|__CAMERA__')
+        platesFolder         = self._getOrInvalidate('|__SET__')
+        
 
-
-        # Namespaced, but no Dag-ambiguity allowed!
+        # Always namespaced, but no Dag-ambiguity allowed!
         controllerTemplate   = self._getOrInvalidate('*:plate_controller')
         pivotTemplate        = self._getOrInvalidate('*:plate_pivot')
 
@@ -158,12 +223,13 @@ class CameraPlatesLinker(object):
             return
 
         # Extra
-        try:
-            animaticImagePlane = cameraFolder.children(type='imagePlaneTransform')[0]
-        except:
+        cameraImagePlanes = cameraFolder.children(type='imagePlaneTransform')
+        if len(cameraImagePlanes) != 1:
             print 'FATAL --> Animatic image plane, missing or ambiguous'
-            return 
-        
+            return
+        animaticImagePlane = cameraImagePlanes[0]
+                     
+
         
 
 
@@ -290,11 +356,15 @@ class CameraPlatesLinker(object):
             newController = MuNode(newControllerName)
             #newPivot      = MuNode(newPivotName)
             
-            newController.visibility.lock().hide()
 
+            # LOck/hide/make unkeyable 
+            newController.visibility.lock().hide()
             newController.rx.lock().hide()
             newController.ry.lock().hide()
             newController.rz.lock().hide()
+            newController.showPlate.setKeyable(False)
+            newController.showPivot.setKeyable(False)
+
             
             newController.tz.set(-100 * i)
             
@@ -310,7 +380,15 @@ class CameraPlatesLinker(object):
             camerasHolder.controllers_size >> (clusterTransform.sx, 
                                                clusterTransform.sy)
 
-
+            """ EASY PLUG 
+            clusterSzCorrection = MultiplyDivide.create(newController.name() + '__szCorrection', 
+                operation='division',
+                input1X=1,
+                input2X=camerasHolder.controllers_size,
+                outputX=clusterTransform.sz
+            )
+            SOUNDS BETTER, AH? :)
+            """
             # To avoid z-deformation of the controller, inverse the controllers' size
             clusterSzCorrection = DGNode.create('multiplyDivide', name=newController.name() + '__szCorrection')
             clusterSzCorrection.operation.set(2) # Division
@@ -333,7 +411,13 @@ class CameraPlatesLinker(object):
             zCoordNode = DGNode.create('addDoubleLinear', name=newController.name() + '_zCoord')
             newController.tz       >> zCoordNode.input1
             newControllerOffset.tz >> zCoordNode.input2
-
+            
+            """ EASY PLUG
+            zCoordNode = addDoubleLinear.create(newController.name() + '_zCoord', 
+                input1=newController.tz,
+                input2=newControllerOffset.tz
+            )
+            """
 
             # Compute orthogonal distance 
             zDistanceNode = DGNode.create('plusMinusAverage', name=newController.name() + '_zDistance')
@@ -388,7 +472,20 @@ class CameraPlatesLinker(object):
             shadingEngine   = meshTrans.mesh().shadingEngine()
             shader          = shadingEngine.surfaceShader.inputPlug().node()
             fileTextureNode = shader.color.inputPlug().node()
+
+            # - myNode.myPlug.set(otherNode.otherPlug.get())
+            # VS
+            # - myNode.myPlug.set(otherNode.otherPlug)
+            #
+            # Without the need to use the .get() when passing another MuPlug
+            # MuPlug.set(<str>|<value>|<MuPlug>)
+            # - <str>    myPlug.set('node.plug')
+            # - <value>  myPlug.set(999)
+            # - <value>  myPlug.set(otherPlug.get())
+            # - <MuPlug> myPlug.set(otherPlug)
+
             fakeMesh.imageName.set(fileTextureNode.fileTextureName.get())
+
             fakeMesh.textureFilter.set(1) # 1 --> Bilinear
 
             
@@ -533,6 +630,10 @@ class CameraPlatesLinker(object):
             mc.connectAttr(realCameraHD + "Shape.verticalFilmOffset", imagePlaneShape + ".offsetY")
         """
 
+
+
+
+
 linker = CameraPlatesLinker()
 with UndoChunkOpen('link'):
     linker.link()
@@ -545,10 +646,7 @@ with UndoChunkOpen('link'):
 
 
 
-import maya.cmds as mc
-
-# ROTATION BUG SOLVED!!!
-
+'''
 def _OLD_linkCameraAndPlates(*args):
     #Python has a "weak closure", i.e. a nested function can read outerScope variables but NOT modify them.
     #By using the ugly array trick, we get a full "strong closure" (read and write). Just use VAR[0]=...
@@ -809,7 +907,7 @@ def _OLD_linkCameraAndPlates(*args):
     if LINKING_STATUS[0] == "INVALID":
         #Something went wrong; stop linking
         abortLinking()
-    
+'''    
     
 
 

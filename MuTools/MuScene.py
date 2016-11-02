@@ -15,7 +15,7 @@ import maya.OpenMaya   as OM
 # Loading module...
 Utils.moduleLoadingMessage()
 #------------------------------------------------------------------------------
-log = Utils.Log('MuSceneLog', Utils.Log.STANDARD)
+log = Utils.Log()
 
 
 
@@ -169,8 +169,9 @@ def load(filePath, loadReferences=True):
         only the scene container.
 
 
-    RETURN
-      <bool>
+    RETURN <bool>
+      True  --> A clean load (no MEL errors)
+      False --> Something went wrong in parsing of the .ma
     ---------------------------------------------------------------------------      
     """
 

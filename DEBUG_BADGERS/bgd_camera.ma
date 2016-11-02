@@ -1,6 +1,6 @@
 //Maya ASCII 2015 scene
-//Name: [09] bgd_camera.ma
-//Last modified: Thu, Oct 27, 2016 10:16:51 AM
+//Name: [10] bgd_camera.ma
+//Last modified: Wed, Nov 02, 2016 04:14:10 PM
 //Codeset: 1252
 requires maya "2015";
 currentUnit -l centimeter -a degree -t film;
@@ -11,12 +11,12 @@ fileInfo "cutIdentifier" "201503261530-955654";
 fileInfo "osv" "Microsoft Windows 7 Business Edition, 64-bit Windows 7 Service Pack 1 (Build 7601)\n";
 createNode transform -s -n "persp";
 	setAttr ".v" no;
-	setAttr ".t" -type "double3" 35.594194504868774 28.87169859961514 37.450969054667297 ;
-	setAttr ".r" -type "double3" -32.738352712060063 -2109.7999999996214 4.9687650164462114e-015 ;
+	setAttr ".t" -type "double3" 41.619703908829756 26.761515108968279 34.363826186350281 ;
+	setAttr ".r" -type "double3" -25.538352712060735 -2103.7999999996127 0 ;
 createNode camera -s -n "perspShape" -p "persp";
 	setAttr -k off ".v" no;
 	setAttr ".fl" 34.999999999999993;
-	setAttr ".coi" 56.721121115143816;
+	setAttr ".coi" 58.057488268378236;
 	setAttr ".imn" -type "string" "persp";
 	setAttr ".den" -type "string" "persp_depth";
 	setAttr ".man" -type "string" "persp_mask";
@@ -1886,15 +1886,15 @@ createNode transform -n "plate_controller" -p "__internals";
 	addAttr -ci true -sn "rotZ" -ln "rotZ" -at "double";
 	addAttr -ci true -sn "PLATE_OPTIONS" -ln "PLATE_OPTIONS" -min 0 -max 0 -en "--------------" 
 		-at "enum";
-	addAttr -ci true -sn "lockPlate" -ln "lockPlate" -min 0 -max 1 -en "OFF:ON" -at "enum";
 	addAttr -ci true -sn "showPlate" -ln "showPlate" -min 0 -max 1 -en "OFF:ON" -at "enum";
+	addAttr -ci true -sn "showPivot" -ln "showPivot" -min 0 -max 1 -en "OFF:ON" -at "enum";
 	setAttr -cb on ".ROTATION_OFFSET";
 	setAttr -k on ".rotX";
 	setAttr -k on ".rotY";
 	setAttr -k on ".rotZ";
 	setAttr -cb on ".PLATE_OPTIONS";
-	setAttr -k on ".lockPlate" 1;
 	setAttr -k on ".showPlate" 1;
+	setAttr -k on ".showPivot";
 createNode nurbsCurve -n "plate_controllerShape_0" -p "plate_controller";
 	setAttr -k off ".v";
 	setAttr ".ove" yes;
@@ -3482,8 +3482,6 @@ select -ne :defaultHardwareRenderGlobals;
 	setAttr -k on ".aap";
 	setAttr -av -k on ".gh";
 	setAttr -cb on ".sd";
-select -ne :ikSystem;
-	setAttr -s 4 ".sol";
 connectAttr "skinCluster4.og[0]" "camera_globalShape.cr";
 connectAttr "tweak18.pl[0].cp[0]" "camera_globalShape.twl";
 connectAttr "skinCluster4GroupId.id" "camera_globalShape.iog.og[2].gid";
@@ -4343,4 +4341,4 @@ connectAttr "normalizeFocalPROJ.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "cameraBGFocalFactor.msg" ":defaultRenderUtilityList1.u" -na;
 connectAttr "defaultRenderLayer.msg" ":defaultRenderingList1.r" -na;
 connectAttr ":perspShape.msg" ":defaultRenderGlobals.sc";
-// End of [09] bgd_camera.ma
+// End of [10] bgd_camera.ma

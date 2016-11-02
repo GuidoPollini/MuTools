@@ -1,0 +1,37 @@
+
+-------------------------
+<frame object at 0x000000E62CBFF848>
+C:\Users\Guido\Desktop\superLog.py
+18
+moduleCallerNameAndPath
+["f = file('E:\\shit.txt', 'a', 0) # append, buffer=0 --> NO BUFFER; no .flush() required!\n"]
+0
+
+
+
+-------------------------
+<frame object at 0x000000E62BEAC918>
+C:\Users\Guido\Desktop\superLog.py
+85
+__init__
+['        #   |      +-- ...\n']
+0
+-------------------------
+
+
+
+<frame object at 0x000000E62C133308>
+C:\Users\Guido\Desktop\myModuleTest.py
+4
+<module>
+['x = L.log()\n']
+0
+
+
+-------------------------
+<frame object at 0x000000E62C145588>
+<maya console>
+5
+<module>
+None
+None

@@ -76,7 +76,7 @@ Utils.moduleLoadingMessage()
 
 
 # Instantiating the 'MuCoreLog'
-log       = Utils.Log('MuCoreLog', Utils.Log.STANDARD)
+log       = Utils.Log()
 debug     = log.debug
 hardDebug = log.hardDebug
 
@@ -219,6 +219,7 @@ class WaitCursorActive(object):
 class UndoChunkOpen(object):
     def __init__(self, undoChunkName):
         self._name = undoChunkName
+
     def __enter__(self):
         MC.undoInfo(chunkName=self._name, openChunk=True)
 
@@ -511,8 +512,6 @@ CLASS STRUCTURE
 
 
 
-
-
 """""""""""""""""""""""""""""""""""
 CLASS HIERARCHY
 -----------------------------------
@@ -541,12 +540,6 @@ Scene             [MODULE?]
 
 
 class DGNode(object):
-    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-    TO DO:
-    - implement an '.addPlug'!
-      (they're plugs, not attributes 'cause' it's per-instance, not per-class)
-    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
     """
     ------------------------------------------
     NEW BASIC GETTERS
@@ -604,59 +597,44 @@ class DGNode(object):
     #-----------------------------
     # INITIALIZER
     #-----------------------------
-    def __init__(self, mObject):
+    def __init__(self, mObject, mFn):
 
-        # Do you really need these wrappers?
-        #   MU.DGNode('woah')
-        #   MU.Transform('woah')
-        #   MU.Mesh('woah')
+        # TERMINOLOGY:
+        # The MObject is indeed the c++ pointer (with type included)
+        # pointing to the true c++ object; the MFn is only the
+        # simplification of the real interface od the apiObj
+        # The mechanic MObject-MFn only exists to allow the 'facade' interface
         #
-        # I prefer a generic wrapper:
-        #   MU.MuNode('woah')
-        #
-        # And for creation these are probably better:
-        #      MU.DGNode.create(...)   --> generic
-        #   MU.Transform.create(...)   --> with specific arguments
-        #        MU.Mesh.create(...)   --> with specific arguments
+        # But in the end, once you have a proper valid MFn(MObject), you have
+        # full access to the apiObj
+
+        # Hence I'll stick to:
+        #-------------------------------------------------
+        # self._apiObj --> self._Mfn.setObject(self._mObject)
+        #------------------------------------------------
+        # (even though it's just the 'facaded' interface of the real apiObject)
+
+
+        # Every wrap carries:
+        # - _mObject        -->  the real C++ pointer
+        # - _mObjectHandle  -->  the pointer validator
+        # - _mFn            -->  a detached compatible functionSet
+        # - _apiObj         -->  a 'property' return a valid mFn
+        #                        (this is the only exception of a tolerated 'property')
+        # 
+        # To use an API method:
         
-        # Hence, the initializer will accept only an MObject
+        #   (OLD) self._mObj.method(... )
+        #   (NEW) self._apiObj.method(... )
+
+        # There will be an exception if the _mObj is invalid!
 
 
+        self._mObject       = mObject
+        self._mObjectHandle = OM.MObjectHandle(self._mObject)
+        self._mFn           = mFn
+        self._type          = self._apiObj.typeName()
 
-
-        """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-         <<< THIS IS ATROCIOUS >>>
-        the MuNode.__new__ already did this check...
-
-        But it's a fine example: if you respect the interface, you can use it, even if
-        it's shitty inside: "IT QUACKS/SHITS LIKE A DUCK, IT'S A DUCK" or:
-
-        <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>
-        <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>
-        <<PROGRAM TO INTERFACES, NOT IMPLEMENTATIONS>>        
-        """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""   
-
-        _type = mObject.apiTypeStr()
-
-        if _type == 'kTransform':
-            self._pointer = OM.MFnTransform(mObject)
-        
-        elif _type == 'kMesh':
-            self._pointer = OM.MFnMesh(mObject)
-
-        elif mObject.hasFn(OM.MFn.kDagNode):
-            self._pointer = OM.MFnDagNode(mObject)
-
-        else: 
-            self._pointer = OM.MFnDependencyNode(mObject)
-        
-
-        self._type = self._pointer.typeName()
-
-        """
-        Here you should check for MObjectHandle... apparently 
-        it's more stable and proper!
-        """
 
         """
         Note:
@@ -666,6 +644,30 @@ class DGNode(object):
         To work with instances, you need to save the DAGPath (of course...)
         """
 
+
+    @property
+    def _apiObj(self):
+        """
+        Probably a little overzealous and paranoid; but nonetheless the performance
+        penalty is irrelevant compared to the huge weight of using the
+        API in the first place (even in a minimalistic not pymel-like way)
+        This way, if an MObject enters in the 'dangling pointer' state, we're
+        gonna know it:)
+        """
+        # To return a VALID mFn:
+        # - Use _mObjectHandle to test if the pointer _mObject is still valid
+        # - Attach _mFn to _mObject
+        # - Return _mFn
+
+        if self._mObjectHandle.isValid():
+            self._mFn.setObject(self._mObject)
+            return self._mFn
+
+        else:
+            # The pointer is invalid; check if it's alive (i.e. the apiObj is deleted
+            # but still in memory, e.g. in the undo queue)
+            MC.error('INVALID POINTER!!!')
+            # ... Now what? Need to recover? How? Or simply a blocking 'Fatality'?
 
 
 
@@ -705,7 +707,7 @@ class DGNode(object):
         ------------------------------------------------------------------------------
         """
 
-        return self._pointer.object() == other._pointer.object()
+        return self._apiObj.object() == other._apiObj.object()
 
 
 
@@ -769,7 +771,7 @@ class DGNode(object):
         """
         try: 
             # Accessing the attribute via the commandEngine is necessary...
-            mPlug = self._pointer.findPlug(attr, True)
+            mPlug = self._apiObj.findPlug(attr, True)
 
         except: # It's a fucking generic <RuntimeError> (__doc__ == 'Unspecified...' WOW!)
             # Even the DependNode can't answer
@@ -955,13 +957,13 @@ class DGNode(object):
 
 
     def longName(self): 
-        return self._pointer.name()
+        return self._apiObj.name()
 
 
 
     def name(self): 
         # To allow loop on generic nodes and DAGs
-        return self._pointer.name()
+        return self._apiObj.name()
 
 
 
@@ -972,7 +974,7 @@ class DGNode(object):
 
 
     def shortName(self): 
-        return self._pointer.name()
+        return self._apiObj.name()
 
 
 
@@ -988,20 +990,20 @@ class DGNode(object):
     #========================================================
     def lock(self):
         try:
-            self._pointer.setLocked(True)
+            self._apiObj.setLocked(True)
         except:
             # Pointer failure, referenced object etc ect
             pass
     def unlock(self):
         try:
-            self._pointer.setLocked(False)
+            self._apiObj.setLocked(False)
         except: 
             # as for .lock()
             pass
     def isLocked(self):    
-        return self._pointer.isLocked()
+        return self._apiObj.isLocked()
     def isReferenced(self):
-        return self._pointer.isFromReferencedFile()    
+        return self._apiObj.isFromReferencedFile()    
     #========================================================    
 
 
@@ -1233,9 +1235,9 @@ class DAGNode(DGNode):
     #-----------------------------
     # INITIALIZER
     #-----------------------------       
-    def __init__(self, mObject):
+    def __init__(self, mObject, mFn):
         printDebug('DAGNode.__init__')
-        super(DAGNode, self).__init__(mObject)
+        super(DAGNode, self).__init__(mObject, mFn)
         
 
 
@@ -1298,22 +1300,22 @@ class DAGNode(DGNode):
           But remember:
           - LIGHTS CANNOT BE INSTANTIATED!!!
         """        
-        return self._pointer.isInstanced(indirect)
+        return self._apiObj.isInstanced(indirect)
 
 
 
     def longName(self):
-        return self._pointer.fullPathName()
+        return self._apiObj.fullPathName()
 
         
 
     def name(self): 
-        return self._pointer.partialPathName()
+        return self._apiObj.partialPathName()
 
 
 
     def shortName(self): 
-        return self._pointer.name()
+        return self._apiObj.name()
 
 
 
@@ -1405,9 +1407,9 @@ class Transform(DAGNode):
     #-----------------------------
     # INITIALIZER
     #-----------------------------  
-    def __init__(self, mObject):
+    def __init__(self, mObject, mFn):
         printDebug('Transform.__init__')        
-        super(Transform, self).__init__(mObject)
+        super(Transform, self).__init__(mObject, mFn)
 
 
  
@@ -1644,9 +1646,9 @@ class Mesh(DAGNode):
     #-----------------------------
     # INITIALIZER
     #-----------------------------
-    def __init__(self, mObject):
+    def __init__(self, mObject, mFn):
         printDebug('Mesh.__init__')        
-        super(Mesh, self).__init__(mObject)
+        super(Mesh, self).__init__(mObject, mFn)
 
 
 
@@ -1807,8 +1809,8 @@ class ObjectSet(DGNode):
 
     @staticmethod
     def union(setA, setB):
-        setA_name = setA._pointer.name()
-        setB_name = setB._pointer.name()
+        setA_name = setA._apiObj.name()
+        setB_name = setB._apiObj.name()
         union_string = MC.sets(setA_name, union=setB_name)
         
         unionSet = ObjectSet.create(setA_name + "_" + setB_name + "_union", union_string)
@@ -1818,9 +1820,8 @@ class ObjectSet(DGNode):
     #-----------------------------
     # INITIALIZER
     #-----------------------------
-    def __init__(self, nodeName):
-        printDebug("[objectSet] __init__ " + nodeName)
-        super(ObjectSet, self).__init__(nodeName)
+    def __init__(self, mObject, mFn):
+        super(ObjectSet, self).__init__(mObject, mFn)
 
 
     #-----------------------------
@@ -1840,7 +1841,7 @@ class ObjectSet(DGNode):
         # mySet.add(<str>)
         # mySet.add(<list of DGNode or str>)
         
-        setName = self._pointer.name()
+        setName = self._apiObj.name()
         force_flag = kwargs.get("force", kwargs.get("f", True))
         
         # issubclass(MyClass, MyClass) == True
@@ -1868,13 +1869,13 @@ class ObjectSet(DGNode):
     
 
     def clear(self):
-        setName = self._pointer.name()
+        setName = self._apiObj.name()
         MC.sets(clear=setName) # Another wonderful syntactic abomination
         return self
 
 
     def members(self):
-        setName = self._pointer.name()
+        setName = self._apiObj.name()
         # Another wonderful syntactic abomination
         # But luckily, it returns shortNames and namespaces
         memberNames = MC.sets(setName, query=True) or [] 
@@ -1882,12 +1883,12 @@ class ObjectSet(DGNode):
     
 
     def _memberNames(self):
-        setName = self._pointer.name()
+        setName = self._apiObj.name()
         return MC.sets(setName, query=True) or [] 
        
 
     def has(self, other):
-        setName = self._pointer.name()
+        setName = self._apiObj.name()
         other_name = None        
         if issubclass(type(other), Wrapper):
             other_name = other.shortName
@@ -1895,6 +1896,46 @@ class ObjectSet(DGNode):
             other_name = other    
         return MC.sets(other_name, isMember=setName)
                
+
+
+
+
+#---------------------------------------------------------------
+# NOT REALLY NECESSARY IN THE END... add it, but it's SECONDARY 
+#---------------------------------------------------------------
+""" EASY-CONNECT wrappers                                 """
+""" just a CREATE who allows to connect directly plugs    """
+""" """
+""" YOU SHOULD WRAP BETTER THE TYPE from MuNode           """
+
+'''
+class MultiplyDivide(DGNode):
+    """
+    MultiplyDivide.create('factor',
+        input1X=myPlug
+        input2X=myPlug2
+        outputX=exit, 
+        operation='divide'
+    )
+    """
+    @staticmethod
+    def create(name):
+        inputPlugs = {
+            'input1X': 0, 
+            'input1Y': 0, 
+            'input1Z': 0, 
+            'input2X': 1,
+            'input2Y': 1, 
+            'input2Z': 1
+        }
+        outputPlugs = ('outputX', 'outputY', 'outputZ')
+        
+class AddDoubleLinear(DGNode):
+    pass
+
+class PlusMinusAverage(DGNode):    
+    pass
+'''
 
 
 
@@ -2057,44 +2098,11 @@ Add the 'massive' methods to MuIterable classes
 ===============================================================================================================================================
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-FACTORIES
+MINI FACTORIES
 
 _______________________________________________________________________________________________________________________________________________
 ===============================================================================================================================================
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-class XXX(object):
-    def __init__(self):
-        self._data = [
-            ('kMesh',         'mesh',      Mesh,      OM.MFnMesh),
-            ('kReference',    'reference', Reference, OM.MFnDependencyNode), 
-            ('kSet',          'objectSet', ObjectSet, OM.MFnSet),
-            ('kTransform',    'transform', Transform, OM.MFnTransform),
-
-            ('kGenericNode',   None,       DGNode,    OM.MFnDependencyNode),
-            ('kGenericShape',  None,       DAGNode,   OM.MFnDagNode)
-        ]
-
-    def APIType(self):
-        return self._data[0]
-
-    def MELType(self):
-        return self._data[1]
-
-    def MUType(self):
-        return self._data[2]
-
-    def functionSet(self):  
-        return self._data[3]
-  
-
-"""
-Ex: 
-  myFuncSet = WRAPPED_NODES['kMesh']['functionSet'](...)
-  return WRAPPED_NODES['kMesh']['MuType'](pointer)
-"""
-#WRAPPED_NODES = {x[0]: {'MuType': x[1], 'functionSet':x[2]} for x in _DATA} 
-
 
 
 
@@ -2102,25 +2110,73 @@ Ex:
 
 
 class MuNode(object):
+    """
+    DESCRIPTION
+      Main wrapper for Maya nodes.
+      If the type has not a specific wrapper, regress to a generic DependencyNode
+      (or a generic MFnDagNode, even if abstract??? Ex: constraints, locator, 
+       annotations, SHAPES in general...) 
+
+    """
+    
+
+
+    # DependencyNode (generic)
+    # |
+    # +--DagNode (abstract)
+    # |  |
+    # |  +--Mesh    
+    # |  |
+    # |  +--Transform
+    # |
+    # +--Reference
+    # |
+    # +--ObjectSet
+
+    wrappedNodeTypes = {
+        # apiType                functionSet,     wrapperClass 
+        OM.MFn.kTransform:      (OM.MFnTransform, Transform),
+        OM.MFn.kMesh:           (OM.MFnMesh,      Mesh),
+        OM.MFn.kSet:            (OM.MFnSet,       ObjectSet),
+        OM.MFn.kReference:      (OM.MFnReference, Reference)
+    }
+
+
     #-----------------------------
     # CONSTRUCTOR
     #-----------------------------
-    def __new__(cls, nodeArgument):
+    def __new__(cls, nodeArg):
         """
-        'nodeArgument' can be a 'str' or an object of a MuNode subclass of MuNode:
-          MuNode('nodeName')  --> wrappedNode  (creates the wrapper)
-          MuNode(wrappedNode) --> wrappedNode  (just another bound name)
-        """
-        hardDebug('MuNode.__new__', nodeArgument)
+        ---------------------------------------------------------------------------          
+        DESCRIPTION                
 
 
+        ARGUMENTS
+          nodeArg <str>|<DGNode derived>
+            MuNode('nodeName')  --> wrappedNode  (creates the wrapper)
+            MuNode(wrappedNode) --> wrappedNode  (just another bound name)
+
+
+        RETURN <DGNode derived>    
+        ---------------------------------------------------------------------------
+        """
+
+       
+        """ 
+        ?????????????????????
+        ==> NOTE: probably it should be up to the DGNode class to create the proper 
+                  MFn* by sending only the MObject... I just wanna do the type check
+                  ONLY ONCE, NOT TWICE!!!
+        ?????????????????????
+        """          
 
         #---------------------------------------------------------
         # It's already a wrappedNode (i.e. derived from DGNode)
         #---------------------------------------------------------
-        if issubclass(type(nodeArgument), DGNode):
-            return nodeArgument
+        if issubclass(type(nodeArg), DGNode):
+            return nodeArg
         
+
 
         #---------------------------------------------------------
         # It's probably the name of a Maya node
@@ -2129,38 +2185,32 @@ class MuNode(object):
         try:
             # The API method .add fails if node doesn't exist or there's 
             # a DAG ambiguity, but MC.objExists doesn't in case of ambiguity!!!
-            selList.add(nodeArgument)     
+            selList.add(nodeArg)     
 
         except:
-            # 'nodeArgument' is not bound to a Maya node...
+            """ AVOID BARE EXCEPT as a rule! """
+            # 'nodeArg' is not bound to a Maya node...
             # It could be an attribute??? No idea 
-            raise NameFatality(nodeArgument)  
+            raise NameFatality(nodeArg)  
         
-
-
-
-
         mObject = OM.MObject()
         selList.getDependNode(0, mObject)
 
-        nodeAPIType = mObject.apiTypeStr()
-        
-        if nodeAPIType == 'kTransform':
-            # A transform
-            return Transform(mObject)
-        
-        if nodeAPIType == 'kMesh':
-            # A mesh
-            return Mesh(mObject)
+        try:
+            mFn = MuNode.wrappedNodeTypes[mObject.apiType()][0]()
+        except KeyError: # <-- This is a nice EAFP (NOT a bare silly 'except:'')
+            # It's not a wrapped type
+            if mObject.hasFn(OM.MFn.kDagNode):
+                # It's a DagNode derived
+                mFn = OM.MFnDagNode()
+                return DAGNode(mObject, mFn)
+            else:
+                # It's a generic dependency node
+                mFn = OM.MFnDependencyNode()
+                return DGNode(mObject, mFn)   
 
-        
-        elif mObject.hasFn(OM.MFn.kDagNode):
-            # Generic DAGNode
-            return DAGNode(mObject)
-
-        else:
-            # Generic DGNode    
-            return DGNode(mObject)    
+        # Now call the __init__ of the right class
+        return MuNode.wrappedNodeTypes[mObject.apiType()][1](mObject, mFn)
 
 
 
@@ -2168,22 +2218,8 @@ class MuNode(object):
 
 
 
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-TO DO:
 
-This is really heavy:
-- newController.rz.setLocked().setVisible(False) # .lock().hide()
-- newController.ry.setLocked().setVisible(False)
-- newController.rz.setLocked().setVisible(False)
 
-If possible, replace with this:
-- INVALID SYNTAX newController.('rx', 'ry', 'rz').lock().hide()
-- newController.getPlugs('rx', 'ry', 'rz').lock().hide()
-
-- myNode.getPlugs('plug1', 'plug2', ...) --> <List> or <PlugList>
-Note that we're gonna need MASSIVES!!!
-
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 class MuPlug(object):
     """
     Getters:
@@ -2194,7 +2230,25 @@ class MuPlug(object):
                .set(<DGNode> [, **kwargs])
                .set(<MuPlug> [, **kwargs])
                .set(<string> [, **kwargs])
-    
+
+
+
+    Array:
+      node.arrayPlug
+      node.arrayPlug[i] --> node.arrayPlug.__getitem__(i)
+
+    [TO DO] Compounds:
+      node.parentPlug
+      node.parentPlug.childPlug --> node.parentPlug.__getattr__('childPlug')
+
+    >>> This will become legal:
+        - cam.renderLayerInfo[0].renderLayerId
+          i.e. cam.renderLayerInfo.__getitem__(0).__getattr__('renderLayerId')
+        - sphere.t.tx
+        - cam.boundingBox.boundingBoxMin.boundingBoxMinX
+
+
+
     Connectors (force=True):
       <MuPlug> >> <MuPlug>
       <MuPlug> << <MuPlug>
@@ -2206,7 +2260,22 @@ class MuPlug(object):
 
     """
 
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    TO DO:
 
+    This is really heavy:
+    - newController.rz.setLocked().setVisible(False) # .lock().hide()
+    - newController.ry.setLocked().setVisible(False)
+    - newController.rz.setLocked().setVisible(False)
+
+    If possible, replace with this:
+    - INVALID SYNTAX newController.('rx', 'ry', 'rz').lock().hide()
+    - newController.getPlugs('rx', 'ry', 'rz').lock().hide()
+
+    - myNode.getPlugs('plug1', 'plug2', ...) --> <List> or <PlugList>
+    Note that we're gonna need MASSIVES!!!
+
+    """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 
     def __init__(self, plugArg):
@@ -2214,6 +2283,7 @@ class MuPlug(object):
         DESCRIPTION 
           The public initializer/binder:
           myWrappedPlug = MuPlug('myNode.myPlug')
+
 
         ARGUMENTS
           plugArg <MPlug>|<string>
@@ -2302,10 +2372,20 @@ class MuPlug(object):
 
 
     def __getitem__(self, index):
+        """
+        ---------------------------------------------------------------------------
+        DESCRIPTION
+          Access to the itemPlugs of an arrayPlug:
+            myNode.myArrayPlug
+            myNode.myArrayPlug[i] --> myNode.myArrayPlug.__getitem__(i)
+
+        RETURN <MuPlug>
+        ---------------------------------------------------------------------------
+        """
         if not self._mPlug.isArray():
             MC.error(self.name() + ' is not an array plug!')
 
-        """ A littyle of safety wouldn't bad at all:) """
+        """ >>> A little of safety wouldn't bad at all:) <<< """
         # logicalIndex == the sparse index (used by the commandEngine)
         return MuPlug(self._mPlug.elementByLogicalIndex(index))    
 
@@ -2317,7 +2397,7 @@ class MuPlug(object):
      ||
     \  /
      \/
-    Don't ever catch with 'except Exception as ...' NEVER   
+    Don't EVER catch with 'except Exception as ...'!!!   
     CATCH EXACTLY WHAT YOU NEED BUT NOT EVERYTHING
     EAFP: it's (E)asier to (A)sk for (F)orgiveness than (P)ermission
     But a bare except is simply STUPID
@@ -2597,9 +2677,8 @@ class MuPlug(object):
             self._mPlug.setKeyable(True)
             self._mPlug.setChannelBox(True)
         else:
-            oldChannelBoxFlag = self._mPlug.isChannelBoxFlagSet()
             self._mPlug.setKeyable(False)
-            self._mPlug.setChannelBox(oldChannelBoxFlag)        
+            self._mPlug.setChannelBox(True)        
         return self    
 
 
@@ -2642,17 +2721,130 @@ class MuPlug(object):
         # myShit.sx(999, ws=True)  -->  myShit.sx.set(999, ws=True)
         pass
 
+     
 
 
 
 
 
-class MuObject(object):
+
+class MuSignal(object):
     """
-    For objects which don't have a nodal representative in Maya;
-    probably useless, but who knows...
+    RULES
+    - if an object 'myObj' has a MuSignal 'mySignal' you can connect outside it with:
+        myObj.mySignal.connect(callback)
+        myObj.mySignal.connect(callback, isGeneric=False)
+      The first sintax is a 'generic' connect; the callback can't recover myObj;
+      with the secon syntax, mySignal will call (when myObj emit mySignal) the callback
+      by adding a new kwarg 'MuEmitter=myObj'. Thus the callback must have a signature
+      that accepts it, ex:
+        myCallback(...., MuEmitter=None)
+
+    - inside myObj there are two ways to emit a MuSignal:
+        self.mySignal.emit(...)
+        self.mySignal.emit(..., MuEmitter=self)
+      It's up to the .connect to specify with the 'isGeneric' if the callback 
+      desires to receive the caller object. 
+      A callback who wanna know the emitter object, must add to its signature:
+        def curiousCallback(*args, MuEmitter=None, **kwargs): ...
+
     """
-    pass        
+
+    # QtSIGNALS AS CALLBACK CONTAINERS (INTERFACE)
+    #-------------------------------------------------------------------
+    # A 'Signal' is simply a 'callback container'!
+    # It allows to add callback from the outside of the object.
+    # Then, something inside may 'emit' it and the <SignalInstance>
+    # calls all the added callbacks
+    #
+    # YOU CAN ADD/REMOVE CALLBACKS FROM OUTSIDE
+    # (but somebody inside the object must ask the container to execute)
+    #
+    # It's "reason d'etre" is the ability to add callbacks from the 
+    # outside. When you wanna react to an event occurring in an object
+    # (implemented, by a cutom signal and the proper emission) you just
+    # do:
+    #  
+    #  (OUTSIDE) myObj.customSignal.connect(myCallback)
+    #   (INSIDE) myObj.customSignal.emit()
+    #
+    #  myObject.visibilityChanged.connect(interestedObj1.setVisibility)
+    #  myObject.visibilityChanged.connect(interestedObj2.setVisibility)
+    #
+    #  Inside myObject, somebody will call 
+    #  
+    #  self.visibilityChanged.emit(True)
+    #  self.visibilityChanged.emit(True)
+    #  
+    #  The methods put into .connect(...) can be predefined slots or 
+    #  whatever is callable and respect the signal signature
+    # DOC: 
+    # mySignal() --> emitted when the object does...
+
+    # It belongs to the object interface and you don't need to know
+    # its inner implementation (but don't forget that something inside
+    # the object will have to talk to the callback container, 
+    # i.e. 'emit' the 'signal')
+
+
+    def __init__(self):
+        # self._callbackList = [
+        #     {'funcObj': <funcObj>,      'isGeneric': <bool>},
+        #     {'funcObj': myCallbackObj1, 'isGeneric': True}, 
+        #     {'funcObj': myCallbackObj2, 'isGeneric': False}, 
+        #     ...
+        # ]
+        self._callbackList = []
+
+
+
+    def emit(self, *args, **kwargs):
+        for callback in self._callbackList: 
+            # Check if the emitter has to be sent
+            if callbackPair['isGeneric']:
+                kwargs.pop('MuEmitter')
+
+            callback(*args, **kwargs)
+
+
+            
+    def connect(self, funcObj, isGeneric=True):
+        self._callbackList.append({'funcObj': funcObj, 'isGeneric': isGeneric})
+
+
+
+    def listConnections(self):
+        pass
+
+
+    def hasCallback(self, callbackId):
+        callbackFound = False
+        for callback in self._callbackList.keys():
+            callbackObj = callback['funcObj']
+            # Check if the funcObj is found, by obj or by name
+            if callbackId in (callbackObj, callbackObj.__name__):
+                callbackFound = True
+                break
+        
+        return callbackFound                
+
+
+
+    def disconnect(self, callbackId):
+        """
+        ----------------------------------------------------------
+        DESCRIPTION
+
+
+        ARGUMENTS
+          callbackId <funcObj>|<str>
+            myObj.mySignal.disconnect(funcObj)
+            myObj.mySignal.disconnect('funcName')    
+        ---------------------------------------------------------
+        """
+        if self.hasCallback(callbackId):
+            self._callbackList.pop(callback)
+
 
 
 
@@ -2882,10 +3074,10 @@ class Metadata(object):
         # DON'T wrap it with a stupid decorator
         # Wanna the nodeName? Use:
         #
-        # self._pointer.name()
+        # self._apiObj.name()
         
         # Pointer to the original Maya node
-        self._pointer = OM.MFnDependencyNode(mObj)
+        self._apiObj = OM.MFnDependencyNode(mObj)
 
     def create(self, attrName, **kwargs):
         """ 
@@ -2906,7 +3098,7 @@ class Metadata(object):
         
         # Just once please (don't trigger API methods for nothing)
         # Here we don't modify the DAG, hence we can revert to the commandEngine
-        nodeName = self._pointer.name() 
+        nodeName = self._apiObj.name() 
         
         if attrType not in Metadata._supportedTypes:
             raise PlugFatality("The attribute type <" + attrType + "> is unknown!")                               
@@ -2963,7 +3155,7 @@ class Metadata(object):
         Again: a metaAttr named "grossaFava" is represented internally by "META_grossaFava"
         """
         attrName = "META_" + attrName
-        nodeName = self._pointer.name()
+        nodeName = self._apiObj.name()
         plug = nodeName + "." + attrName
         attrType = MC.getAttr(plug, type=True)
         
@@ -2981,7 +3173,7 @@ class Metadata(object):
         # Get the string name.
         # Here it's quite unlikely to change the DAG, so we shouldn't
         # have any problem by regressing to a string
-        nodeName = self._pointer.name()
+        nodeName = self._apiObj.name()
         
         metaAttrs = MC.listAttr(nodeName, userDefined=True, string="META_*") or []
         result = {}
@@ -3074,7 +3266,7 @@ class Occlusion(object):
         except:
             MC.error("[FATAL] Can't found node!")
         mObj = selList.getDependNode(0)
-        self._pointer = OM2.MFnDependencyNode(mObj)
+        self._apiObj = OM2.MFnDependencyNode(mObj)
         
         # The initializer accept all the attributes of the node
         for arg in kwargs:
@@ -3092,71 +3284,71 @@ class Occlusion(object):
     #-----------------------------  
     @property
     def samples(self):
-        return MC.getAttr(self._pointer.name() + ".samples")
+        return MC.getAttr(self._apiObj.name() + ".samples")
 
 
     @samples.setter
     def samples(self, numSamples):
-        MC.setAttr(self._pointer.name() + ".samples", numSamples)
+        MC.setAttr(self._apiObj.name() + ".samples", numSamples)
 
 
     @property
     def spread(self):
-        return MC.getAttr(self._pointer.name() + ".spread")
+        return MC.getAttr(self._apiObj.name() + ".spread")
 
 
     @spread.setter
     def spread(self, spreadValue):
-        MC.setAttr(self._pointer.name() + ".spread", spreadValue)
+        MC.setAttr(self._apiObj.name() + ".spread", spreadValue)
 
 
     @property
     def maxDistance(self):
-        return MC.getAttr(self._pointer.name() + ".max_distance")
+        return MC.getAttr(self._apiObj.name() + ".max_distance")
 
 
     @maxDistance.setter
     def maxDistance(self, maxDistanceValue):
-        MC.setAttr(self._pointer.name() + ".max_distance", maxDistanceValue)
+        MC.setAttr(self._apiObj.name() + ".max_distance", maxDistanceValue)
 
 
     @property
     def falloff(self):
-        return MC.getAttr(self._pointer.name() + ".falloff")
+        return MC.getAttr(self._apiObj.name() + ".falloff")
 
 
     @falloff.setter
     def falloff(self, falloffValue):
-        MC.setAttr(self._pointer.name() + ".falloff", falloffValue)
+        MC.setAttr(self._apiObj.name() + ".falloff", falloffValue)
 
 
     @property
     def includeExclude(self):
-        return MC.getAttr(self._pointer.name() + ".id_inclexcl")
+        return MC.getAttr(self._apiObj.name() + ".id_inclexcl")
 
 
     @includeExclude.setter
     def includeExclude(self, includeExcludeValue):
-        MC.setAttr(self._pointer.name() + ".id_inclexcl", includeExcludeValue)
+        MC.setAttr(self._apiObj.name() + ".id_inclexcl", includeExcludeValue)
 
 
     @property
     def nonSelf(self):
-        return MC.getAttr(self._pointer.name() + ".id_nonself")
+        return MC.getAttr(self._apiObj.name() + ".id_nonself")
 
 
     @nonSelf.setter
     def nonSelf(self, nonSelfValue):
-        MC.setAttr(self._pointer.name() + ".id_nonself", nonSelfValue)
+        MC.setAttr(self._apiObj.name() + ".id_nonself", nonSelfValue)
 
     @property
     def nonSelf(self):
-        return MC.getAttr(self._pointer.name() + ".id_nonself")
+        return MC.getAttr(self._apiObj.name() + ".id_nonself")
 
 
     @nonSelf.setter
     def nonSelf(self, nonSelfValue):
-        MC.setAttr(self._pointer.name() + ".id_nonself", nonSelfValue)
+        MC.setAttr(self._apiObj.name() + ".id_nonself", nonSelfValue)
 
 
 
@@ -3179,147 +3371,14 @@ mayaBatch  1  OM.MGlobal.kBatch
 # Render.exe
 
 # maya.exe -log fileFullPath --> stdout and sterr in a chosen file
-
+'''
 
 
 
 """
-An instanced node is a SINGLE NODE that is 'pointer' more than once;
+An instanced node is a SINGLE NODE that is 'pointed' more than once;
 But there's ONLY ONE NODE; hence the mObject CAN'T be enough!
 YOU NEED THE DAGPATH (there's only ONE node, hence only a real pointer!!!)
 
 Should I really care???
 """
-#-----------------------------------------------------------
-# YEEEEEEEEEESSS... you can use it, the penalty is minimal
-class Node(object):
-    _functionSets = {
-    # int <--> singleton OM.MFn*
-    #
-    # DependencyNode (generic)
-    # |
-    # +--DagNode (abstract)
-    # |  |
-    # |  +--Mesh    
-    # |  |
-    # |  +--Transform
-    # |
-    # +--Reference
-    # |
-    # +--Set
-
-    # NOTE
-    # Comment out the kDependencyNode; then:
-    #   self._mFn = Node._funtionSets.get(self._mObject.apiType(), OM.MFnDependencyNode)()
-    # If the type has not a specific wrapper, regress to a generic DependencyNode
-    # (or a generic MFnDagNode, even if abstract??? Ex: constraints, locator, annotations, SHAPES in general...) 
-
-    OM.MFn.kDependencyNode: OM.MFnDependencyNode,
-    OM.MFn.kTransform:      OM.MFnTransform,
-    OM.MFn.kMesh:           OM.MFnMesh,
-    OM.MFn.kDagNode:        OM.MFnDagNode,
-    OM.MFn.kSet:            OM.MFnSet,
-    OM.MFn.kReference:      OM.MFnReference
-    }
-    
-    _wrappedNodeTypes = {
-        OM.MFn.kJoint           OM.MFnJoint,
-        OM.MFn.kTransform:      OM.MFnTransform,
-        OM.MFn.kMesh:           OM.MFnMesh,
-        OM.MFn.kSet:            OM.MFnSet,
-        OM.MFn.kReference:      OM.MFnReference
-    }
-
-    # THIS IS A LOT BETTER (it works even for unwrapped Dags)
-    try:
-        self._mFn = Node._wrappedNodeTypes[self._mObject.apiType()]()
-    except KeyError: # <-- This is a nice EAFP (NOT a bare silly 'except:'')
-        # It's not a wrapped type
-        if self._mObject.hasFn(OM.MFn.kDagNode):
-            # It's a DagNode derived
-            self.mFn = OM.MFnDagNode()
-        else:
-            # It's a generic dependency node
-            self.mFn = OM.MFnDependencyNode()   
-
-        # SHORTER VERSION, not necessarily better (? Or is it?)
-        # self.mFn = OM.MFnDagNode() if self._mObject.hasFn(OM.Mfn.kDagNode) else OM.MFnDependencyNode()
-
-
-
-    def __init__(self, nodeName):
-        # TERMINOLOGY:
-        # The MObject is indeed the c++ pointer (with type included)
-        # pointing to the true c++ object; the MFn is only the
-        # simplification of the real interface od the apiObj
-        # The mechanic MObject-MFn only exists to allow the 'facade' interface
-        #
-        # But in the end, once you have a proper valid MFn(MObject), you have
-        # full access to the apiObj
-
-        # Hence I'll stick to:
-        #-------------------------------------------------
-        # self._apiObj --> self._Mfn.setObject(self._mObject)
-        #------------------------------------------------
-        # (even though it's just the 'facaded' interface of the real apiObject)
-
-
-        # Every wrap carries:
-        # - _mObject        -->  the real C++ pointer
-        # - _mObjectHandle  -->  the pointer validator
-        # - _mFn            -->  a detached compatible functionSet
-        # - _apiObj         -->  a 'property' return a valid mFn
-        #                        (this is the only exception of a tolerated 'property')
-        # 
-        # To use an API method:
-        
-        #   (OLD) self._mObj.method(... )
-        #   (NEW) self._apiObj.method(... )
-
-        # There will be an exception if the _mObj is invalid!
-        # (DO MORE TESTS, BUT APPARENTLY THE PERFORMANCE PENALTY IS IRRELEVANT)
-
-        selList = OM.MSelectionList()
-        selList.add(nodeName)
-        self._mObject = OM.MObject()
-        selList.getDependNode(0, self._mObject)
-        self._mObjectHandle = OM.MObjectHandle(self._mObject)
-
-        self._mFn = OM.MFnDependencyNode()
-        """ Or generically: """
-        """ self._mFn = Node._funtionSets[self._mObject.apiType()]() # It's an instance! """
-        
-    @property
-    def _apiObj(self):
-        """
-        Probably a little overzealous and paranoid; but nonetheless the performance
-        penalty is irrelevant compared to the huge weight of using the
-        API in the first place (even in a minimalistic not pymel-like way)
-
-        This way, if an MObject enters in the 'dangling pointer' state, we're
-        gonna know it:)
-        """
-        # THE ONLY PROPERTY TOLERATED IN MUTOOLS
-        #-----------------------------------------------
-        # To return a VALID mFn:
-        # - Use _mObjectHandle to test if the pointer _mObject is still valid
-        # - Attach _mFn to _mObject
-        # - Return _mFn
-
-        if self._mObjectHandle.isValid():
-            self._mFn.setObject(self._mObject)
-            return self._mFn
-        else:
-            # The pointer is invalid; check if it's alive (i.e. the apiObj is deleted
-            # but still in memory, e.g. in the undo queue)
-            MC.error('INVALID POINTER!!!')
-            # ... Now what? Need to recover? How? Or simply a blocking 'Fatality'?
-
-    _functionSets = {
-    OM.MFn.kDependencyNode: OM.MFnDependencyNode,
-    OM.MFn.kTransform:      OM.MFnTransform,
-    OM.MFn.kMesh:           OM.MFnMesh,
-    OM.MFn.kDagNode:        OM.MFnDagNode
-    }
-
-'''
